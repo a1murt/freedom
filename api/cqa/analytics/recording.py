@@ -51,11 +51,24 @@ def recording_gaps(db: Session, *, checklist_version_id: int | None = None, data
             "evaluation_id": ev.id if ev is not None else None,
         })
     seconds = [float(i["seconds_not_recorded"]) for i in items if isinstance(i["seconds_not_recorded"], (int, float))]
+    # greeting compliance counted only where the opening can be heard: a rule credit is "no penalty", not a greeting
+    verifiable = [c for c in calls if c.id not in {i["conversation_id"] for i in items if i["opening_not_recorded"]}]
+    greeted = 0
+    judged = 0
+    for conv in verifiable:
+        ev = display_evaluation(db, conv.id, checklist_version_id)
+        row = next((r for r in (ev.criteria if ev is not None else []) if r.code == "C1"), None)
+        if row is None or not row.applicable or row.answer is None:
+            continue
+        judged += 1
+        greeted += int(str(row.final_answer if row.final_answer is not None else row.answer).lower() == "yes")
     return {
         "calls": len(calls),
         "with_gap": len(items),
         "share": round(len(items) / len(calls), 4) if calls else None,
         "opening_not_recorded": sum(1 for i in items if i["opening_not_recorded"]),
+        "contact_compliance_verifiable": {"calls": judged, "greeted": greeted,
+                                          "share": round(greeted / judged, 4) if judged else None},
         "seconds_not_recorded": {"total": round(sum(seconds), 1), "mean": round(statistics.fmean(seconds), 1) if seconds else None,
                                  "max": round(max(seconds), 1) if seconds else None},
         "rule": ("Снижать балл можно только по фрагменту, который можно прослушать и оспорить: если первая реплика оператора "

@@ -318,3 +318,9 @@ def test_recording_gaps_list_the_call_for_the_telephony_owner(store):
     with store() as db:
         after = recording_gaps(db)
     assert after["items"][0]["credited_by_rule"] == ["C1"] and after["seconds_not_recorded"] == {"total": 30.2, "mean": 30.2, "max": 30.2}
+    # compliance only where the opening can be heard: the rule's credit never counts as a greeting
+    assert after["contact_compliance_verifiable"] == {"calls": 0, "greeted": 0, "share": None}
+    asyncio.run(judge_runner.evaluate_conversation("call-ok", vid, provider_name="fake"))  # «Компания …, слушаю вас»: no greeting
+    with store() as db:
+        both = recording_gaps(db)
+    assert both["contact_compliance_verifiable"] == {"calls": 1, "greeted": 0, "share": 0.0}

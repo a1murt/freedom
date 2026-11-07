@@ -59,10 +59,30 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
 # put before its predicate is negated by that predicate («оскорблений не было», «предложений платных услуг нет»,
 # «оскорблений и предложений платных услуг оператор не допустил»). Disclosure's own «без подтверждения» / «without
 # verification» is a positive signal unless its own predicate is negated («не раскрывал данные счёта без идентификации»).
-_CLAUSE_SPLIT = re.compile(r"[.;!?\n«»“”„\"]|—|,\s*(?:но|однако|а|but|however)\b", re.I)  # quoted text is a clause of its own
-_SEGMENT_SPLIT = re.compile(r",|\s(?:и|или|либо|and|or|nor)(?=\s)", re.I)  # coordinated objects and predicates
+# A determiner negation («no», «none», «neither … nor», «никаких», «ни …, ни …», «ешқандай») negates the noun phrase it heads,
+# every conjunct included, so the predicate they share after the last one is not an affirmed one: «no insults or paid offers
+# were made», «никаких оскорблений или платных предложений». A conjunct with an affirmed predicate of its own is outside it. A
+# Russian or Kazakh determiner always comes with a negated verb («никаких оскорблений не было»), so an affirmed predicate
+# belongs to its conjunct alone («никаких оскорблений, и платную консультацию оператор предложил сам»). In English the
+# predicate after the last conjunct is shared after «or» / «nor» and after the «and» that closes a list («no insults, threats
+# and paid offers were made»), not after another «and» («no identity check and paid advice offered»). «никаких» and
+# «ешқандай» never negate a verb, so they stay inside their noun phrase («оскорбление клиента, никаких извинений»), and a
+# Kazakh one ends at its negated verb or «-сыз» word («ешқандай тексерместен шот деректерін жария етті»).
+_CLAUSE_SPLIT = re.compile(r"[.;!?\n«»“”„\"]|—|,\s*(?:но|однако|а|but|however|бірақ|алайда)\b|\b(?:но|однако|but|however|бірақ|алайда)\b",
+                           re.I)  # quoted text is a clause of its own; a contrast word starts one even without a comma
+# coordinated objects and predicates; groups: the comma or colon before a segment, the conjunction that joins it
+_SEGMENT_SPLIT = re.compile(r"([,:])(?:\s*(и|или|либо|and|or|nor|және|немесе)(?=\s))?|\s(и|или|либо|and|or|nor|және|немесе)(?=\s)",
+                            re.I)
 _WORD = re.compile(r"[^\W_]+(?:['’][^\W_]+)?")  # «didn't» stays one word
-_NEGATIONS = frozenset({"не", "ни", "нет", "no", "not", "never", "nor", "none", "nothing", "жоқ", "емес"})
+_NEGATIONS = frozenset({"не", "ни", "нет", "no", "not", "never", "nor", "neither", "none", "nothing", "жоқ", "емес"})
+_EN_DETERMINERS = frozenset({"no", "none", "neither", "nor"})
+_KK_DETERMINERS = frozenset({"ешқандай", "ешбір"})
+# negations that head a noun phrase; «никаких» and «ешқандай» are not in _NEGATIONS, as they never negate a verb
+_DETERMINER_NEGATIONS = _EN_DETERMINERS | _KK_DETERMINERS | {"ни", "никакой", "никакая", "никакое", "никакие", "никакого",
+                                                             "никакую", "никаких", "никаким", "никакими", "никакому", "никаком"}
+_NO_OBJECT = frozenset({"no", "none", "nothing", "nobody", "neither"})  # «disclosed no account data», «disclosed nothing»
+_TIME_ADJUNCTS = frozenset({"до", "перед", "после", "before", "after", "prior"})  # «никаких извинений после оскорбления»
+_EN_AUXILIARIES = frozenset({"was", "were", "is", "are", "has", "had"})
 _NOT_A_NEGATION_BEFORE = frozenset({"только", "лишь", "only"})  # «не только …, но и …», «not only»
 _LOCAL_NEGATIONS = frozenset({"без", "without"})  # negate the noun phrase right after them: «без оскорблений»
 _ABSENCE = re.compile(r"(?:отсутству|absent)", re.I)  # «оскорбления отсутствуют»
@@ -73,7 +93,9 @@ _RU_GERUND = re.compile(r"[^\W\d_]{2,}[аяиы]в(?:ши|шись)?", re.I)  # 
 _RU_PRESENT = re.compile(r"[^\W\d_]{3,}(?:ет|ит|ют|ят|ут|ат|ется|ится|ются|ятся|утся|атся)", re.I)  # оскорбляет (keyword words only)
 _EN_PAST = re.compile(r"[a-z]{3,}ed", re.I)
 _EN_VERBS = frozenset({"told", "gave", "sent", "said", "made", "wrote", "took", "sold", "was", "were", "is", "are", "has", "had"})
-_KK_NEGATED_VERB = re.compile(r"(?:ма|ме|ба|бе|па|пе)(?:ды|ді|ған|ген|йды|йді|йтын|йтін)$", re.I)  # қорламады
+# negated Kazakh verbs and converbs: қорламады, қорламаған, жасамай, тексерместен
+_KK_NEGATED_VERB = re.compile(r"(?:ма|ме|ба|бе|па|пе)(?:ды|ді|ған|ген|йды|йді|йтын|йтін|й|стан|стен)$", re.I)
+_KK_WITHOUT = ("сыз", "сіз")  # «растаусыз» = «без подтверждения»
 # nouns, adverbs and conjunctions that look like a past tense or a gerund (also with a case ending: «канала», «детали»)
 _NOT_VERBS = frozenset({
     "или", "ли", "если", "мало", "около", "канал", "сигнал", "капитал", "материал", "журнал", "персонал", "терминал", "портал",
@@ -119,11 +141,30 @@ def _is_predicate(words: list[str], i: int, *, keyword: bool = False) -> bool:
     return keyword and bool(_RU_PRESENT.fullmatch(w))
 
 
-def _scan_back(words: list[str], lo: int, hi: int) -> bool | None:
-    """Nearest predicate before ``hi`` (down to ``lo``): True negated, False affirmative, None when there is none."""
+def _heads(words: list[str], j: int, k: int) -> bool:
+    """Whether the determiner negation at ``j`` still heads the word at ``k`` after it. Its noun phrase ends at a time adjunct
+    («никаких извинений после оскорбления»: the insult happened). A Kazakh one is paired with a negated verb or a «-сыз»
+    word and ends there: «ешқандай тексерместен шот деректерін жария етті» discloses the data, «ешқандай растаусыз» is
+    «без какого-либо подтверждения»."""
+    if any(w.lower() in _TIME_ADJUNCTS for w in words[j + 1:k]):
+        return False
+    return words[j].lower() not in _KK_DETERMINERS or not any(
+        _KK_NEGATED_VERB.search(w) or w.lower().endswith(_KK_WITHOUT) for w in words[j + 1:k + 1])
+
+
+def _scan_back(words: list[str], lo: int, hi: int, *, determiners: bool = False) -> bool | None:
+    """Nearest predicate before ``hi`` (down to ``lo``): True negated, False affirmative, None when there is none. In the
+    keyword's own segment (``determiners``) a determiner negation that heads the keyword's noun phrase negates it too
+    («никаких платных предложений», «ешқандай ақылы қызмет»)."""
+    ended = False  # a determiner's noun phrase ended before the keyword, and so did that of any determiner before it
     for j in range(hi - 1, lo - 1, -1):
         if words[j].lower() in _SUBORDINATORS:  # «…не скрывал, что консультация платная»: the «не» belongs to another clause
             return None
+        if determiners and words[j].lower() in _DETERMINER_NEGATIONS:
+            if not ended and _heads(words, j, hi):
+                return True
+            ended = True
+            continue
         if _is_negation(words, j):
             return True
         if _is_predicate(words, j):
@@ -145,6 +186,91 @@ def _scan_forward(words: list[str], lo: int, hi: int, *, verbs_decide: bool) -> 
     return None
 
 
+Joins = list[tuple[str | None, str | None]]  # per segment: the comma or colon before it, the conjunction that joins it
+
+
+def _list_goes_on(joins: Joins, s: int) -> bool:
+    """Whether segment ``s``, joined by a bare comma, is a middle item of a list closed by a conjunction («no threats, insults
+    or paid offers»), not a statement of its own («никакой эмпатии, сарказм в адрес клиента»)."""
+    for mark, conj in joins[s + 1:]:
+        if conj is not None:
+            return True
+        if mark != ",":
+            return False
+    return False
+
+
+def _series_item(words: list[str], segment: list[int], i: int) -> int | None:
+    """The determiner negation that heads the last noun phrase of the segment ending at word ``i`` («ни ФИО» in «не проверил
+    ни ФИО, ни кодовое слово»); None when a predicate, a verb negation or a subordinate clause comes first."""
+    s = segment[i]
+    while i >= 0 and segment[i] == s:
+        w = words[i].lower()
+        if w in _DETERMINER_NEGATIONS:
+            return i
+        if w in _SUBORDINATORS or _is_negation(words, i) or _is_predicate(words, i):
+            return None
+        i -= 1
+    return None
+
+
+def _leads(words: list[str], segment: list[int], joins: Joins, j: int) -> bool:
+    """Whether the determiner negation at ``j`` heads its clause's subject rather than the object of a predicate before it
+    («the operator requested no verification and paid advice was offered»). A series of determiners after commas is led by
+    its first one («оператор не проверил ни ФИО, ни кодовое слово и …», «used no insults, no threats, and …»); an existential
+    «there were no …» and a subordinate clause («the client confirmed that no insults or …») lead."""
+    i = j - 1
+    while i >= 0:
+        if segment[i] != segment[i + 1]:  # the segment of the determiner (or of the series item before it) starts at i + 1
+            prev = _series_item(words, segment, i) if joins[segment[i + 1]] == (",", None) else None
+            if prev is None:
+                return True
+            i = prev - 1
+            continue
+        if words[i].lower() in _SUBORDINATORS:
+            return True
+        if _is_predicate(words, i) and not (i > 0 and words[i - 1].lower() == "there"):
+            return False
+        i -= 1
+    return True
+
+
+def _scan_determiner(words: list[str], segment: list[int], joins: Joins, k: int, lo: int, hi: int,
+                     own: bool | None) -> bool | None:
+    """True when the keyword's segment ``[lo, hi)`` is a later conjunct of a noun phrase headed by a determiner negation, else
+    None (see the comment above). ``own`` is the scan of the segment after the keyword: False when the conjunct has an
+    affirmed predicate of its own."""
+    s = segment[lo]
+    mark, conj = joins[s]
+    if conj == "nor":
+        return True  # «neither insults nor paid offers were made»
+    if conj is None and (mark != "," or own is False or not _list_goes_on(joins, s)):
+        return None  # a bare comma (or none) joins a statement of its own: «no insult, paid help was offered»
+    det = None
+    for j in range(lo - 1 if conj is None else lo - 2, -1, -1):  # a conjunction is the last word before the segment
+        if segment[j] != segment[j + 1] and joins[segment[j + 1]][0] == ":":
+            return None  # «no insults: paid offers were made»
+        w = words[j].lower()
+        if w in _DETERMINER_NEGATIONS:
+            det = j
+            break
+        if w in _SUBORDINATORS or _is_negation(words, j) or _is_predicate(words, j):
+            return None  # an earlier conjunct with a predicate of its own, or a verb's negation («did not insult … and …»)
+    if det is None or not _heads(words, det, k) or not _leads(words, segment, joins, det):
+        return None
+    if own is False:  # the conjunct has a predicate of its own
+        p = next(j for j in range(k + 1, hi) if _is_predicate(words, j))
+        if words[p].lower() in _EN_AUXILIARIES and p + 1 < hi and words[p + 1].lower() in ("not", "never"):
+            return True  # not an affirmed one: «there were no insults or threats, and paid advice was not offered»
+        # shared only after an English «or», or after the «and» that closes a list unless the verb is singular («…, threats and
+        # paid help was offered»). A Russian or Kazakh conjunction never shares it: the determiner's own predicate would be
+        # negated («никаких оскорблений, и платную консультацию оператор предложил сам»)
+        closes_list = segment[det] < s - 1 and all(joins[t] == (",", None) for t in range(segment[det] + 1, s))
+        if not (conj == "or" or (conj == "and" and closes_list and words[p].lower() not in ("was", "is", "has"))):
+            return None  # «no identity check and paid advice offered»
+    return True
+
+
 def _negated(clause: str, start: int) -> bool:
     """Whether the keyword match at ``start`` sits in a negated predicate of the clause (see the comment above)."""
     tokens = list(_WORD.finditer(clause))
@@ -154,18 +280,23 @@ def _negated(clause: str, start: int) -> bool:
     words = [t.group() for t in tokens]
     if _KK_NEGATED_VERB.search(words[k]):
         return True
-    if _is_predicate(words, k, keyword=True):  # «раскрыл», «не раскрывал», «disclosed»: only its own negation counts
-        return k > 0 and _is_negation(words, k - 1)
+    if _is_predicate(words, k, keyword=True):  # «раскрыл», «не раскрывал», «disclosed»: only its own negation counts,
+        no_object = (k + 1 < len(words) and words[k + 1].lower() in _NO_OBJECT  # or a determiner of its object right after
+                     and not clause[tokens[k].end():tokens[k + 1].start()].strip())  # it: «disclosed no account data»
+        return (k > 0 and _is_negation(words, k - 1)) or no_object
     for j in range(k - 1, max(-1, k - 4), -1):  # «без оскорблений», «без каких-либо оскорблений», «without any insult»
         if words[j].lower() in _LOCAL_NEGATIONS:
             return True
         if _is_predicate(words, j) or _is_negation(words, j):
             break
-    cuts = [m.end() for m in _SEGMENT_SPLIT.finditer(clause)]
+    seps = list(_SEGMENT_SPLIT.finditer(clause))
+    cuts = [m.end() for m in seps]
+    joins: Joins = [(None, None)] + [(m.group(1), (m.group(2) or m.group(3) or "").lower() or None) for m in seps]
     segment = [bisect_right(cuts, t.start()) for t in tokens]
     lo = segment.index(segment[k])
     hi = len(segment) - segment[::-1].index(segment[k])
-    for decision in (_scan_back(words, lo, k), _scan_forward(words, k + 1, hi, verbs_decide=True),
+    own = _scan_forward(words, k + 1, hi, verbs_decide=True)
+    for decision in (_scan_back(words, lo, k, determiners=True), _scan_determiner(words, segment, joins, k, lo, hi, own), own,
                      _scan_forward(words, hi, len(words), verbs_decide=False), _scan_back(words, 0, lo)):
         if decision is not None:
             return decision
