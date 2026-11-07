@@ -385,3 +385,13 @@ def test_every_timestamp_carries_its_utc_offset(env):
     assert [_utc(h["created_at"]) for h in history] == [T_DONE, T_CREATED]
     appeals = env.client.get("/api/appeals").json()
     assert _utc(appeals[0]["created_at"]) == _utc(appeal["created_at"])
+
+
+def test_card_404s_are_russian_and_tell_the_two_states_apart(env):
+    missing = env.client.get("/api/conversations/nope-404").json()["error"]
+    assert (missing["code"], missing["reason"]) == ("not_found", "conversation_not_found") and missing["message"] == "Диалог не найден в CQA"
+    with env.Session() as db:
+        _conversation(db, "fresh-404", "agent chat")
+        db.commit()
+    none = env.client.get("/api/conversations/fresh-404/evaluation").json()["error"]
+    assert (none["code"], none["reason"], none["message"]) == ("not_found", "no_evaluation", "Оценки пока нет")

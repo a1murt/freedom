@@ -393,7 +393,7 @@ def set_operator(conversation_id: str, body: OperatorBody, db: Session = Depends
 def get_conversation(conversation_id: str, db: Session = Depends(get_db)):
     c = db.get(Conversation, conversation_id)
     if c is None:
-        raise HTTPException(404, detail={"code": "not_found", "message": "conversation not found"})
+        raise HTTPException(404, detail={"code": "not_found", "reason": "conversation_not_found", "message": "Диалог не найден в CQA"})
     return conversation_detail(db, c)
 
 
@@ -404,7 +404,7 @@ def get_latest_evaluation(conversation_id: str, checklist_version_id: int | None
     {id, status, error, created_at}, like the list; otherwise the latest evaluation with `last_attempt_failed: false`."""
     ev = latest_evaluation(db, conversation_id, checklist_version_id)
     if ev is None:
-        raise HTTPException(404, detail={"code": "not_found", "message": "no evaluation yet"})
+        raise HTTPException(404, detail={"code": "not_found", "reason": "no_evaluation", "message": "Оценки пока нет"})
     q = select(Evaluation).where(Evaluation.conversation_id == conversation_id, Evaluation.status.in_(["completed", "failed"]))
     if checklist_version_id:  # the same version filter as latest_evaluation
         q = q.where(Evaluation.checklist_version_id == checklist_version_id)
@@ -426,7 +426,7 @@ def list_evaluations(conversation_id: str, db: Session = Depends(get_db)):
 def get_evaluation(evaluation_id: int, db: Session = Depends(get_db)):
     ev = db.get(Evaluation, evaluation_id)
     if ev is None:
-        raise HTTPException(404, detail={"code": "not_found", "message": "evaluation not found"})
+        raise HTTPException(404, detail={"code": "not_found", "reason": "evaluation_not_found", "message": "Оценка не найдена"})
     return evaluation_dict(db, ev)
 
 
@@ -434,5 +434,5 @@ def get_evaluation(evaluation_id: int, db: Session = Depends(get_db)):
 def get_trace(evaluation_id: int, db: Session = Depends(get_db)):
     ev = db.get(Evaluation, evaluation_id)
     if ev is None:
-        raise HTTPException(404, detail={"code": "not_found", "message": "evaluation not found"})
+        raise HTTPException(404, detail={"code": "not_found", "reason": "evaluation_not_found", "message": "Оценка не найдена"})
     return [trace_dict(t) for t in sorted(ev.traces, key=lambda t: t.id)]

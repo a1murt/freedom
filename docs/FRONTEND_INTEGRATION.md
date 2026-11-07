@@ -312,4 +312,11 @@ The evaluation also gets an `attention` block: `low_confidence`, `split_votes`, 
 
 **Downloads:** CSV and PDF responses expose `Content-Disposition`, so a fetch-based download gets the file name.
 
+**Card 404s.** The `code` stays `not_found`; new: `reason` and a Russian `message`.
+- `conversation_not_found`: «Диалог не найден в CQA», for the embed and card states.
+- `no_evaluation`: «Оценки пока нет».
+- `evaluation_not_found`.
+
+**Jobs:** `started_at`, `finished_at` and `created_at` now carry `+00:00`.
+
 **Ops: `GET /api/system/health`.** `guards` {`daily_budget_usd`, `max_dialogs_per_run`, `max_concurrent_jobs`}. Readiness's `baseline_snapshot` check now reports `baseline_age_minutes`.

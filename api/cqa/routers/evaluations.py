@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 
 from ..checklist import service as svc
 from ..config import settings
+from ..serializers import iso_utc
 from ..db import SessionLocal, get_db
 from ..jobs import estimate as estimator
 from ..jobs import guards
@@ -41,8 +42,9 @@ class RunBody(BaseModel):
 def _job_dict(j: Job) -> dict:
     params = j.params or {}
     return {"id": j.id, "type": j.type, "status": j.status, "total": j.total, "done": j.done, "failed": j.failed, "cost_usd": round(j.cost_usd, 4),
-            "params": j.params, "started_at": j.started_at.isoformat() if j.started_at else None,
-            "finished_at": j.finished_at.isoformat() if j.finished_at else None, "created_at": j.created_at.isoformat() if j.created_at else None,
+            # UTC with an explicit offset, like every serializer timestamp (naive SQLite values are UTC)
+            "params": j.params, "started_at": iso_utc(j.started_at),
+            "finished_at": iso_utc(j.finished_at), "created_at": iso_utc(j.created_at),
             "log": (j.log or [])[-200:],
             # finished with unfinished conversations and not resumed yet → POST /api/jobs/{id}/resume is worth offering
             "resumable": j.status in jobs.TERMINAL_STATUSES and (j.done or 0) < (j.total or 0) and not params.get("resumed_as")}
