@@ -35,7 +35,14 @@ class Settings(BaseSettings):
     judge_effort: str = "high"
     max_parallel_criteria: int = 8
     max_parallel_conversations: int = 3
-    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["*"])  # env CORS_ORIGINS='["https://cqa-freedom-pi.vercel.app","http://localhost:5173"]'
+
+    # platform guards (public hosted instance: protect the API credit from accidental or abusive runs)
+    daily_budget_usd: float = 75.0        # rolling 24h spend cap across all evaluation jobs; 0 disables
+    max_dialogs_per_run: int = 200        # one evaluation request may queue at most this many dialogs
+    max_concurrent_jobs: int = 2          # running evaluation jobs at the same time
+    app_version: str | None = None        # env APP_VERSION; falls back to RAILWAY_GIT_COMMIT_SHA / git
+    team_name: str = "Я Тебя Могну"
 
     # USD per 1M tokens: (input, output, cache_read)
     cost_rates: dict[str, tuple[float, float, float]] = Field(

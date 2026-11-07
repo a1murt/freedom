@@ -256,3 +256,36 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[Any] = mapped_column(JSON, nullable=True)
+
+
+class AuditEvent(Base):
+    """Who did what, when (process correctness, enterprise audit trail). Written by cqa.audit."""
+
+    __tablename__ = "audit_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    actor_role: Mapped[str] = mapped_column(String(32), default="demo")
+    actor_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    action: Mapped[str] = mapped_column(String(64), index=True)  # e.g. appeal.create, decision.create, checklist.version.create
+    entity_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    request_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class GoldLabel(Base):
+    """Human reference label for one criterion of one conversation (calibration, AI-vs-human agreement)."""
+
+    __tablename__ = "gold_labels"
+    __table_args__ = (UniqueConstraint("conversation_id", "criterion_code", "labeler"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), index=True)
+    criterion_code: Mapped[str] = mapped_column(String(16))
+    value: Mapped[Any] = mapped_column(JSON, nullable=True)  # "yes" | "no" | number | "N/A"
+    labeler: Mapped[str] = mapped_column(String(64), default="team")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    split: Mapped[str | None] = mapped_column(String(16), nullable=True)  # train | validation | None
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
