@@ -65,3 +65,13 @@ export function truncate(s: string, n = 120): string {
   if (!s) return "";
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }
+
+/** Plain-text answer label for toasts and timelines (yes/no localized, numbers as-is). */
+export function answerText(answer: string | number | null | undefined, t: (k: string) => string): string {
+  if (answer === null || answer === undefined || answer === "") return t("common.na");
+  const a = String(answer).toLowerCase();
+  if (a === "yes") return t("common.yes");
+  if (a === "no") return t("common.no");
+  if (a === "na" || a === "n/a") return t("common.na");
+  return String(answer);
+}

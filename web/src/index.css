@@ -4,16 +4,32 @@
 
 /* Design tokens (docs/DESIGN_SYSTEM_PROMPT.md). RGB channels so Tailwind opacity modifiers work. */
 :root {
+  /* Freedom green scale (Figma kit green/50..900) */
+  --green-50: #F0F8ED;
+  --green-100: #DFF1DC;
+  --green-200: #BEE3B5;
+  --green-300: #8ED47F;
+  --green-400: #68C155;
+  --green-500: #51AF3D;
+  --green-600: #2F8F2A;
+  --green-700: #1F7028;
+  --green-800: #0F5431;
+  --green-900: #092818;
+  /* semantic mappings, RGB channels so Tailwind opacity modifiers work */
+  --accent: 47 143 42; /* green-600 */
+  --accent-hover: 31 112 40; /* green-700 */
+  --accent-subtle: 240 248 237; /* green-50 */
+  --selection: 223 241 220; /* green-100 */
+
   --bg: 247 248 246;
   --surface: 255 255 255;
   --surface-2: 238 241 236;
   --line: 213 220 211;
   --text: 22 32 26;
   --text-2: 75 90 80;
-  --accent: 47 143 42;
   --accent-fg: 255 255 255;
-  --deep: 15 84 49;
-  --tint: 223 241 220;
+  --deep: 15 84 49; /* green-800 */
+  --tint: 223 241 220; /* green-100 */
   --success: 47 143 42;
   --warning: 183 121 31;
   --critical: 179 54 47;
@@ -22,15 +38,19 @@
 }
 
 .dark {
+  --accent: 81 175 61; /* green-500 */
+  --accent-hover: 104 193 85; /* green-400 */
+  --accent-subtle: 9 40 24; /* green-900 */
+  --selection: 15 84 49; /* green-800 */
+
   --bg: 15 20 17;
   --surface: 22 29 24;
   --surface-2: 30 39 33;
   --line: 42 53 45;
   --text: 232 237 231;
   --text-2: 163 176 166;
-  --accent: 81 175 61;
   --accent-fg: 11 20 13;
-  --deep: 15 84 49;
+  --deep: 15 84 49; /* green-800 */
   --tint: 27 47 29;
   --success: 81 175 61;
   --warning: 226 167 74;
@@ -54,7 +74,7 @@
     -webkit-font-smoothing: antialiased;
   }
   ::selection {
-    background: rgb(var(--accent) / 0.3);
+    background: rgb(var(--selection));
   }
   :focus-visible {
     outline: 2px solid rgb(var(--accent) / 0.6);

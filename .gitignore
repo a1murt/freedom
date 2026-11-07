@@ -20,3 +20,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+.vercel/
+web/dist/
+web/dist-single/

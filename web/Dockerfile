@@ -1,7 +1,7 @@
 # Stage 1: build the static bundle
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10 --activate
+RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY . .
