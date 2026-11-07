@@ -93,3 +93,11 @@ total MAE 4.8   cost $0.18/dialog   provider anthropic/claude-opus-5-5   prompt 
 ### Run-to-run consistency (12 dialogs, Opus 5.5 single, v1 → v1 re-run)
 
 Per-criterion agreement between two independent runs: C1 12/12, C2 10/12, C3 12/12, C4 8/12, C5 11/12, C6 11/12, C7 12/12, C8 12/12. Mean |Δtotal| 4.55, max 16.88 (en-007: C2 N/A→Нет, C5 Нет→Да, C6 4→7). C4 flips are always 15↔20, so the "второстепенная деталь" boundary is the biggest lever: the C4 spec now requires naming the missed detail for 15, otherwise 20. C2 flips are N/A↔Нет when the first answer is wrong on a clear request; the spec now sends that case to C4 and keeps C2 = N/A. Re-measure after your gold set; the 3-vote ensemble is expected to remove most of the remaining flips.
+
+## Gold set and judge v2 (2026-11-07, evening)
+
+- Gold set for all 65 DEV dialogs in `api/eval/`: three independent model labelers per dialog (blind to specs, prompts and verdicts, protocol `api/eval/PROTOCOL.md`), reconciliation, blind arbitration against the baseline judge, three team decisions, twelve disputed labels with `_alt`. Decision log: `api/eval/decisions.md`. Human review by the team lead is still pending.
+- Judge specs v2.2 (`api/seeds/judge_specs_v1.json`): mean per-criterion agreement 0.854 → 0.965 on all 65 dialogs and 0.859 → 0.979 on the 24-dialog holdout (C7 policy N/A; 0.919 → 0.965 under the old C7 reading). Biggest gains: C7 0.46 → 1.00, C6 0.80 → 0.92, C2 0.85 → 0.94, C5 0.91 → 1.00.
+- C7 bare farewell is a policy, not a model guess: the judge flags `bare_farewell`, `c7_bare_farewell_policy` (`na` by default) sets the value.
+- Ensemble vs single on 29 validation dialogs: 0.966 vs 0.962 (equal within noise); the control run uses the ensemble for stability. Frozen configuration: `api/judge_config_control.md`.
+- Harness: `--only C4,C7` (partial re-judge), `--c7-bare`, `--api`, `--min-eval-id/--max-eval-id`, lenient score with `_alt`, per-criterion agreement in `eval/runs.csv`.

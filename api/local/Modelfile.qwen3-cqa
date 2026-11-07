@@ -1,0 +1,8 @@
+# Local judge model for the CQA "local" provider (Ollama, OpenAI-compatible endpoint http://localhost:11434/v1).
+#   ollama pull qwen3:8b
+#   ollama create qwen3-cqa -f api/local/Modelfile.qwen3-cqa
+#   LOCAL_ENDPOINT=http://localhost:11434/v1 LOCAL_MODEL=qwen3-cqa uv run python -m cqa.eval.harness --gold eval/gold.json --run --provider local --split validation
+# The judge prompt (system + transcript + criterion spec) is 6-12k tokens; Ollama's default context would truncate it.
+FROM qwen3:8b
+PARAMETER num_ctx 16384
+PARAMETER temperature 0
