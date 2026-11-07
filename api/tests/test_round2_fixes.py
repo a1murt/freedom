@@ -191,3 +191,22 @@ def test_a_rejected_push_fails_after_retries_and_leaves_no_worktree(repos, contr
     (a / "results/prod/results.json").write_text(json.dumps({"results": [7]}))
     assert control_run.commit_and_push("results/prod/results.json", 1) == 1
     assert _git(a, "worktree", "list").count("\n") == 0
+
+
+def test_null_contact_is_a_warning_only_where_it_can_be_a_call():
+    import json as _json
+    from pathlib import Path as _Path
+
+    from cqa.export.results_json import validate_document
+
+    doc = _json.loads((_Path(__file__).resolve().parents[2] / "results" / "dev" / "results.json").read_text(encoding="utf-8"))
+    rec = next(r for r in doc["results"] if r["conversation_id"] == "p4-ru-002")
+    assert next(c for c in rec["criteria"] if c["criterion_id"] == "contact")["value"] is None  # N/A by the call rule
+    errors, warnings = validate_document(doc, expected_count=65)  # a bare file: no channels known
+    assert errors == [] and any("p4-ru-002" in w and "contact is null" in w for w in warnings)
+    ids = [r["conversation_id"] for r in doc["results"]]
+    channels = {cid: ("voice call" if cid.startswith("p4-") else "agent chat") for cid in ids}
+    errors, _ = validate_document(doc, expected_count=65, channels=channels)
+    assert errors == []
+    errors, _ = validate_document(doc, expected_count=65, channels={**channels, "p4-ru-002": "agent chat"})
+    assert any("p4-ru-002" in e and "contact" in e for e in errors)  # on a chat a null contact stays an error

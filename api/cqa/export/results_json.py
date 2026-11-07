@@ -308,8 +308,13 @@ def validate_document(doc: Any, *, expected_ids: list[str] | None = None, expect
                 ok = (v is None and None in ALLOWED_VALUES[k]) or (isinstance(v, bool) and v in ALLOWED_VALUES[k]) or (
                     not isinstance(v, bool) and isinstance(v, (int, float)) and v in ALLOWED_VALUES[k])
                 if not ok:
-                    if k == "contact" and v is None and (channels or {}).get(cid) == "voice call":
+                    channel = (channels or {}).get(cid)
+                    if k == "contact" and v is None and channel == "voice call":
                         warnings.append(f"{where}: contact is null on a voice call (organizer: greeting not recorded → N/A)")
+                    elif k == "contact" and v is None and channels is None:
+                        # a bare file has no channel: N/A is the organizer's rule for calls whose greeting was not recorded
+                        warnings.append(f"{where}: contact is null (allowed only for a voice call whose greeting was not "
+                                        "recorded; check the channel)")
                     else:
                         errors.append(f"{where}: {k} value {v!r} not allowed (allowed: {sorted(map(repr, ALLOWED_VALUES[k]))})")
                 values[k] = v
