@@ -102,7 +102,24 @@ def _members(rs: dict[str, Any], provider_name: str, model: str | None) -> list[
 
 
 async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[str, Any]], effort: str) -> tuple[Verdict, dict[str, Any]]:
-    res = await provider.complete(system, messages, Verdict, effort=effort)
+    """One provider call with retry on transient failures (connection errors, overload, rate limits)."""
+    delays = (2.0, 6.0, 15.0)
+    last: Exception | None = None
+    for attempt, delay in enumerate((0.0,) + delays):
+        if delay:
+            await asyncio.sleep(delay)
+        try:
+            res = await provider.complete(system, messages, Verdict, effort=effort)
+            break
+        except ProviderError as e:
+            last = e
+            msg = str(e).lower()
+            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out"))
+            if not transient or attempt == len(delays):
+                raise
+            log.warning("%s/%s transient error (attempt %d): %s", provider.name, provider.model, attempt + 1, e)
+    else:  # pragma: no cover
+        raise last or ProviderError("provider failed")
     v = Verdict.model_validate(res.parsed)
     cost = provider.cost(res.usage) if hasattr(provider, "cost") else 0.0
     trace = {"provider": res.provider, "model": res.model, "request": {"system_chars": len(system), "messages": messages},

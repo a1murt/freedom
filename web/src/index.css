@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens (docs/DESIGN_SYSTEM_PROMPT.md). RGB channels so Tailwind opacity modifiers work. */
+:root {
+  --bg: 247 248 246;
+  --surface: 255 255 255;
+  --surface-2: 238 241 236;
+  --line: 213 220 211;
+  --text: 22 32 26;
+  --text-2: 75 90 80;
+  --accent: 47 143 42;
+  --accent-fg: 255 255 255;
+  --deep: 15 84 49;
+  --tint: 223 241 220;
+  --success: 47 143 42;
+  --warning: 183 121 31;
+  --critical: 179 54 47;
+  --info: 95 168 211;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: 15 20 17;
+  --surface: 22 29 24;
+  --surface-2: 30 39 33;
+  --line: 42 53 45;
+  --text: 232 237 231;
+  --text-2: 163 176 166;
+  --accent: 81 175 61;
+  --accent-fg: 11 20 13;
+  --deep: 15 84 49;
+  --tint: 27 47 29;
+  --success: 81 175 61;
+  --warning: 226 167 74;
+  --critical: 226 103 95;
+  --info: 95 168 211;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-text font-sans text-body antialiased;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent) / 0.6);
+    outline-offset: 2px;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgb(var(--line));
+    border-radius: 999px;
+    border: 3px solid rgb(var(--bg));
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-md border border-line bg-surface;
+  }
+  .label {
+    @apply text-label uppercase text-text-2;
+  }
+  .mono {
+    @apply font-mono text-mono;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .glow {
+    background: radial-gradient(60% 60% at 50% 0%, rgb(var(--accent) / 0.14) 0%, transparent 70%);
+  }
+  .turn-highlight {
+    box-shadow: 0 0 0 2px rgb(var(--accent) / 0.9), 0 0 40px -8px rgb(var(--accent) / 0.6);
+  }
+  .turn-span {
+    box-shadow: inset 3px 0 0 rgb(var(--warning));
+  }
+  .kbd {
+    @apply rounded-sm border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-text-2;
+  }
+}
+
+/* native audio element tweaks */
+audio::-webkit-media-controls-panel {
+  background: rgb(var(--surface-2));
+}
