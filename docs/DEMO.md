@@ -117,5 +117,6 @@ Costs: 10 control chats ≈ $1,80 with Opus; a partial re-judge of one criterion
 **Rehearsed on 08.11 at 02:44** with the real judge and the final specs (876c1de), on a scratch copy (`control_run.py --api http://127.0.0.1:8020 --rehearse`):
 - 10 DEV chats evaluated on all 8 criteria, exported and validated **in 48 s for $2,23**, with no failures;
 - the verdicts agree with the AI-panel gold on 95,0% of cells (76 of 80).
+- the same with `--provider ensemble` at 02:50: 10 chats in **53 s for $5,77**, valid, 95,0%, and `model.name` lists both models as the format requires.
 
 The hour has plenty of slack. If a dialog fails, the script still writes a valid file (status=error records) and prints the `--only-incomplete` command to finish it.
