@@ -51,7 +51,33 @@ def session_scope() -> Generator[Session, None, None]:
         db.close()
 
 
+# Additive column migrations for databases created by earlier versions (SQLite and Postgres both support ADD COLUMN).
+ADDITIVE_COLUMNS: list[tuple[str, str, str]] = [
+    ("appeals", "author_role", "VARCHAR(32)"),
+    ("appeals", "author_name", "VARCHAR(128)"),
+    ("decisions", "reviewer_role", "VARCHAR(32)"),
+]
+
+
+def _apply_additive_migrations() -> list[str]:
+    from sqlalchemy import inspect, text
+
+    applied: list[str] = []
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+    with engine.begin() as conn:
+        for table, column, ddl in ADDITIVE_COLUMNS:
+            if table not in tables:
+                continue
+            existing = {c["name"] for c in insp.get_columns(table)}
+            if column not in existing:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+                applied.append(f"{table}.{column}")
+    return applied
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (register tables)
 
     Base.metadata.create_all(engine)
+    _apply_additive_migrations()

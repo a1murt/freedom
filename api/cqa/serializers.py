@@ -63,7 +63,7 @@ def conversation_detail(db: Session, c: Conversation) -> dict[str, Any]:
 
 
 def appeal_dict(ap: Appeal) -> dict[str, Any]:
-    return {"id": ap.id, "evaluation_criterion_id": ap.evaluation_criterion_id, "comment": ap.comment, "author_label": ap.author_label,
+    return {"id": ap.id, "evaluation_criterion_id": ap.evaluation_criterion_id, "comment": ap.comment, "author_label": ap.author_label, "author_role": ap.author_role, "author_name": ap.author_name,
             "status": ap.status, "created_at": _iso(ap.created_at), "decision": decision_dict(ap.decision) if ap.decision else None}
 
 
@@ -71,7 +71,7 @@ def decision_dict(d: Decision | None) -> dict[str, Any] | None:
     if d is None:
         return None
     return {"id": d.id, "action": d.action, "new_answer": d.new_answer, "new_score": d.new_score, "reason": d.reason,
-            "reviewer_label": d.reviewer_label, "created_at": _iso(d.created_at)}
+            "reviewer_label": d.reviewer_label, "reviewer_role": d.reviewer_role, "created_at": _iso(d.created_at)}
 
 
 def criterion_result(r: EvaluationCriterion, title: str | None = None, answer_type: str | None = None, options: list | None = None) -> dict[str, Any]:

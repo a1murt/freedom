@@ -122,3 +122,47 @@ EvaluationCriterion { "id": 101, "code": "C3", "title": "Идентификац�
 `GET /api/settings` / `PUT /api/settings` → `{ "default_provider", "default_model", "explanation_language": "ru|en|kk", "pii_masking": true, "fewshot_from_reviews": true, "ensemble_members": [{"provider","model"}], "local_endpoint": "http://…/v1", "cost_rates": {...} }`
 
 `GET /api/health` → `{ "ok": true, "db": "sqlite", "providers": { "anthropic": true, "local": false } }`
+
+## Additions (2026-11-07 evening): roles, violations, results, waveform
+
+All additive; existing fields unchanged.
+
+### Datasets
+`GET /api/datasets` → `[{ "id": 1, "group_id": "DEV", "source": "organizer_api", "imported_at": "…", "record_count": 65, "conversations": 65 }]` (one row per import; `conversations` = how many conversations currently point to it).
+`GET /api/conversations?dataset_id=1` and `GET /api/conversations?operator=Алина` filter the list.
+
+### Gross violations (criterion C8, export id `critical`)
+`GET /api/violations?checklist_version_id=&type=insult|paid_bypass|disclosure|other&language=&channel=&operator=&include_reviewed_out=false`
+```json
+{ "total": 8,
+  "counts": { "insult": 1, "paid_bypass": 4, "disclosure": 3, "other": 0 },
+  "types": [{ "code": "insult", "ru": "Оскорбление клиента", "en": "Insulting the client", "kk": "Клиентті қорлау" }, …],
+  "items": [{ "conversation_id": "p1-ru-029", "channel": "agent chat", "language": "RU", "operator_name": "Алексей",
+      "evaluation_id": 12, "evaluation_criterion_id": 104, "total_score": 51.25, "final_total_score": 51.25,
+      "types": ["insult"], "type_labels": ["Оскорбление клиента"], "explanation": "Грубые ошибки — Да. …", "confidence": 0.97,
+      "evidence": [{ "turn_idx": 9, "speaker": "operator", "quote": "Вы вообще читать умеете?…", "timestamp": "01:31", "offset_seconds": 91 }],
+      "review_state": "none", "ai_answer": "yes", "final_answer": "yes", "confirmed_by_reviewer": false, "overturned_by_reviewer": false,
+      "evaluated_at": "…" }] }
+```
+Items are the latest evaluation per conversation where C8 is "yes" after reviewer decisions (pass `include_reviewed_out=true` to also see AI flags a reviewer overturned). Sorted by final total ascending.
+
+### Operators (operator portal, coaching)
+`GET /api/operators?checklist_version_id=` → `[{ "operator_name": "Алина", "conversations": 2, "evaluated": 1, "mean_total": 100.0, "critical_count": 0, "languages": ["RU"], "channels": ["agent chat"], "open_appeals": 0, "last_evaluated_at": "…" }]` (`"—"` groups conversations without a detected name).
+
+### Appeals: authorship and filters
+`POST /api/appeals` accepts `author_role` (`operator | analyst | reviewer | lead | methodologist | admin | director`) and `author_name` (operator name). When `author_role = "operator"` and `author_name` differs from the conversation's operator, the API returns 403 `not_your_dialog`.
+`POST /api/appeals/{id}/decision` accepts `reviewer_role`.
+`GET /api/appeals?status=&operator=&conversation_id=&author_role=`; items add `operator_name`, `author_role`, `author_name`, `na_allowed_for_channel` (N/A may be allowed by a voice-call override even when the base criterion does not allow it); decisions add `reviewer_role`.
+
+### Results file (organizer JSON 1.0)
+`GET /api/export/results.json?group_id=DEV|<control>&conversation_ids=&checklist_version_id=&team_name=&expect=10&download=true` → the file; headers `X-Results-Valid`, `X-Results-Errors`, `X-Results-Warnings`.
+`GET /api/export/results/validate?group_id=&conversation_ids=&expect=` → `{ "valid": true, "errors": [], "warnings": [], "summary": "records=65 ok=65 …", "records": 65, "ok": 65, "error_records": [], "model": { "mode": "external_api", "name": "claude-opus-5-5" } }`.
+
+### Waveform (two-track call view)
+`GET /api/audio/{id}/peaks?buckets=600` → `{ "available": true, "duration_s": 312.26, "buckets": 600, "bucket_seconds": 0.52, "peaks": [0..1], "tracks": { "client": [0..1], "operator": [0..1], "other": [0..1] }, "spans": [{ "start": 15.5, "end": 21.0, "speaker": "operator" }] }`. Tracks are the mono peaks attributed to whoever speaks at that moment according to the transcript timing (bot/IVR/system and internal consultation → `other`).
+
+### Settings
+`GET/PUT /api/settings` also carry `mascot_enabled` (default `false`, organizer guidance: no cartoon characters by default), `default_theme` (`light`), `team_name` (used in results.json).
+
+### Checklist channel overrides
+`criteria[].channel_overrides["voice call"]` may contain `na_allowed: true` and `na_condition` (C1 on calls: N/A when the greeting is not in the recording, per the organizers). The UI should offer N/A for that criterion on calls.

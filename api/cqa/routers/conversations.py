@@ -95,7 +95,7 @@ def paste_conversation(body: PasteBody, db: Session = Depends(get_db)):
 
 @router.get("/conversations")
 def list_conversations(channel: str | None = None, language: str | None = None, status: str | None = None, min_total: float | None = None,
-                       max_total: float | None = None, critical: bool | None = None, q: str | None = None, dataset_id: int | None = None,
+                       max_total: float | None = None, critical: bool | None = None, q: str | None = None, dataset_id: int | None = None, operator: str | None = None,
                        page: int = Query(1, ge=1), page_size: int = Query(100, ge=1, le=500), db: Session = Depends(get_db)):
     stmt = select(Conversation).order_by(Conversation.imported_at, Conversation.id)
     if channel:
@@ -104,6 +104,8 @@ def list_conversations(channel: str | None = None, language: str | None = None, 
         stmt = stmt.where(Conversation.language == language.upper())
     if dataset_id:
         stmt = stmt.where(Conversation.dataset_id == dataset_id)
+    if operator:
+        stmt = stmt.where(Conversation.operator_name == operator)
     convs = db.execute(stmt).scalars().all()
     # latest evaluations in one query
     evs = db.execute(select(Evaluation).where(Evaluation.status.in_(["completed", "failed"])).order_by(Evaluation.id).options(selectinload(Evaluation.criteria))).scalars().all()

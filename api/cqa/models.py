@@ -172,6 +172,8 @@ class Appeal(Base):
     evaluation_criterion_id: Mapped[int] = mapped_column(ForeignKey("evaluation_criteria.id", ondelete="CASCADE"), index=True)
     comment: Mapped[str] = mapped_column(Text)
     author_label: Mapped[str] = mapped_column(String(64), default="QA analyst")
+    author_role: Mapped[str | None] = mapped_column(String(32), nullable=True)  # operator | analyst | reviewer | lead | ...
+    author_name: Mapped[str | None] = mapped_column(String(128), nullable=True)  # e.g. operator name "Алина"
     status: Mapped[str] = mapped_column(String(16), default="open")  # open | decided
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     evaluation_criterion: Mapped[EvaluationCriterion] = relationship(back_populates="appeals")
@@ -187,6 +189,7 @@ class Decision(Base):
     new_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     reason: Mapped[str] = mapped_column(Text)
     reviewer_label: Mapped[str] = mapped_column(String(64), default="Reviewer")
+    reviewer_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     appeal: Mapped[Appeal] = relationship(back_populates="decision")
 

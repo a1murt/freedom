@@ -19,6 +19,8 @@ class AppealBody(BaseModel):
     evaluation_criterion_id: int
     comment: str
     author_label: str = "QA analyst"
+    author_role: str | None = None  # operator | analyst | reviewer | lead | methodologist | admin | director
+    author_name: str | None = None
 
 
 class DecisionBody(BaseModel):
@@ -26,6 +28,7 @@ class DecisionBody(BaseModel):
     new_answer: Any = None
     reason: str
     reviewer_label: str = "Reviewer"
+    reviewer_role: str | None = None
     add_to_fewshot: bool = True
 
 
@@ -44,16 +47,25 @@ def _with_context(db: Session, ap: Appeal) -> dict[str, Any]:
               "applicable": ec.applicable, "answer": ec.answer, "na_reason": ec.na_reason, "score": ec.score, "max_points": ec.max_points,
               "weight": ec.weight, "explanation": ec.explanation, "evidence": ec.evidence or [], "total_score": ev.total_score,
               "final_total_score": ev.final_total_score, "review_state": ec.review_state, "final_answer": ec.final_answer,
-              "language": ev.conversation.language, "channel": ev.conversation.channel})
+              "language": ev.conversation.language, "channel": ev.conversation.channel, "operator_name": ev.conversation.operator_name,
+              "na_allowed_for_channel": bool(cdef and (cdef.na_allowed or ((cdef.channel_overrides or {}).get(ev.conversation.channel, {}) or {}).get("na_allowed")))})
     return d
 
 
 @router.get("")
-def list_appeals(status: str | None = None, db: Session = Depends(get_db)):
+def list_appeals(status: str | None = None, operator: str | None = None, conversation_id: str | None = None, author_role: str | None = None,
+                 db: Session = Depends(get_db)):
     stmt = select(Appeal).options(selectinload(Appeal.decision)).order_by(Appeal.status.desc(), Appeal.id.desc())
     if status:
         stmt = stmt.where(Appeal.status == status)
-    return [_with_context(db, ap) for ap in db.execute(stmt).scalars().all()]
+    if author_role:
+        stmt = stmt.where(Appeal.author_role == author_role)
+    items = [_with_context(db, ap) for ap in db.execute(stmt).scalars().all()]
+    if operator:
+        items = [a for a in items if a.get("operator_name") == operator]
+    if conversation_id:
+        items = [a for a in items if a.get("conversation_id") == conversation_id]
+    return items
 
 
 @router.post("")
@@ -63,7 +75,9 @@ def create_appeal(body: AppealBody, db: Session = Depends(get_db)):
         raise HTTPException(404, detail={"code": "not_found", "message": "criterion result not found"})
     if any(a.status == "open" for a in ec.appeals):
         raise HTTPException(409, detail={"code": "already_open", "message": "an appeal is already open for this criterion"})
-    ap = review.create_appeal(db, ec, body.comment, body.author_label)
+    if body.author_role == "operator" and body.author_name and ec.evaluation.conversation.operator_name and body.author_name != ec.evaluation.conversation.operator_name:
+        raise HTTPException(403, detail={"code": "not_your_dialog", "message": "Оператор может оспаривать только оценки своих диалогов"})
+    ap = review.create_appeal(db, ec, body.comment, body.author_label, body.author_role, body.author_name)
     return _with_context(db, ap)
 
 
@@ -91,7 +105,7 @@ def decide(appeal_id: int, body: DecisionBody, db: Session = Depends(get_db)):
     if body.action not in ("confirm", "change"):
         raise HTTPException(400, detail={"code": "bad_action", "message": "action must be confirm or change"})
     try:
-        review.decide(db, ap, action=body.action, new_answer=body.new_answer, reason=body.reason, reviewer_label=body.reviewer_label,
+        review.decide(db, ap, action=body.action, new_answer=body.new_answer, reason=body.reason, reviewer_label=body.reviewer_label, reviewer_role=body.reviewer_role,
                       add_to_fewshot=body.add_to_fewshot)
     except ValueError as e:
         raise HTTPException(400, detail={"code": "invalid_decision", "message": str(e)})

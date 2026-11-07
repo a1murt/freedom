@@ -13,7 +13,8 @@ from ..models import FewshotExample, Setting
 router = APIRouter(prefix="/api", tags=["settings"])
 
 EDITABLE = {"default_provider", "default_model", "secondary_model", "explanation_language", "pii_masking", "fewshot_from_reviews",
-            "ensemble_members", "local_endpoint", "local_model", "judge_effort", "max_parallel_criteria"}
+            "ensemble_members", "local_endpoint", "local_model", "judge_effort", "max_parallel_criteria",
+            "mascot_enabled", "team_name", "default_theme"}
 
 
 def current(db: Session) -> dict[str, Any]:
@@ -23,6 +24,7 @@ def current(db: Session) -> dict[str, Any]:
         "ensemble_members": [{"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.secondary_model}],
         "local_endpoint": settings.local_endpoint, "local_model": settings.local_model, "judge_effort": settings.judge_effort,
         "max_parallel_criteria": settings.max_parallel_criteria, "cost_rates": settings.cost_rates,
+        "mascot_enabled": False, "default_theme": "light", "team_name": __import__("os").environ.get("TEAM_NAME", "k4ssymzhomart/freedom"),
     }
     for row in db.execute(select(Setting)).scalars():
         base[row.key] = row.value

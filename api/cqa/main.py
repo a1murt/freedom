@@ -44,7 +44,7 @@ async def any_exc(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"error": {"code": "internal", "message": str(exc)}})
 
 
-for mod in ("conversations", "checklists", "evaluations", "appeals", "settings_router", "audio", "analytics", "export"):
+for mod in ("conversations", "checklists", "evaluations", "appeals", "settings_router", "audio", "analytics", "export", "insights"):
     try:
         m = importlib.import_module(f"cqa.routers.{mod}")
         app.include_router(m.router)

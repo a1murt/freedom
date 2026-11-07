@@ -58,8 +58,8 @@ def preview_total(db: Session, ec: EvaluationCriterion, new_answer: Any) -> dict
     return out
 
 
-def create_appeal(db: Session, ec: EvaluationCriterion, comment: str, author_label: str) -> Appeal:
-    ap = Appeal(evaluation_criterion_id=ec.id, comment=comment, author_label=author_label or "QA analyst")
+def create_appeal(db: Session, ec: EvaluationCriterion, comment: str, author_label: str, author_role: str | None = None, author_name: str | None = None) -> Appeal:
+    ap = Appeal(evaluation_criterion_id=ec.id, comment=comment, author_label=author_label or "QA analyst", author_role=author_role, author_name=author_name)
     ec.review_state = "under_review"
     db.add(ap)
     db.commit()
@@ -67,7 +67,7 @@ def create_appeal(db: Session, ec: EvaluationCriterion, comment: str, author_lab
     return ap
 
 
-def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str, reviewer_label: str, add_to_fewshot: bool) -> Decision:
+def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str, reviewer_label: str, add_to_fewshot: bool, reviewer_role: str | None = None) -> Decision:
     if ap.decision is not None:
         raise ValueError("appeal already decided")
     ec = ap.evaluation_criterion
@@ -90,7 +90,7 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
     else:
         ec.final_answer = ec.answer if ec.applicable else "N/A"
         ec.review_state = "confirmed"
-    dec = Decision(appeal_id=ap.id, action=action, new_answer=(new_answer if action == "change" else None), reason=reason, reviewer_label=reviewer_label or "Reviewer")
+    dec = Decision(appeal_id=ap.id, action=action, new_answer=(new_answer if action == "change" else None), reason=reason, reviewer_label=reviewer_label or "Reviewer", reviewer_role=reviewer_role)
     ap.status = "decided"
     db.add(dec)
     recompute_final(db, ev)
