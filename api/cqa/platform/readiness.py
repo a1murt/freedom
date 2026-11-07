@@ -106,8 +106,10 @@ def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, 
                          **by_status))
 
     budget = guards.budget_status(db)
-    provider = str(cfg.get("default_provider") or "anthropic")
-    reserve = estimate_cost(control_dialogs, 0, provider if provider in ("anthropic", "ensemble") else "anthropic") * 2
+    # the control run uses --provider ensemble (api/judge_config_control.md) whatever the default provider is, so a green
+    # check must mean that the recommended run and one retry fit in the 24 h window
+    provider = "ensemble"
+    reserve = estimate_cost(control_dialogs, 0, provider) * 2
     budget_ok = budget["unlimited"] or (budget["remaining"] or 0) >= reserve
     checks.append(_check("budget_reserve", budget_ok, "required",
                          ("Бюджет без ограничения." if budget["unlimited"] else
