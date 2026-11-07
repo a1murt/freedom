@@ -65,6 +65,30 @@ def get_audio(conversation_id: str, db: DbSession):
     return FileResponse(path, media_type="audio/mpeg", headers=AUDIO_HEADERS)
 
 
+@router.get("/{conversation_id}/peaks")
+def get_audio_peaks(
+    conversation_id: str,
+    db: DbSession,
+    buckets: Annotated[int, Query(ge=50, le=4000, description="Number of waveform buckets")] = 600,
+):
+    """Waveform peaks with client/operator tracks derived from transcript timing (two-track call view)."""
+    from ..audio.peaks import cached_peaks
+
+    conv = _load_voice_conversation(db, conversation_id)
+    if isinstance(conv, JSONResponse):
+        return conv
+    try:
+        path = Path(resolve_and_cache(conv.id, conv.audio_url))
+    except AudioError as exc:
+        log.warning("audio %s unavailable: %s", conversation_id, exc)
+        return _error(502, "audio_unavailable", str(exc))
+    turns = [
+        {"idx": t.idx, "speaker": t.speaker, "offset_seconds": t.offset_seconds, "segment": t.segment, "is_duplicate": t.is_duplicate}
+        for t in conv.turns
+    ]
+    return cached_peaks(path, turns, buckets)
+
+
 @router.get("/{conversation_id}/features")
 def get_audio_features(
     conversation_id: str,

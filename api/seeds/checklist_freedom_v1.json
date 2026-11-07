@@ -5,17 +5,38 @@
   "scoring_rules": {
     "total_scale": 100,
     "na_policy": "redistribute_weight",
-    "rounding": { "mode": "half_up", "decimals": 2 },
-    "critical": { "mode": "flag_only" },
+    "rounding": {
+      "mode": "half_up",
+      "decimals": 2
+    },
+    "critical": {
+      "mode": "flag_only"
+    },
     "no_applicable_policy": "no_total",
     "first_response_threshold_seconds": 180,
-    "excluded_from_score": ["first_response_threshold", "tags", "attachments"]
+    "excluded_from_score": [
+      "first_response_threshold",
+      "tags",
+      "attachments"
+    ]
   },
   "sections": [
-    { "code": "S1", "title": "Начало и понимание запроса" },
-    { "code": "S2", "title": "Безопасность и решение" },
-    { "code": "S3", "title": "Ведение и завершение диалога" },
-    { "code": "S4", "title": "Грубые нарушения" }
+    {
+      "code": "S1",
+      "title": "Начало и понимание запроса"
+    },
+    {
+      "code": "S2",
+      "title": "Безопасность и решение"
+    },
+    {
+      "code": "S3",
+      "title": "Ведение и завершение диалога"
+    },
+    {
+      "code": "S4",
+      "title": "Грубые нарушения"
+    }
   ],
   "criteria": [
     {
@@ -24,8 +45,16 @@
       "title": "Установление контакта",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 1 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 1
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 1,
       "weight": 10,
@@ -35,7 +64,9 @@
       "instruction": "Да — оператор поздоровался на языке клиента и представился в первом ответе.",
       "channel_overrides": {
         "voice call": {
-          "instruction": "Да — оператор поздоровался, назвал компанию и представился в начале своего сегмента разговора (после подключения агента). Имя может быть скрыто маской [Имя скрыто] — это считается представлением."
+          "instruction": "Да — оператор поздоровался, назвал компанию и представился в начале своего сегмента разговора (после подключения агента). Имя может быть скрыто маской [Имя скрыто] — это считается представлением.",
+          "na_allowed": true,
+          "na_condition": "Приветствие оператора не попало в запись (запись началась после начала разговора оператора) — по разъяснению организаторов ставится N/A."
         }
       }
     },
@@ -45,8 +76,16 @@
       "title": "Выявление потребности",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 1 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 1
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 1,
       "weight": 15,
@@ -62,8 +101,16 @@
       "title": "Идентификация",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 1 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 1
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 1,
       "weight": 20,
@@ -83,11 +130,36 @@
       "title": "Корректная и полная консультация",
       "answer_type": "scale",
       "options": [
-        { "value": 20, "label": "20", "points": 20, "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг." },
-        { "value": 15, "label": "15", "points": 15, "anchor": "Основной вопрос решён, пропущена второстепенная деталь." },
-        { "value": 10, "label": "10", "points": 10, "anchor": "Часть запроса закрыта, существенный вопрос остался открытым." },
-        { "value": 5, "label": "5", "points": 5, "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать." },
-        { "value": 0, "label": "0", "points": 0, "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна." }
+        {
+          "value": 20,
+          "label": "20",
+          "points": 20,
+          "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+        },
+        {
+          "value": 15,
+          "label": "15",
+          "points": 15,
+          "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+        },
+        {
+          "value": 10,
+          "label": "10",
+          "points": 10,
+          "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+        },
+        {
+          "value": 5,
+          "label": "5",
+          "points": 5,
+          "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+        },
+        {
+          "value": 0,
+          "label": "0",
+          "points": 0,
+          "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+        }
       ],
       "max_points": 20,
       "weight": 20,
@@ -107,8 +179,16 @@
       "title": "Эмпатия и клиентоориентированность",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 1 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 1
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 1,
       "weight": 15,
@@ -124,10 +204,30 @@
       "title": "Управление диалогом, скорость и грамотность",
       "answer_type": "scale",
       "options": [
-        { "value": 10, "label": "10", "points": 10, "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил." },
-        { "value": 7, "label": "7", "points": 7, "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить." },
-        { "value": 4, "label": "4", "points": 4, "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов." },
-        { "value": 0, "label": "0", "points": 0, "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен." }
+        {
+          "value": 10,
+          "label": "10",
+          "points": 10,
+          "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+        },
+        {
+          "value": 7,
+          "label": "7",
+          "points": 7,
+          "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+        },
+        {
+          "value": 4,
+          "label": "4",
+          "points": 4,
+          "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+        },
+        {
+          "value": 0,
+          "label": "0",
+          "points": 0,
+          "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+        }
       ],
       "max_points": 10,
       "weight": 15,
@@ -147,8 +247,16 @@
       "title": "Завершение",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 1 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 1
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 1,
       "weight": 5,
@@ -168,8 +276,16 @@
       "title": "Грубые ошибки",
       "answer_type": "binary",
       "options": [
-        { "value": "yes", "label": "Да", "points": 0 },
-        { "value": "no", "label": "Нет", "points": 0 }
+        {
+          "value": "yes",
+          "label": "Да",
+          "points": 0
+        },
+        {
+          "value": "no",
+          "label": "Нет",
+          "points": 0
+        }
       ],
       "max_points": 0,
       "weight": 0,

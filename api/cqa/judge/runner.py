@@ -139,7 +139,7 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
     tr["kind"] = "judge"
     traces.append(tr)
     v.criterion_code = crit.code
-    val = validate_verdict(v, conv.turns, crit, conversation_terminal=conv.terminal_event)
+    val = validate_verdict(v, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
     issues = list(val.issues)
     if val.needs_retry:
         messages = bundle.messages + [
@@ -151,7 +151,7 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
         tr2["kind"] = "retry"
         traces.append(tr2)
         v2.criterion_code = crit.code
-        val2 = validate_verdict(v2, conv.turns, crit, conversation_terminal=conv.terminal_event)
+        val2 = validate_verdict(v2, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
         issues += [f"retry: {i}" for i in val2.issues]
         if not val2.needs_retry:
             val = val2
@@ -196,7 +196,7 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
                 atr["prompt_version"] = f"{PROMPT_VERSION}:{bundle.prompt_hash}"
                 outcome.traces.append(atr)
                 av.criterion_code = crit.code
-                aval = validate_verdict(av, conv.turns, crit, conversation_terminal=conv.terminal_event)
+                aval = validate_verdict(av, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
                 if not aval.needs_retry:
                     merged = aval.verdict
                     merged.flags.append("arbiter_decided")

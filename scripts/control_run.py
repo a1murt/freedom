@@ -5,7 +5,7 @@ Designed for the one-hour window before the stop-code (docs/ORGANIZER_UPDATES.md
 
   api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>
   api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble
-  api/.venv/bin/python scripts/control_run.py --rehearse            # 10 DEV chats, writes results/rehearsal/, no git
+  api/.venv/bin/python scripts/control_run.py --rehearse            # 10 DEV chats, writes api/data/rehearsal/, no git
 
 Defaults: hosted API, organizer checklist (version 1), expect 10 records, out results/prod/results.json, git push on.
 Every step prints what it did; any failure stops before git with a clear message, and the partial file is still written.
@@ -110,7 +110,7 @@ def main() -> int:
     ap.add_argument("--no-git", action="store_true")
     ap.add_argument("--skip-import", action="store_true", help="use already imported conversations given by --ids")
     ap.add_argument("--ids", help="comma-separated ids (with --skip-import)")
-    ap.add_argument("--rehearse", action="store_true", help="dry run on 10 DEV chats: no import, writes results/rehearsal/results.json, no git")
+    ap.add_argument("--rehearse", action="store_true", help="dry run on 10 DEV chats: no import, writes api/data/rehearsal/results.json, no git")
     args = ap.parse_args()
 
     import os
@@ -129,7 +129,7 @@ def main() -> int:
         if args.rehearse:
             convs = http.get(f"{base}/api/conversations", params={"page_size": 500, "channel": "agent chat"}).json()["items"]
             ids = [c["id"] for c in convs if c["id"].startswith("p1-")][:: max(1, len(convs) // 10)][:10]
-            out = ROOT / "results" / "rehearsal" / "results.json"
+            out = ROOT / "api" / "data" / "rehearsal" / "results.json"  # git-ignored, never mixed with results/
             args.no_git = True
         elif args.skip_import:
             if not args.ids:

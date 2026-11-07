@@ -83,7 +83,7 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
             if cdef is None or answer_points(cdef.options, new_answer) is None:
                 raise ValueError(f"new_answer {new_answer!r} is not an allowed option")
             new_answer = normalize_answer(cdef.options, new_answer)
-        elif cdef is not None and not cdef.na_allowed:
+        elif cdef is not None and not (cdef.na_allowed or ((cdef.channel_overrides or {}).get(ev.conversation.channel, {}) or {}).get("na_allowed")):
             raise ValueError("N/A is not allowed for this criterion")
         ec.final_answer = new_answer
         ec.review_state = "changed"

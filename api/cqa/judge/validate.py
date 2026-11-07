@@ -22,7 +22,15 @@ class ValidationResult:
     confidence_penalty: float = 0.0
 
 
-def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, conversation_terminal: str | None = None) -> ValidationResult:
+def effective_na(crit: CriterionPack, channel: str | None) -> tuple[bool, str | None]:
+    """N/A availability for this channel: a channel override may allow N/A where the base criterion does not."""
+    ov = (crit.channel_overrides or {}).get(channel or "", {}) or {}
+    if ov.get("na_allowed"):
+        return True, ov.get("na_condition") or crit.na_condition
+    return crit.na_allowed, crit.na_condition
+
+
+def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, conversation_terminal: str | None = None, channel: str | None = None) -> ValidationResult:
     issues: list[str] = []
     retry = False
     penalty = 0.0
@@ -48,8 +56,9 @@ def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, 
     v.evidence = kept
 
     # applicability
+    na_ok, _na_cond = effective_na(crit, channel)
     if not v.applicable:
-        if not crit.na_allowed:
+        if not na_ok:
             issues.append("N/A given but not allowed for this criterion")
             retry = True
         elif not v.na_reason.strip():

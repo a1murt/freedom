@@ -484,3 +484,35 @@ def test_features_endpoint_end_to_end(client, monkeypatch):
     assert list(body) == list(FEATURE_KEYS)
     assert abs(body["duration_s"] - 312.26) < 1.0
     assert body["long_pauses_count"] >= 1
+
+
+# --- waveform peaks (two-track call view) -------------------------------------------------------
+def test_compute_peaks_tracks_follow_turn_timing():
+    from cqa.audio.peaks import compute_peaks
+
+    if not SAMPLE_MP3.exists():
+        pytest.skip("sample MP3 not available")
+    turns = [
+        {"idx": 0, "speaker": "bot", "offset_seconds": 0.0, "segment": "pre", "is_duplicate": False},
+        {"idx": 1, "speaker": "operator", "offset_seconds": 20.0, "segment": "operator", "is_duplicate": False},
+        {"idx": 2, "speaker": "client", "offset_seconds": 40.0, "segment": "operator", "is_duplicate": False},
+    ]
+    data = compute_peaks(SAMPLE_MP3, turns, buckets=300)
+    assert data["available"] is True and data["buckets"] == 300 and len(data["peaks"]) == 300
+    assert 300 < data["duration_s"] < 330
+    assert all(0.0 <= p <= 1.0 for p in data["peaks"])
+    bs = data["bucket_seconds"]
+    b_op = int(25 / bs)
+    b_cl = int(45 / bs)
+    assert data["tracks"]["operator"][b_op] == data["peaks"][b_op] and data["tracks"]["client"][b_op] == 0
+    assert data["tracks"]["client"][b_cl] == data["peaks"][b_cl] and data["tracks"]["operator"][b_cl] == 0
+    # client turn span is capped at 30 s, so the tail after 70 s belongs to "other"
+    b_tail = int(100 / bs)
+    assert data["tracks"]["client"][b_tail] == 0 and data["tracks"]["other"][b_tail] == data["peaks"][b_tail]
+
+
+def test_compute_peaks_missing_file_degrades():
+    from cqa.audio.peaks import compute_peaks
+
+    data = compute_peaks(Path("/nonexistent/file.mp3"), [], buckets=100)
+    assert data["available"] is False and data["peaks"] == []

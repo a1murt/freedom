@@ -115,7 +115,10 @@ def build_bundle(conv: ConversationPack, crit: CriterionPack, *, explanation_lan
 
     override = (crit.channel_overrides or {}).get(conv.channel, {})
     channel_instruction = f"Channel adaptation ({conv.channel}): {override['instruction']}\n" if override.get("instruction") else ""
-    na_rule = (f"allowed. Condition: {crit.na_condition}" if crit.na_allowed else "not allowed for this criterion; answer must be yes/no or a scale step")
+    ov_na = bool(override.get("na_allowed"))
+    na_allowed = crit.na_allowed or ov_na
+    na_condition = (override.get("na_condition") if ov_na else None) or crit.na_condition
+    na_rule = (f"allowed. Condition: {na_condition}" if na_allowed else "not allowed for this criterion; answer must be yes/no or a scale step")
     steps = spec.get("decision_steps") or [
         "Locate the relevant operator turns.",
         "Check the instruction literally against them.",
