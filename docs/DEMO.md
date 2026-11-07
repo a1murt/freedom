@@ -98,7 +98,9 @@ If behind schedule, drop step 8 first, then step 7.
 
 `scripts/control_run.py` runs import → dry-run guard → evaluate → resume after a restart → retry → export → validate → commit → push.
 - Rehearsal, free and with no git, against a local API (see `docs/ARCHITECTURE_V2.md` §10 step 4): `--api http://127.0.0.1:8019 --rehearse --provider fake`. Against the hosted instance `--rehearse` is refused unless `--allow-hosted-rehearsal` is added, because it re-evaluates 10 DEV cards there. The live-demo dialogs and dialogs with appeals are always skipped.
-- Real run: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>`. If the organizers hand over a URL or a file instead: `--source-url` / `--source-file`.
+- Real run: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`. If the organizers hand over a URL or a file instead: `--source-url` / `--source-file`.
+  - Ensemble (Opus ×2 + Sonnet, arbiter on disagreement), measured on 08.11 against the AI-panel gold: +1,5 points over single Opus on the noisy criteria (C2/C4/C5/C6/C7), with less run-to-run variance.
+  - It costs about $6 for 10 chats instead of $2,20 and takes 1–2 minutes. Single Opus (no flag) stays a valid fallback.
 
 1. **H+22:00 · Freeze.**
    - No deploys from now on.

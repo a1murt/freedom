@@ -51,6 +51,17 @@ The lab runs on a scratch copy, measured against the provisional gold, showed th
 
 **Cost of the experiment:** $2.04 (C7) + $3.57 (C2 and C6) + $1.80 (C2 refined), on a scratch copy; the hosted instance was not touched.
 
+## Single judge vs ensemble (for the control run)
+
+The same final specs, 27 chats (a balanced half without the demo dialogs) and the five criteria where the single judge varies between runs (C2/C4/C5/C6/C7):
+
+| | Agreement with gold | Cost per chat (these 5 criteria) |
+|---|---|---|
+| Single Opus (`--provider anthropic`) | 127/135 = 94,1% | ≈ $0,13 |
+| Ensemble Opus ×2 + Sonnet + arbiter (`--provider ensemble`) | **129/135 = 95,6%** | ≈ $0,38 |
+
+The ensemble wins one cell on C4 and one on C6, and ties on the rest. The gain is small but goes the right way, and majority voting lowers run-to-run variance, which matters on 10 chats. Recommendation: `control_run.py --group <id> --provider ensemble`. That costs about $6 for 10 chats.
+
 ## How to reproduce
 
 ```bash
