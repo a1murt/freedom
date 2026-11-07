@@ -1,0 +1,715 @@
+{
+ "id": 1,
+ "conversation_id": "p1-ru-029",
+ "checklist_version_id": 1,
+ "status": "completed",
+ "provider": "anthropic",
+ "mode": "single",
+ "model": "anthropic:claude-opus-5-5",
+ "prompt_version": "v1",
+ "total_score": 70.0,
+ "final_total_score": 62.31,
+ "critical_error": true,
+ "sections": [
+  {
+   "code": "S1",
+   "title": "Начало и понимание запроса",
+   "score": 15.38,
+   "max": 15.38
+  },
+  {
+   "code": "S2",
+   "title": "Безопасность и решение",
+   "score": 30.77,
+   "max": 30.77
+  },
+  {
+   "code": "S3",
+   "title": "Ведение и завершение диалога",
+   "score": 16.15,
+   "max": 53.85
+  },
+  {
+   "code": "S4",
+   "title": "Грубые нарушения",
+   "score": 0.0,
+   "max": 0.0
+  }
+ ],
+ "cost_usd": 0.198344,
+ "input_tokens": 11796,
+ "output_tokens": 7558,
+ "latency_ms": 19412,
+ "job_id": null,
+ "error": null,
+ "created_at": "2026-11-07T10:40:05.017322",
+ "completed_at": "2026-11-07T10:40:23.423125",
+ "review_state": "reviewed",
+ "criteria": [
+  {
+   "id": 1,
+   "code": "C1",
+   "title": "Установление контакта",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 1
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "yes",
+   "score": 1.0,
+   "max_points": 1.0,
+   "weight": 10.0,
+   "weight_applied": 15.3846,
+   "earned": 15.3846,
+   "confidence": 0.95,
+   "explanation": "Установление контакта — Да. Оператор в первой реплике поздоровался на русском языке клиента и назвал имя. Основание — реплика [9]: «Здравствуйте, я Алексей.»",
+   "evidence": [
+    {
+     "turn_idx": 9,
+     "speaker": "operator",
+     "quote": "Здравствуйте, я Алексей.",
+     "role": "supports",
+     "offset_seconds": 83.0
+    },
+    {
+     "turn_idx": 0,
+     "speaker": "client",
+     "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+     "role": "context",
+     "offset_seconds": 0.0
+    },
+    {
+     "turn_idx": 8,
+     "speaker": "system",
+     "quote": "Эскалация на оператора.",
+     "role": "context",
+     "offset_seconds": 42.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "rude_remark_in_first_reply_out_of_scope",
+    "late_operator_response"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию выполняется через сайт tradernet.global.",
+     "status": "unverified",
+     "note": "Справочные факты по адресу веб-платформы не предоставлены."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": "yes",
+   "final_score": 1.0,
+   "final_earned": 15.3846,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 2,
+   "code": "C2",
+   "title": "Выявление потребности",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 1
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": false,
+   "na_reason": "Данных для ответа хватало с самого начала: клиент написал, что ищет вход на сайте («На вашем сайте всё перелопатил»), а бот уже указал на торговую платформу. Уточнять было нечего, и оператор дал путь для веб-версии без переспросов.",
+   "answer": null,
+   "score": null,
+   "max_points": 1.0,
+   "weight": 15.0,
+   "weight_applied": 0.0,
+   "earned": 0.0,
+   "confidence": 0.6,
+   "explanation": "Выявление потребности — N/A. Клиент сразу указал, что ищет вход на сайте, бот подсказал торговую платформу; оператор без переспросов дал адрес веб-версии с учётом этой детали. Основание — реплика клиента [0] и ответ оператора [11].",
+   "evidence": [
+    {
+     "turn_idx": 0,
+     "speaker": "client",
+     "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+     "role": "supports",
+     "offset_seconds": 0.0
+    },
+    {
+     "turn_idx": 3,
+     "speaker": "bot",
+     "quote": "Если вы на информационном сайте, попробуйте открыть торговую платформу.",
+     "role": "context",
+     "offset_seconds": 8.0
+    },
+    {
+     "turn_idx": 11,
+     "speaker": "operator",
+     "quote": "Откройте tradernet.global, там вход в веб-версию.",
+     "role": "supports",
+     "offset_seconds": 135.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "rude_tone_scored_elsewhere",
+    "first_reply_not_substantive"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию торговой платформы доступен на tradernet.global",
+     "status": "unverified",
+     "note": "Справочных фактов о веб-адресе платформы не предоставлено."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": null,
+   "final_score": null,
+   "final_earned": 0.0,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 3,
+   "code": "C3",
+   "title": "Идентификация",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 1
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": false,
+   "na_reason": "Запрос общий: клиент не мог найти вход на платформу (навигация). Данные конкретного счёта не раскрывались, защищённые действия не выполнялись, поэтому идентификация не требовалась.",
+   "answer": null,
+   "score": null,
+   "max_points": 1.0,
+   "weight": 20.0,
+   "weight_applied": 0.0,
+   "earned": 0.0,
+   "confidence": 0.93,
+   "explanation": "Идентификация — N/A. Клиент спрашивал только, где найти вход на торговую платформу, а оператор дал навигационную подсказку без раскрытия данных счёта. Основание — реплика клиента [0] «Почему опять не могу найти вход?» и ответ оператора [11] со ссылкой на веб-версию.",
+   "evidence": [
+    {
+     "turn_idx": 0,
+     "speaker": "client",
+     "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+     "role": "supports",
+     "offset_seconds": 0.0
+    },
+    {
+     "turn_idx": 10,
+     "speaker": "client",
+     "quote": "Не понимаю, на какой сайт перейти.",
+     "role": "supports",
+     "offset_seconds": 112.0
+    },
+    {
+     "turn_idx": 11,
+     "speaker": "operator",
+     "quote": "Откройте tradernet.global, там вход в веб-версию.",
+     "role": "context",
+     "offset_seconds": 135.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "general_navigation_query",
+    "no_account_data_disclosed",
+    "possible_factual_claim"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию торговой платформы доступен на сайте tradernet.global.",
+     "status": "unverified",
+     "note": "Справочные данные о домене веб-платформы не предоставлены."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": null,
+   "final_score": null,
+   "final_earned": 0.0,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 4,
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "answer_type": "scale",
+   "options": [
+    {
+     "value": 20,
+     "label": "20",
+     "points": 20,
+     "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+    },
+    {
+     "value": 15,
+     "label": "15",
+     "points": 15,
+     "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+    },
+    {
+     "value": 10,
+     "label": "10",
+     "points": 10,
+     "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+    },
+    {
+     "value": 5,
+     "label": "5",
+     "points": 5,
+     "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+    },
+    {
+     "value": 0,
+     "label": "0",
+     "points": 0,
+     "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "20",
+   "score": 20.0,
+   "max_points": 20.0,
+   "weight": 20.0,
+   "weight_applied": 30.7692,
+   "earned": 30.7692,
+   "confidence": 0.88,
+   "explanation": "Корректная и полная консультация — 20. Оператор назвал верный адрес для входа в веб-версию, и клиент подтвердил, что вошёл. Основание — реплика [11] «Откройте tradernet.global, там вход в веб-версию» и ответ клиента [12] «Вошёл».",
+   "evidence": [
+    {
+     "turn_idx": 0,
+     "speaker": "client",
+     "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+     "role": "context",
+     "offset_seconds": 0.0
+    },
+    {
+     "turn_idx": 10,
+     "speaker": "client",
+     "quote": "Не понимаю, на какой сайт перейти.",
+     "role": "context",
+     "offset_seconds": 112.0
+    },
+    {
+     "turn_idx": 11,
+     "speaker": "operator",
+     "quote": "Откройте tradernet.global, там вход в веб-версию.",
+     "role": "supports",
+     "offset_seconds": 135.0
+    },
+    {
+     "turn_idx": 12,
+     "speaker": "client",
+     "quote": "Вошёл.",
+     "role": "supports",
+     "offset_seconds": 174.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "rudeness_excluded_other_criterion"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию выполняется на tradernet.global",
+     "status": "consistent",
+     "note": "DEV: вход — на tradernet.global или в приложении Freedom Broker."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": "20",
+   "final_score": 20.0,
+   "final_earned": 30.7692,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 5,
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 1
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "no",
+   "score": 0.0,
+   "max_points": 1.0,
+   "weight": 15.0,
+   "weight_applied": 23.0769,
+   "earned": 0.0,
+   "confidence": 0.98,
+   "explanation": "Эмпатия и клиентоориентированность — Нет. Оператор не признал раздражение клиента из-за поиска входа, ответил грубостью, а на замечание клиента о тоне не извинился и завершил разговор. Основание — реплики [9] «Вы вообще читать умеете? Бот всё написал.» и [13] «До свидания.»",
+   "evidence": [
+    {
+     "turn_idx": 0,
+     "speaker": "client",
+     "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+     "role": "context",
+     "offset_seconds": 0.0
+    },
+    {
+     "turn_idx": 4,
+     "speaker": "client",
+     "quote": "Дайте человека, пожалуйста, уже надоело.",
+     "role": "context",
+     "offset_seconds": 24.0
+    },
+    {
+     "turn_idx": 9,
+     "speaker": "operator",
+     "quote": "Вы вообще читать умеете? Бот всё написал.",
+     "role": "supports",
+     "offset_seconds": 83.0
+    },
+    {
+     "turn_idx": 12,
+     "speaker": "client",
+     "quote": "Но со мной так говорить не надо.",
+     "role": "context",
+     "offset_seconds": 174.0
+    },
+    {
+     "turn_idx": 13,
+     "speaker": "operator",
+     "quote": "До свидания.",
+     "role": "supports",
+     "offset_seconds": 206.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "rudeness",
+    "closed_after_objection"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию доступен на tradernet.global",
+     "status": "unverified",
+     "note": "Справочные факты не предоставлены."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": "no",
+   "final_score": 0.0,
+   "final_earned": 0.0,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 6,
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "answer_type": "scale",
+   "options": [
+    {
+     "value": 10,
+     "label": "10",
+     "points": 10,
+     "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+    },
+    {
+     "value": 7,
+     "label": "7",
+     "points": 7,
+     "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+    },
+    {
+     "value": 4,
+     "label": "4",
+     "points": 4,
+     "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+    },
+    {
+     "value": 0,
+     "label": "0",
+     "points": 0,
+     "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "7",
+   "score": 7.0,
+   "max_points": 10.0,
+   "weight": 15.0,
+   "weight_applied": 23.0769,
+   "earned": 16.1538,
+   "confidence": 0.6,
+   "explanation": "Управление диалогом — 7. Первая реплика оператора не содержала инструкции и отсылала к ответу бота, поэтому клиенту пришлось заново уточнить, на какой сайт перейти; после этого оператор дал ясный адрес, и клиент вошёл. Основание — реплики [9] «Бот всё написал» и [11] «Откройте tradernet.global, там вход в веб-версию».",
+   "evidence": [
+    {
+     "turn_idx": 9,
+     "speaker": "operator",
+     "quote": "Здравствуйте, я Алексей. Вы вообще читать умеете? Бот всё написал.",
+     "role": "supports",
+     "offset_seconds": 83.0
+    },
+    {
+     "turn_idx": 10,
+     "speaker": "client",
+     "quote": "Не понимаю, на какой сайт перейти.",
+     "role": "supports",
+     "offset_seconds": 112.0
+    },
+    {
+     "turn_idx": 11,
+     "speaker": "operator",
+     "quote": "Откройте tradernet.global, там вход в веб-версию.",
+     "role": "context",
+     "offset_seconds": 135.0
+    },
+    {
+     "turn_idx": 12,
+     "speaker": "client",
+     "quote": "Вошёл.",
+     "role": "context",
+     "offset_seconds": 174.0
+    },
+    {
+     "turn_idx": 13,
+     "speaker": "operator",
+     "quote": "До свидания.",
+     "role": "context",
+     "offset_seconds": 206.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "rudeness_scored_elsewhere_C_empathy",
+    "abrupt_closing"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "На сайте tradernet.global доступен вход в веб-версию торговой платформы.",
+     "status": "unverified",
+     "note": "Справочные факты не предоставлены."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": "7",
+   "final_score": 7.0,
+   "final_earned": 16.1538,
+   "appeal": null,
+   "appeals": []
+  },
+  {
+   "id": 7,
+   "code": "C7",
+   "title": "Завершение",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 1
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "yes",
+   "score": 1.0,
+   "max_points": 1.0,
+   "weight": 5.0,
+   "weight_applied": 7.6923,
+   "earned": 7.6923,
+   "confidence": 0.6,
+   "explanation": "Завершение — Да. Клиент подтвердил решение («Вошёл»), открытых вопросов не осталось, оператор попрощался. Основание — реплики [12] и [13] «До свидания.»",
+   "evidence": [
+    {
+     "turn_idx": 12,
+     "speaker": "client",
+     "quote": "Вошёл. Но со мной так говорить не надо.",
+     "role": "supports",
+     "offset_seconds": 174.0
+    },
+    {
+     "turn_idx": 13,
+     "speaker": "operator",
+     "quote": "До свидания.",
+     "role": "supports",
+     "offset_seconds": 206.0
+    },
+    {
+     "turn_idx": 13,
+     "speaker": "operator",
+     "quote": "До свидания.",
+     "role": "context",
+     "offset_seconds": 206.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "minimal_farewell",
+    "no_offer_of_further_help",
+    "rudeness_scored_elsewhere"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию торговой платформы доступен на tradernet.global",
+     "status": "unverified",
+     "note": "Справочные факты по адресу веб-платформы не предоставлены."
+    }
+   ],
+   "votes": null,
+   "review_state": "changed",
+   "final_answer": "no",
+   "final_score": 0.0,
+   "final_earned": 0.0,
+   "appeal": {
+    "id": 1,
+    "evaluation_criterion_id": 7,
+    "comment": "Оператор не подвёл итог и не предложил помощь; прощание после жалобы клиента.",
+    "author_label": "QA analyst",
+    "status": "decided",
+    "created_at": "2026-11-07T10:42:47.905461",
+    "decision": {
+     "id": 1,
+     "action": "change",
+     "new_answer": "no",
+     "new_score": 0.0,
+     "reason": "Прощание формальное, без итога, сразу после замечания клиента.",
+     "reviewer_label": "Reviewer",
+     "created_at": "2026-11-07T10:42:47.917634"
+    }
+   },
+   "appeals": [
+    {
+     "id": 1,
+     "evaluation_criterion_id": 7,
+     "comment": "Оператор не подвёл итог и не предложил помощь; прощание после жалобы клиента.",
+     "author_label": "QA analyst",
+     "status": "decided",
+     "created_at": "2026-11-07T10:42:47.905461",
+     "decision": {
+      "id": 1,
+      "action": "change",
+      "new_answer": "no",
+      "new_score": 0.0,
+      "reason": "Прощание формальное, без итога, сразу после замечания клиента.",
+      "reviewer_label": "Reviewer",
+      "created_at": "2026-11-07T10:42:47.917634"
+     }
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "answer_type": "binary",
+   "options": [
+    {
+     "value": "yes",
+     "label": "Да",
+     "points": 0
+    },
+    {
+     "value": "no",
+     "label": "Нет",
+     "points": 0
+    }
+   ],
+   "applicable": true,
+   "na_reason": null,
+   "answer": "yes",
+   "score": 0.0,
+   "max_points": 0.0,
+   "weight": 0.0,
+   "weight_applied": 0.0,
+   "earned": 0.0,
+   "confidence": 0.97,
+   "explanation": "Грубые ошибки — Да. Оператор оскорбил клиента, обвинив его в неспособности читать. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.»",
+   "evidence": [
+    {
+     "turn_idx": 9,
+     "speaker": "operator",
+     "quote": "Вы вообще читать умеете? Бот всё написал.",
+     "role": "supports",
+     "offset_seconds": 83.0
+    },
+    {
+     "turn_idx": 12,
+     "speaker": "client",
+     "quote": "Но со мной так говорить не надо.",
+     "role": "context",
+     "offset_seconds": 174.0
+    }
+   ],
+   "checked_span": null,
+   "flags": [
+    "insult_detected",
+    "correct_answer_does_not_cancel_flag"
+   ],
+   "claims": [
+    {
+     "turn_idx": 11,
+     "claim": "Вход в веб-версию выполняется на tradernet.global",
+     "status": "consistent",
+     "note": "DEV: вход — на tradernet.global или в приложении Freedom Broker."
+    }
+   ],
+   "votes": null,
+   "review_state": "none",
+   "final_answer": "yes",
+   "final_score": 0.0,
+   "final_earned": 0.0,
+   "appeal": null,
+   "appeals": []
+  }
+ ]
+}

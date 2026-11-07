@@ -1,0 +1,36 @@
+{
+ "duration_s": 312.26,
+ "operator_talk_s": 123.47,
+ "client_talk_s": 147.97,
+ "talk_ratio_operator": 0.455,
+ "operator_wpm": 232.5,
+ "long_pauses": [
+  {
+   "start": 13.421,
+   "end": 17.916,
+   "duration": 4.495
+  },
+  {
+   "start": 39.145,
+   "end": 44.996,
+   "duration": 5.851
+  },
+  {
+   "start": 54.443,
+   "end": 63.109,
+   "duration": 8.666
+  },
+  {
+   "start": 301.765,
+   "end": 305.555,
+   "duration": 3.791
+  }
+ ],
+ "long_pauses_count": 4,
+ "overlaps": 1,
+ "loudness_range_lu": 11.9,
+ "hold_segments": [],
+ "repeated_operator_lines": 0,
+ "speech_rate_label": "fast",
+ "summary_ru": "Темп 232 сл/мин, 4 длинные паузы, доля речи оператора 46%"
+}

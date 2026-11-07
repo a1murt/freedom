@@ -1,0 +1,36 @@
+{
+ "from_version_id": 1,
+ "to_version_id": 2,
+ "added": [],
+ "removed": [],
+ "changed": [
+  {
+   "code": "C1",
+   "fields": [
+    "instruction"
+   ],
+   "requires_rejudge": true
+  },
+  {
+   "code": "C2",
+   "fields": [
+    "judge_spec"
+   ],
+   "requires_rejudge": true
+  },
+  {
+   "code": "C7",
+   "fields": [
+    "weight",
+    "judge_spec"
+   ],
+   "requires_rejudge": true
+  }
+ ],
+ "scoring_rules_changed": false,
+ "rejudge_codes": [
+  "C1",
+  "C2",
+  "C7"
+ ]
+}

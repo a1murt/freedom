@@ -1,0 +1,9 @@
+{
+ "ok": true,
+ "db": "sqlite",
+ "providers": {
+  "anthropic": true,
+  "local": false
+ },
+ "organizer_api": true
+}

@@ -1,0 +1,1184 @@
+{
+ "checklist_version_id": null,
+ "count": 65,
+ "mean_total": 80.94,
+ "median_total": 95.0,
+ "distribution": [
+  {
+   "bucket": "0-59",
+   "n": 14
+  },
+  {
+   "bucket": "60-69",
+   "n": 4
+  },
+  {
+   "bucket": "70-79",
+   "n": 2
+  },
+  {
+   "bucket": "80-89",
+   "n": 6
+  },
+  {
+   "bucket": "90-100",
+   "n": 39
+  }
+ ],
+ "by_language": [
+  {
+   "language": "EN",
+   "mean_total": 83.56,
+   "n": 15
+  },
+  {
+   "language": "KZ",
+   "mean_total": 84.1,
+   "n": 15
+  },
+  {
+   "language": "RU",
+   "mean_total": 78.47,
+   "n": 35
+  }
+ ],
+ "by_channel": [
+  {
+   "channel": "agent chat",
+   "mean_total": 81.57,
+   "n": 60
+  },
+  {
+   "channel": "voice call",
+   "mean_total": 73.47,
+   "n": 5
+  }
+ ],
+ "criteria_heatmap": [
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.9231,
+   "yes_rate_or_mean": 0.9231,
+   "n": 65
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.9333,
+   "yes_rate_or_mean": 0.9333,
+   "n": 15
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.9333,
+   "yes_rate_or_mean": 0.9333,
+   "n": 15
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.9333,
+   "yes_rate_or_mean": 0.9333,
+   "n": 15
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.9333,
+   "yes_rate_or_mean": 0.9333,
+   "n": 15
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.9143,
+   "yes_rate_or_mean": 0.9143,
+   "n": 35
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.9667,
+   "yes_rate_or_mean": 0.9667,
+   "n": 30
+  },
+  {
+   "code": "C1",
+   "title": "Установление контакта",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.6,
+   "yes_rate_or_mean": 0.6,
+   "n": 5
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.6923,
+   "yes_rate_or_mean": 0.6923,
+   "n": 39
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 5
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 5
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.625,
+   "yes_rate_or_mean": 0.625,
+   "n": 8
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.625,
+   "yes_rate_or_mean": 0.625,
+   "n": 8
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.6923,
+   "yes_rate_or_mean": 0.6923,
+   "n": 26
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.6667,
+   "yes_rate_or_mean": 0.6667,
+   "n": 21
+  },
+  {
+   "code": "C2",
+   "title": "Выявление потребности",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 5
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.6429,
+   "yes_rate_or_mean": 0.6429,
+   "n": 14
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.5,
+   "yes_rate_or_mean": 0.5,
+   "n": 2
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.5,
+   "yes_rate_or_mean": 0.5,
+   "n": 2
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.6667,
+   "yes_rate_or_mean": 0.6667,
+   "n": 3
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.6667,
+   "yes_rate_or_mean": 0.6667,
+   "n": 3
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.6667,
+   "yes_rate_or_mean": 0.6667,
+   "n": 9
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.6,
+   "yes_rate_or_mean": 0.6,
+   "n": 5
+  },
+  {
+   "code": "C3",
+   "title": "Идентификация",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.75,
+   "yes_rate_or_mean": 0.75,
+   "n": 4
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.8438,
+   "yes_rate_or_mean": 0.8438,
+   "n": 64
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.8833,
+   "yes_rate_or_mean": 0.8833,
+   "n": 15
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.8833,
+   "yes_rate_or_mean": 0.8833,
+   "n": 15
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.8667,
+   "yes_rate_or_mean": 0.8667,
+   "n": 15
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.8667,
+   "yes_rate_or_mean": 0.8667,
+   "n": 15
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.8162,
+   "yes_rate_or_mean": 0.8162,
+   "n": 34
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.8103,
+   "yes_rate_or_mean": 0.8103,
+   "n": 29
+  },
+  {
+   "code": "C4",
+   "title": "Корректная и полная консультация",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.85,
+   "yes_rate_or_mean": 0.85,
+   "n": 5
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.7692,
+   "yes_rate_or_mean": 0.7692,
+   "n": 65
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 15
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 15
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 15
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 15
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.7429,
+   "yes_rate_or_mean": 0.7429,
+   "n": 35
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.7333,
+   "yes_rate_or_mean": 0.7333,
+   "n": 30
+  },
+  {
+   "code": "C5",
+   "title": "Эмпатия и клиентоориентированность",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.8,
+   "yes_rate_or_mean": 0.8,
+   "n": 5
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.8138,
+   "yes_rate_or_mean": 0.8138,
+   "n": 65
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.84,
+   "yes_rate_or_mean": 0.84,
+   "n": 15
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.84,
+   "yes_rate_or_mean": 0.84,
+   "n": 15
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.9,
+   "yes_rate_or_mean": 0.9,
+   "n": 15
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.9,
+   "yes_rate_or_mean": 0.9,
+   "n": 15
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.7657,
+   "yes_rate_or_mean": 0.7657,
+   "n": 35
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.8067,
+   "yes_rate_or_mean": 0.8067,
+   "n": 30
+  },
+  {
+   "code": "C6",
+   "title": "Управление диалогом, скорость и грамотность",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.52,
+   "yes_rate_or_mean": 0.52,
+   "n": 5
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.6897,
+   "yes_rate_or_mean": 0.6897,
+   "n": 58
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.6429,
+   "yes_rate_or_mean": 0.6429,
+   "n": 14
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.6429,
+   "yes_rate_or_mean": 0.6429,
+   "n": 14
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.7143,
+   "yes_rate_or_mean": 0.7143,
+   "n": 14
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.7143,
+   "yes_rate_or_mean": 0.7143,
+   "n": 14
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.7,
+   "yes_rate_or_mean": 0.7,
+   "n": 30
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.6786,
+   "yes_rate_or_mean": 0.6786,
+   "n": 28
+  },
+  {
+   "code": "C7",
+   "title": "Завершение",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 1.0,
+   "yes_rate_or_mean": 1.0,
+   "n": 2
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "ALL",
+   "channel": "ALL",
+   "value": 0.1231,
+   "yes_rate_or_mean": 0.1231,
+   "n": 65
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "EN",
+   "channel": "ALL",
+   "value": 0.1333,
+   "yes_rate_or_mean": 0.1333,
+   "n": 15
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "EN",
+   "channel": "agent chat",
+   "value": 0.1333,
+   "yes_rate_or_mean": 0.1333,
+   "n": 15
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "KZ",
+   "channel": "ALL",
+   "value": 0.1333,
+   "yes_rate_or_mean": 0.1333,
+   "n": 15
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "KZ",
+   "channel": "agent chat",
+   "value": 0.1333,
+   "yes_rate_or_mean": 0.1333,
+   "n": 15
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "RU",
+   "channel": "ALL",
+   "value": 0.1143,
+   "yes_rate_or_mean": 0.1143,
+   "n": 35
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "RU",
+   "channel": "agent chat",
+   "value": 0.1333,
+   "yes_rate_or_mean": 0.1333,
+   "n": 30
+  },
+  {
+   "code": "C8",
+   "title": "Грубые ошибки",
+   "language": "RU",
+   "channel": "voice call",
+   "value": 0.0,
+   "yes_rate_or_mean": 0.0,
+   "n": 5
+  }
+ ],
+ "na_rates": [
+  {
+   "code": "C1",
+   "na_rate": 0.0
+  },
+  {
+   "code": "C2",
+   "na_rate": 0.4
+  },
+  {
+   "code": "C3",
+   "na_rate": 0.7846
+  },
+  {
+   "code": "C4",
+   "na_rate": 0.0154
+  },
+  {
+   "code": "C5",
+   "na_rate": 0.0
+  },
+  {
+   "code": "C6",
+   "na_rate": 0.0
+  },
+  {
+   "code": "C7",
+   "na_rate": 0.1077
+  },
+  {
+   "code": "C8",
+   "na_rate": 0.0
+  }
+ ],
+ "operators": [
+  {
+   "operator_name": "Саша",
+   "n": 1,
+   "mean_total": 10.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Кирилл",
+   "n": 1,
+   "mean_total": 25.63,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Виктор",
+   "n": 1,
+   "mean_total": 26.25,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Tyler",
+   "n": 1,
+   "mean_total": 30.59,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Лера",
+   "n": 1,
+   "mean_total": 32.5,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Мұрат",
+   "n": 1,
+   "mean_total": 36.0,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Chris",
+   "n": 1,
+   "mean_total": 40.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Руслан",
+   "n": 1,
+   "mean_total": 41.0,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Алексей",
+   "n": 1,
+   "mean_total": 45.0,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Дамир",
+   "n": 1,
+   "mean_total": 46.92,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Айдана",
+   "n": 1,
+   "mean_total": 50.0,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Антон",
+   "n": 1,
+   "mean_total": 50.63,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Adrian",
+   "n": 1,
+   "mean_total": 62.31,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Мадина",
+   "n": 1,
+   "mean_total": 70.77,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "—",
+   "n": 10,
+   "mean_total": 71.98,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Дана",
+   "n": 1,
+   "mean_total": 80.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Sofia",
+   "n": 1,
+   "mean_total": 81.88,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Нина",
+   "n": 1,
+   "mean_total": 82.5,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Дина",
+   "n": 1,
+   "mean_total": 85.38,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Соня",
+   "n": 1,
+   "mean_total": 90.5,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Самат",
+   "n": 1,
+   "mean_total": 91.67,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Nina",
+   "n": 1,
+   "mean_total": 92.31,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Марк",
+   "n": 1,
+   "mean_total": 92.31,
+   "critical_count": 1
+  },
+  {
+   "operator_name": "Света",
+   "n": 1,
+   "mean_total": 92.31,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Sam",
+   "n": 1,
+   "mean_total": 95.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Дидар",
+   "n": 1,
+   "mean_total": 95.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Роман",
+   "n": 1,
+   "mean_total": 95.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Alex",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Daniel",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Eva",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Julia",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Leo",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Lina",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Maya",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Noah",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Айбек",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Айсұлу",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Алина",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Алма",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Артём",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Валерия",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Вера",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Егор",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Илья",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Инга",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Ирина",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Кира",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Лиза",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Ләззат",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Мария",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Нұрлан",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Олег",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Олеся",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Полина",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Тимур",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  },
+  {
+   "operator_name": "Әсел",
+   "n": 1,
+   "mean_total": 100.0,
+   "critical_count": 0
+  }
+ ],
+ "worst": [
+  {
+   "conversation_id": "p1-ru-018",
+   "evaluation_id": 19,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Саша",
+   "total_score": 10.0,
+   "final_total_score": 10.0,
+   "critical_error": false
+  },
+  {
+   "conversation_id": "p1-ru-022",
+   "evaluation_id": 23,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Кирилл",
+   "total_score": 25.63,
+   "final_total_score": 25.63,
+   "critical_error": true
+  },
+  {
+   "conversation_id": "p1-ru-026",
+   "evaluation_id": 27,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Виктор",
+   "total_score": 26.25,
+   "final_total_score": 26.25,
+   "critical_error": false
+  },
+  {
+   "conversation_id": "p1-en-014",
+   "evaluation_id": 60,
+   "channel": "agent chat",
+   "language": "EN",
+   "operator_name": "Tyler",
+   "total_score": 30.59,
+   "final_total_score": 30.59,
+   "critical_error": true
+  },
+  {
+   "conversation_id": "p1-ru-003",
+   "evaluation_id": 70,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Лера",
+   "total_score": 32.5,
+   "final_total_score": 32.5,
+   "critical_error": false
+  },
+  {
+   "conversation_id": "p1-kz-015",
+   "evaluation_id": 49,
+   "channel": "agent chat",
+   "language": "KZ",
+   "operator_name": "Мұрат",
+   "total_score": 36.0,
+   "final_total_score": 36.0,
+   "critical_error": true
+  },
+  {
+   "conversation_id": "p1-kz-008",
+   "evaluation_id": 39,
+   "channel": "agent chat",
+   "language": "KZ",
+   "operator_name": null,
+   "total_score": 38.13,
+   "final_total_score": 38.13,
+   "critical_error": false
+  },
+  {
+   "conversation_id": "p1-en-007",
+   "evaluation_id": 53,
+   "channel": "agent chat",
+   "language": "EN",
+   "operator_name": "Chris",
+   "total_score": 40.0,
+   "final_total_score": 40.0,
+   "critical_error": false
+  },
+  {
+   "conversation_id": "p1-ru-009",
+   "evaluation_id": 10,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Руслан",
+   "total_score": 41.0,
+   "final_total_score": 41.0,
+   "critical_error": true
+  },
+  {
+   "conversation_id": "p1-ru-029",
+   "evaluation_id": 67,
+   "channel": "agent chat",
+   "language": "RU",
+   "operator_name": "Алексей",
+   "total_score": 45.0,
+   "final_total_score": 45.0,
+   "critical_error": true
+  }
+ ],
+ "critical_count": 8,
+ "agreement": [
+  {
+   "code": "C1",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C2",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C3",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C4",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C5",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C6",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C7",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  },
+  {
+   "code": "C8",
+   "n_reviewed": 0,
+   "agreement_rate": null,
+   "kappa": null
+  }
+ ],
+ "providers": [
+  {
+   "provider": "anthropic",
+   "model": "anthropic:claude-opus-5-5",
+   "n": 69,
+   "mean_cost_usd": 0.2171,
+   "mean_latency_ms": 15124.0,
+   "total_cost_usd": 14.9815
+  },
+  {
+   "provider": "ensemble",
+   "model": "anthropic:claude-opus-5-5,anthropic:claude-opus-5-5,anthropic:claude-sonnet-5-5",
+   "n": 1,
+   "mean_cost_usd": 0.4901,
+   "mean_latency_ms": 15650.0,
+   "total_cost_usd": 0.4901
+  }
+ ],
+ "first_response": {
+  "mean_seconds": 71.5,
+  "over_threshold_share": 0.0,
+  "threshold_seconds": 180.0,
+  "n": 65
+ }
+}

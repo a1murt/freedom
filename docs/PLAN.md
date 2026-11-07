@@ -17,8 +17,8 @@ Rules: contracts first (verdict schema, checklist schema, API routes) frozen at 
 | Phase | Window | Goal | Exit check |
 |---|---|---|---|
 | P0 Prep | before H+0 | Spec, scaffold, design tokens, deck template, checklist seed from the PDF, gold-set protocol | `docker compose up` serves an empty app; DEV import works |
-| P1 Spine | H+0 → H+4 | End-to-end on one dialog: import → judge → card with evidence → total | One RU chat fully evaluated in the UI with trace |
-| P2 Core | H+4 → H+10 | All R1–R9: checklist studio, batch runs, appeals and decisions, audio proxy, exports | Full DEV batch evaluated; appeal flow demoable |
+| P1 Spine | H+0 → H+4 | End-to-end on one dialog: import → judge → card with evidence → total | DONE (backend): import, judge, scoring, trace verified on p1-ru-029 |
+| P2 Core | H+4 → H+10 | All R1–R9: checklist studio, batch runs, appeals and decisions, audio proxy, exports | Backend DONE: full DEV batch (65/65, $14.14), appeals, versions, partial re-eval, audio, CSV/PDF; web app in progress |
 | P3 Accuracy | H+6 → H+18 (ML track, parallel) | Gold set, harness, prompt v2–v4, ensemble, few-shot memory | Validation kappa reported per criterion; config chosen |
 | P4 Edge | H+10 → H+18 | Differentiators in §11 order: trace UI, provider switch, partial re-eval, audio insights, agreement dashboard, PII, claims ledger, embed mode | Each shipped feature has a demo step |
 | P5 Freeze | H+18 → H+22 | Bug bash, README, hosting, deck, rehearsal ×2, repo link sent to organizers | Rehearsal under 5 minutes; cold-start test on a clean machine |

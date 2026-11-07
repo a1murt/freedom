@@ -1,0 +1,4788 @@
+{
+ "p1-ru-029": {
+  "id": 68,
+  "conversation_id": "p1-ru-029",
+  "checklist_version_id": 2,
+  "status": "failed",
+  "provider": "anthropic",
+  "mode": "partial",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 34.67,
+  "final_total_score": 34.67,
+  "critical_error": true,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 0.0,
+    "max": 20.0
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 26.67,
+    "max": 26.67
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 8.0,
+    "max": 53.33
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "latency_ms": 3053,
+  "job_id": null,
+  "error": "C1: all judges failed: anthropic/claude-opus-5-5: Anthropic connection error: Connection error.",
+  "created_at": "2026-11-07T10:49:35.643209",
+  "completed_at": "2026-11-07T10:49:38.693988",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 537,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": null,
+    "score": null,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": null,
+    "explanation": "Ошибка оценки: all judges failed: anthropic/claude-opus-5-5: Anthropic connection error: Connection error.",
+    "evidence": [],
+    "checked_span": null,
+    "flags": [
+     "error"
+    ],
+    "claims": [],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": null,
+    "final_score": null,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 538,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 0.0,
+    "confidence": 0.887,
+    "explanation": "Выявление потребности — Нет. Оператор не дал содержательного первого ответа: вместо работы с описанной проблемой входа он отослал клиента к ответу бота, и клиенту пришлось заново пояснять запрос. Основание — реплика [9] «Бот всё написал» и повтор запроса клиентом в [10].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 3,
+      "speaker": "bot",
+      "quote": "Если вы на информационном сайте, попробуйте открыть торговую платформу.",
+      "role": "context",
+      "offset_seconds": 8.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Вы вообще читать умеете? Бот всё написал.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Не понимаю, на какой сайт перейти.",
+      "role": "supports",
+      "offset_seconds": 112.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Откройте tradernet.global, там вход в веб-версию.",
+      "role": "context",
+      "offset_seconds": 135.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "referral_to_bot",
+     "client_repeated_request",
+     "possible_factual_claim",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вход в веб-версию находится на сайте tradernet.global",
+      "status": "unverified",
+      "note": "Справочных данных об адресе веб-платформы не предоставлено."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.9,
+      "explanation": "Выявление потребности — Нет. Оператор не дал содержательного первого ответа: вместо работы с описанной проблемой входа он отослал клиента к ответу бота, и клиенту пришлось заново пояснять запрос. Основание — реплика [9] «Бот всё написал» и повтор запроса клиентом в [10]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.88,
+      "explanation": "Выявление потребности — Нет. Оператор не учёл, что клиент уже искал вход на сайте и не понял подсказку бота, и вместо содержательного ответа отослал к ответу бота, из-за чего клиенту пришлось повторить запрос. Основание — реплика [9] «Бот всё написал» и повтор клиента в [10]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.88,
+      "explanation": "Выявление потребности — Нет. Первая реплика оператора отослала клиента к ответу бота и не содержала ни уточнения, ни ответа по существу, поэтому клиенту пришлось повторять запрос. Основание — реплика [9] «Бот всё написал.» и ответ клиента [10] «Не понимаю, на какой сайт перейти.»"
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 539,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": false,
+    "na_reason": "Запрос общий — навигация: клиент не может найти вход на сайт. Данные конкретного счёта не раскрывались и защищённое действие не выполнялось.",
+    "answer": null,
+    "score": null,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Идентификация — N/A. Запрос клиента касался навигации (поиск входа на сайт), оператор лишь назвал адрес веб-версии и не раскрывал данные счёта. Основание — реплика клиента [0] «Почему опять не могу найти вход?» и ответ оператора [11].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+      "role": "supports",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Откройте tradernet.global, там вход в веб-версию.",
+      "role": "context",
+      "offset_seconds": 135.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "general_navigation_question",
+     "no_account_data_disclosed",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вход в веб-версию находится на tradernet.global",
+      "status": "unverified",
+      "note": "Справочные данные не предоставлены."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": false,
+      "answer": "",
+      "confidence": 0.93,
+      "explanation": "Идентификация — N/A. Клиент спрашивал, где найти вход на платформу; оператор дал только адрес веб-версии, данные счёта не раскрывались и защищённые действия не выполнялись. Основание — реплика клиента [0] «Почему опять не могу найти вход?» и ответ оператора [11]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": false,
+      "answer": "",
+      "confidence": 0.93,
+      "explanation": "Идентификация — N/A. Клиент спрашивал, где найти вход на платформу; оператор дал только навигационную подсказку и данные счёта не раскрывал. Основание — реплика клиента [0] «Почему опять не могу найти вход?» и ответ оператора [11]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": false,
+      "answer": "",
+      "confidence": 0.95,
+      "explanation": "Идентификация — N/A. Запрос клиента касался навигации (поиск входа на сайт), оператор лишь назвал адрес веб-версии и не раскрывал данные счёта. Основание — реплика клиента [0] «Почему опять не могу найти вход?» и ответ оператора [11]."
+     }
+    ],
+    "review_state": "none",
+    "final_answer": null,
+    "final_score": null,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 540,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "20",
+    "score": 20.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 26.6667,
+    "earned": 26.6667,
+    "confidence": 0.893,
+    "explanation": "Корректная и полная консультация — 20. Оператор назвал верный адрес для входа (tradernet.global), что соответствует справочным фактам, и клиент подтвердил успешный вход. Основание — реплика [11] «Откройте tradernet.global, там вход в веб-версию» и ответ клиента [12] «Вошёл».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Не понимаю, на какой сайт перейти.",
+      "role": "context",
+      "offset_seconds": 112.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Откройте tradernet.global, там вход в веб-версию.",
+      "role": "supports",
+      "offset_seconds": 135.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Вошёл.",
+      "role": "supports",
+      "offset_seconds": 174.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "rudeness_excluded_other_criterion",
+     "client_confirmed_resolution",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вход в веб-версию выполняется на tradernet.global.",
+      "status": "consistent",
+      "note": "DEV: вход — на tradernet.global или в приложении Freedom Broker."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "20",
+      "confidence": 0.9,
+      "explanation": "Корректная и полная консультация — 20. Оператор назвал верный адрес для входа (tradernet.global), что соответствует справочным фактам, и клиент подтвердил успешный вход. Основание — реплика [11] «Откройте tradernet.global, там вход в веб-версию» и ответ клиента [12] «Вошёл»."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "20",
+      "confidence": 0.9,
+      "explanation": "Корректная и полная консультация — 20. Оператор назвал верный адрес для входа (tradernet.global), и клиент подтвердил, что вошёл. Основание — реплики [11] и [12]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "20",
+      "confidence": 0.88,
+      "explanation": "Корректная и полная консультация — 20. Оператор назвал верный адрес для входа, клиент подтвердил, что вошёл, других вопросов не осталось. Основание — реплика [11] «Откройте tradernet.global, там вход в веб-версию.» и ответ клиента [12] «Вошёл.»"
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "20",
+    "final_score": 20.0,
+    "final_earned": 26.6667,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 541,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 0.0,
+    "confidence": 0.977,
+    "explanation": "Эмпатия и клиентоориентированность — Нет. Оператор ответил на недовольство клиента грубостью и сарказмом, а на замечание о тоне не извинился и завершил разговор. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.» и реплика [13] «До свидания.» в ответ на возражение [12].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Почему опять не могу найти вход? На вашем сайте всё перелопатил.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 4,
+      "speaker": "client",
+      "quote": "Дайте человека, пожалуйста, уже надоело.",
+      "role": "context",
+      "offset_seconds": 24.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Вы вообще читать умеете? Бот всё написал.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Но со мной так говорить не надо.",
+      "role": "context",
+      "offset_seconds": 174.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "До свидания.",
+      "role": "supports",
+      "offset_seconds": 206.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "rudeness",
+     "sarcasm",
+     "ignored_complaint",
+     "closed_after_objection",
+     "possible_factual_claim",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "На сайте tradernet.global есть вход в веб-версию торговой платформы.",
+      "status": "unverified",
+      "note": "Справочные факты не предоставлены; клиент подтвердил, что вошёл."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.97,
+      "explanation": "Эмпатия и клиентоориентированность — Нет. Оператор ответил на выраженное недовольство клиента грубостью и пренебрежением, а на замечание о тоне не извинился и завершил разговор. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.» и реплика [13] «До свидания.» в ответ на [12]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.98,
+      "explanation": "Эмпатия и клиентоориентированность — Нет. Оператор ответил на недовольство клиента грубостью и сарказмом, а на замечание о тоне не извинился и завершил разговор. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.» и реплика [13] «До свидания.» в ответ на возражение [12]."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.98,
+      "explanation": "Эмпатия и клиентоориентированность — Нет. Оператор грубо обвинил клиента фразой «Вы вообще читать умеете?», а на возражение клиента не отреагировал и сразу завершил диалог. Основание — реплики [9] «Вы вообще читать умеете? Бот всё написал.» и [13] «До свидания.» в ответ на «со мной так говорить не надо»."
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 542,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "4",
+    "score": 4.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 8.0,
+    "confidence": 0.583,
+    "explanation": "Управление диалогом — 4. Первой репликой оператор не дал инструкцию, а отослал к неясному ответу бота, из-за чего клиенту пришлось переспрашивать, на какой сайт перейти; понятный путь прозвучал только после переспроса. Основание — реплики [9] «Бот всё написал.» и [10] «Не понимаю, на какой сайт перейти.»",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Вы вообще читать умеете? Бот всё написал.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Не понимаю, на какой сайт перейти.",
+      "role": "supports",
+      "offset_seconds": 112.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Откройте tradernet.global, там вход в веб-версию.",
+      "role": "context",
+      "offset_seconds": 135.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "До свидания.",
+      "role": "context",
+      "offset_seconds": 206.0
+     },
+     {
+      "turn_idx": 3,
+      "speaker": "bot",
+      "quote": "Если вы на информационном сайте, попробуйте открыть торговую платформу.",
+      "role": "context",
+      "offset_seconds": 8.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "rudeness_scored_elsewhere",
+     "abrupt_closing",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вход в веб-версию торговой платформы доступен на tradernet.global",
+      "status": "unverified",
+      "note": "Справочных данных о домене платформы не предоставлено."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "4",
+      "confidence": 0.6,
+      "explanation": "Управление диалогом — 4. Первой репликой оператор не дал инструкцию, а отослал к неясному ответу бота, из-за чего клиенту пришлось переспрашивать, на какой сайт перейти; понятный путь прозвучал только после переспроса. Основание — реплики [9] «Бот всё написал.» и [10] «Не понимаю, на какой сайт перейти.»"
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "4",
+      "confidence": 0.6,
+      "explanation": "Управление диалогом — 4. Первой репликой оператор не дал инструкции и отослал клиента к неконкретному ответу бота, поэтому клиенту пришлось переспрашивать; ясный адрес прозвучал только после переспроса. Основание — реплики [9] «Бот всё написал» и [10] «Не понимаю, на какой сайт перейти»."
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "7",
+      "confidence": 0.55,
+      "explanation": "Управление диалогом — 7. Первая реплика оператора не содержала инструкции и была сформулирована неуместно, но после уточнения клиента оператор дал чёткий адрес, и клиент вошёл. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.» и чёткая инструкция в [11]."
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "4",
+    "final_score": 4.0,
+    "final_earned": 8.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 543,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 13.3333,
+    "earned": 0.0,
+    "confidence": 0.6,
+    "explanation": "Завершение — Нет. Оператор не подвёл итог, не ответил на подтверждение клиента и не предложил дальнейшую помощь, ограничившись голым «До свидания.». Основание — реплика [13] «До свидания.» сразу после [12] «Вошёл. Но со мной так говорить не надо.»",
+    "evidence": [
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Вошёл. Но со мной так говорить не надо.",
+      "role": "context",
+      "offset_seconds": 174.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "До свидания.",
+      "role": "supports",
+      "offset_seconds": 206.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 12,
+     "to_turn": 13
+    },
+    "flags": [
+     "formal_farewell_only",
+     "no_summary_no_offer_of_help",
+     "reference_judgment_applied",
+     "procedure_ambiguity_step6_vs_definition",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "На tradernet.global находится вход в веб-версию торговой платформы.",
+      "status": "unverified",
+      "note": "Справочные факты не предоставлены; клиент подтвердил успешный вход."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.6,
+      "explanation": "Завершение — Нет. Оператор не подвёл итог, не ответил на подтверждение клиента и не предложил дальнейшую помощь, ограничившись голым «До свидания.». Основание — реплика [13] «До свидания.» сразу после [12] «Вошёл. Но со мной так говорить не надо.»"
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "yes",
+      "confidence": 0.6,
+      "explanation": "Завершение — Да. Оператор попрощался после того, как клиент подтвердил решение («Вошёл»); открытых вопросов и просьб клиента не осталось, а замечание о тоне оценивается в других критериях. Основание — реплики [12] «Вошёл. Но со мной так говорить не надо.» и [13] «До свидания.»"
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "no",
+      "confidence": 0.6,
+      "explanation": "Завершение — Нет. Оператор ответил на подтверждение клиента «Вошёл» одним «До свидания.», без итога, без «Пожалуйста» и без предложения помощи. Основание — реплика [13] «До свидания.» сразу после замечания клиента [12]."
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 544,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.963,
+    "explanation": "Грубые ошибки — Да. Оператор оскорбил клиента, обвинив его в неспособности читать. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.»",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Вы вообще читать умеете? Бот всё написал.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Но со мной так говорить не надо.",
+      "role": "context",
+      "offset_seconds": 174.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Откройте tradernet.global, там вход в веб-версию.",
+      "role": "context",
+      "offset_seconds": 135.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "insult_detected",
+     "client_complained_about_tone",
+     "copied_from_previous_version"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вход в веб-версию выполняется на tradernet.global",
+      "status": "consistent",
+      "note": "DEV: вход — на tradernet.global или в приложении Freedom Broker."
+     }
+    ],
+    "votes": [
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "yes",
+      "confidence": 0.97,
+      "explanation": "Грубые ошибки — Да. Оператор оскорбил клиента, обвинив его в неспособности читать. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.»"
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "applicable": true,
+      "answer": "yes",
+      "confidence": 0.95,
+      "explanation": "Грубые ошибки — Да. Оператор оскорбил клиента, обвинив его в неспособности читать, при этом платных услуг в обход компании и раскрытия данных счёта не было. Основание — реплика [9] «Вы вообще читать умеете? Бот всё написал.»"
+     },
+     {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "applicable": true,
+      "answer": "yes",
+      "confidence": 0.97,
+      "explanation": "Грубые ошибки — Да. Оператор обвинил клиента в неспособности читать, что является оскорблением. Основание — реплика оператора [9]: «Вы вообще читать умеете? Бот всё написал.»; правильный ответ в [11] флаг не отменяет."
+     }
+    ],
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ },
+ "p1-ru-006": {
+  "id": 7,
+  "conversation_id": "p1-ru-006",
+  "checklist_version_id": 1,
+  "status": "completed",
+  "provider": "anthropic",
+  "mode": "single",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 95.0,
+  "final_total_score": 95.0,
+  "critical_error": false,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 25.0,
+    "max": 25.0
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 35.0,
+    "max": 40.0
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 35.0,
+    "max": 35.0
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.221206,
+  "input_tokens": 12190,
+  "output_tokens": 8381,
+  "latency_ms": 12994,
+  "job_id": "j_f81544d8919b",
+  "error": null,
+  "created_at": "2026-11-07T10:43:56.610146",
+  "completed_at": "2026-11-07T10:44:09.599771",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 41,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 10.0,
+    "earned": 10.0,
+    "confidence": 0.97,
+    "explanation": "Установление контакта — Да. Оператор в первой реплике поздоровался на русском, языке клиента, и назвал своё имя. Основание — реплика [9]: «Здравствуйте, меня зовут Роман.»",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Здравствуйте, меня зовут Роман.",
+      "role": "supports",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Пополняла со своей карты, а в приложении денег всё ещё нет.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 8,
+      "speaker": "system",
+      "quote": "Эскалация на оператора.",
+      "role": "context",
+      "offset_seconds": 76.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Для проверки счёта сначала нужно подтвердить личность клиента.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет направлен клиенту в этом чате.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 10.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 42,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.75,
+    "explanation": "Выявление потребности — Да. Оператор учёл описанную до подключения проблему (пополнение с карты не зачислено, клиент уже отправил платёж), не переспросил известное и уточнил недостающую деталь — валюту перевода. Основание — реплики [9] и [12].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Пополняла со своей карты, а в приложении денег всё ещё нет.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 4,
+      "speaker": "client",
+      "quote": "Уже отправила. Хочу, чтобы человек проверил, подключите.",
+      "role": "context",
+      "offset_seconds": 52.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Понимаю, что вы переживаете из-за платежа.",
+      "role": "supports",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам. Укажите, пожалуйста, в какой валюте был перевод, чтобы я добавил это к обращению.",
+      "role": "supports",
+      "offset_seconds": 265.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "clarification_after_escalation",
+     "partial_clarification_no_amount_date"
+    ],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Для проверки счёта нужно сначала подтвердить личность клиента.",
+      "status": "unverified",
+      "note": "Справочных фактов о политике идентификации не предоставлено."
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом же чате.",
+      "status": "unverified",
+      "note": "Справочных фактов о порядке обратной связи не предоставлено."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 43,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 20.0,
+    "confidence": 0.93,
+    "explanation": "Идентификация — Да. Оператор запросил подтверждение личности до работы с платежом по счёту, и только после подтверждения передал вопрос по зачислению специалистам. Основание — системное событие «Личность клиента подтверждена» [11] перед репликой [12].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Пополняла со своей карты, а в приложении денег всё ещё нет.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Сначала нужно подтвердить личность, чтобы проверить счёт.",
+      "role": "supports",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "system",
+      "quote": "Личность клиента подтверждена.",
+      "role": "supports",
+      "offset_seconds": 238.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам.",
+      "role": "context",
+      "offset_seconds": 265.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "identity_confirmed_before_action"
+    ],
+    "claims": [
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам.",
+      "status": "unverified",
+      "note": "Факт эскалации не подтверждён системным событием в транскрипте."
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом чате.",
+      "status": "unverified",
+      "note": "Справочных данных о порядке уведомления нет."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 20.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 44,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "15",
+    "score": 15.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 15.0,
+    "confidence": 0.8,
+    "explanation": "Корректная и полная консультация — 15. Оператор передал вопрос о незачисленном пополнении картой специалистам, уточнил валюту для обращения и назвал канал обратной связи, но не указал срок ответа. Основание — реплика [14] «Когда по платежу будет ответ, мы сообщим вам в этом чате».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Пополняла со своей карты, а в приложении денег всё ещё нет.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам. Укажите, пожалуйста, в какой валюте был перевод, чтобы я добавил это к обращению.",
+      "role": "supports",
+      "offset_seconds": 265.0
+     },
+     {
+      "turn_idx": 14,
+      "speaker": "operator",
+      "quote": "Когда по платежу будет ответ, мы сообщим вам в этом чате.",
+      "role": "contradicts",
+      "offset_seconds": 343.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 12,
+     "to_turn": 14
+    },
+    "flags": [
+     "escalation_without_timeline"
+    ],
+    "claims": [
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам",
+      "status": "unverified",
+      "note": "Справочные факты не описывают процедуру эскалации по незачисленным пополнениям."
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет направлен клиенту в этом чате",
+      "status": "unverified",
+      "note": "Канал обратной связи справочными фактами не подтверждён и не опровергнут."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "15",
+    "final_score": 15.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 45,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.88,
+    "explanation": "Эмпатия и клиентоориентированность — Да. Оператор признал тревогу клиента из-за незачисленного платежа, передал вопрос специалистам, поблагодарил за ожидание и сохранял вежливый тон до конца диалога. Основание — реплика [9] «Понимаю, что вы переживаете из-за платежа» и реплика [14] «Спасибо, что подождали».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Пополняла со своей карты, а в приложении денег всё ещё нет.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Понимаю, что вы переживаете из-за платежа.",
+      "role": "supports",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам.",
+      "role": "supports",
+      "offset_seconds": 265.0
+     },
+     {
+      "turn_idx": 14,
+      "speaker": "operator",
+      "quote": "Когда по платежу будет ответ, мы сообщим вам в этом чате. Спасибо, что подождали. До свидания!",
+      "role": "supports",
+      "offset_seconds": 343.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "empathy_acknowledgement_present",
+     "pre_segment_complaint_honoured"
+    ],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Для проверки счёта сначала нужно подтвердить личность клиента",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом же чате",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 46,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "10",
+    "score": 10.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.75,
+    "explanation": "Управление диалогом, скорость и грамотность — 10. Оператор ясно и последовательно объяснил шаги: подтверждение личности, передача вопроса специалистам, уточнение валюты, канал ответа; переспросов не было, а пауз дольше минуты не возникло. Основание — реплики [9], [12] и [14].",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Сначала нужно подтвердить личность, чтобы проверить счёт.",
+      "role": "supports",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Укажите, пожалуйста, в какой валюте был перевод, чтобы я добавил это к обращению.",
+      "role": "supports",
+      "offset_seconds": 265.0
+     },
+     {
+      "turn_idx": 14,
+      "speaker": "operator",
+      "quote": "Добавил. Когда по платежу будет ответ, мы сообщим вам в этом чате. Спасибо, что подождали.",
+      "role": "supports",
+      "offset_seconds": 343.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "order_minor_escalated_before_details"
+    ],
+    "claims": [
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом чате",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "10",
+    "final_score": 10.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 47,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 5.0,
+    "weight_applied": 5.0,
+    "earned": 5.0,
+    "confidence": 0.65,
+    "explanation": "Завершение — Да. Оператор подвёл итог: обращение передано специалистам с указанием валюты, ответ придёт в этом чате, после чего попрощался; неотвеченных вопросов клиента не осталось. Основание — реплика [14] «Когда по платежу будет ответ, мы сообщим вам в этом чате… До свидания!».",
+    "evidence": [
+     {
+      "turn_idx": 14,
+      "speaker": "operator",
+      "quote": "Добавил. Когда по платежу будет ответ, мы сообщим вам в этом чате. Спасибо, что подождали. До свидания!",
+      "role": "supports",
+      "offset_seconds": 343.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам.",
+      "role": "context",
+      "offset_seconds": 265.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "client",
+      "quote": "В тенге.",
+      "role": "context",
+      "offset_seconds": 295.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "issue_escalated_not_resolved",
+     "goodbye_same_turn_as_summary"
+    ],
+    "claims": [
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам",
+      "status": "unverified",
+      "note": "В транскрипте нет системного события о передаче обращения"
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом чате",
+      "status": "unverified",
+      "note": "Справочных данных о порядке уведомления нет"
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 5.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 48,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Грубые ошибки — Нет. Оператор не оскорблял клиента, не предлагал платных услуг или личных каналов в обход компании и не раскрывал данные счёта; идентификация подтверждена до продолжения работы с обращением. Основание — реплики [9], [12], [14] и событие [11].",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Сначала нужно подтвердить личность, чтобы проверить счёт.",
+      "role": "context",
+      "offset_seconds": 208.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "system",
+      "quote": "Личность клиента подтверждена.",
+      "role": "context",
+      "offset_seconds": 238.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Я передал вопрос по зачислению специалистам.",
+      "role": "context",
+      "offset_seconds": 265.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 9,
+     "to_turn": 14
+    },
+    "flags": [],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Для проверки счёта нужно сначала подтвердить личность.",
+      "status": "unverified",
+      "note": "Справочник описывает идентификацию для звонков; для чата прямого подтверждения нет."
+     },
+     {
+      "turn_idx": 12,
+      "claim": "Вопрос по зачислению передан специалистам.",
+      "status": "unverified",
+      "note": "Внутренний процесс эскалации в справочных фактах не описан."
+     },
+     {
+      "turn_idx": 14,
+      "claim": "Ответ по платежу будет сообщён клиенту в этом чате.",
+      "status": "unverified",
+      "note": "Канал и сроки ответа в справочных фактах не указаны."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ },
+ "p1-kz-003": {
+  "id": 34,
+  "conversation_id": "p1-kz-003",
+  "checklist_version_id": 1,
+  "status": "completed",
+  "provider": "anthropic",
+  "mode": "single",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 80.0,
+  "final_total_score": 80.0,
+  "critical_error": false,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 10.0,
+    "max": 25.0
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 35.0,
+    "max": 40.0
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 35.0,
+    "max": 35.0
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.239974,
+  "input_tokens": 11742,
+  "output_tokens": 9409,
+  "latency_ms": 14755,
+  "job_id": "j_f81544d8919b",
+  "error": null,
+  "created_at": "2026-11-07T10:46:10.180724",
+  "completed_at": "2026-11-07T10:46:24.932537",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 265,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 10.0,
+    "earned": 10.0,
+    "confidence": 0.96,
+    "explanation": "Установление контакта — Да. Оператор в первой реплике после эскалации поздоровался на казахском языке клиента и назвал своё имя. Основание — реплика [10] «Сәлеметсіз бе, мен Дана.»",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Сәлеметсіз бе, мен Дана.",
+      "role": "supports",
+      "offset_seconds": 169.0
+     },
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Кеше шотқа ақша аудардым, әлі көрінбей тұр.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 8,
+      "speaker": "system",
+      "quote": "Чат операторға жіберілді.",
+      "role": "context",
+      "offset_seconds": 74.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [],
+    "claims": [],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 10.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 266,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 0.0,
+    "confidence": 0.7,
+    "explanation": "Выявление потребности — Нет. Оператор уточнил валюту, но переспросил дату перевода, которую клиент уже указал в первом сообщении («Кеше»). Основание — реплика [16] «аударымның шамамен қашан жасалғанын айтыңыз» при реплике клиента [0] «Кеше шотқа ақша аудардым».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Кеше шотқа ақша аудардым, әлі көрінбей тұр.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "client",
+      "quote": "Банк жағында аударым жіберілді деп тұр.",
+      "role": "context",
+      "offset_seconds": 91.0
+     },
+     {
+      "turn_idx": 16,
+      "speaker": "operator",
+      "quote": "Алдымен аударымның шамамен қашан жасалғанын айтыңыз.",
+      "role": "supports",
+      "offset_seconds": 337.0
+     },
+     {
+      "turn_idx": 17,
+      "speaker": "client",
+      "quote": "Кеше кешке жібердім.",
+      "role": "context",
+      "offset_seconds": 346.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Ақшаны қай валютамен аудардыңыз?",
+      "role": "context",
+      "offset_seconds": 253.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "re_asked_known_detail",
+     "platform_not_clarified_report"
+    ],
+    "claims": [
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт загружается в приложении через раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "unverified",
+      "note": "Справочные данные о пути меню не предоставлены."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за произвольный период, указав начало и конец периода (в том числе за один месяц).",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет направлен в этот чат.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 267,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 20.0,
+    "confidence": 0.92,
+    "explanation": "Идентификация — Да. Оператор до работы с конкретным пополнением запросил подтверждение личности, и только после системного подтверждения передал запрос о платеже специалистам. Основание — реплика [10] «жеке басыңызды растау қажет» и системное событие [12] «Клиенттің жеке басы расталды».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Кеше шотқа ақша аудардым, әлі көрінбей тұр.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Нақты төлемді тексеру үшін жеке басыңызды растау қажет.",
+      "role": "supports",
+      "offset_seconds": 169.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "system",
+      "quote": "Клиенттің жеке басы расталды.",
+      "role": "supports",
+      "offset_seconds": 214.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Рақмет. Төлем туралы сұрағыңызды мамандарға жолдаймын.",
+      "role": "supports",
+      "offset_seconds": 253.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "identity_confirmed_before_action",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт загружается в приложении через раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "unverified",
+      "note": "Справочных данных о пути меню не предоставлено."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за месяц, указав начало и конец нужного периода.",
+      "status": "unverified",
+      "note": "Справочных данных не предоставлено."
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет направлен в этот же чат.",
+      "status": "unverified",
+      "note": "Регламент канала ответа не предоставлен."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 20.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 268,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "15",
+    "score": 15.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 15.0,
+    "confidence": 0.65,
+    "explanation": "Корректная и полная консультация — 15. Оператор передал вопрос о незачисленном переводе специалистам с указанием валюты и времени, назвал канал ответа (этот чат) и дал верный путь к отчёту брокера с выбором периода, но не назвал срок обратной связи по эскалации. Основание — реплики 13, 18, 21, 23 и 25 («аударымға қатысты жауапты осында жібереміз»).",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Кеше шотқа ақша аудардым, әлі көрінбей тұр.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Төлем туралы сұрағыңызды мамандарға жолдаймын. Ақшаны қай валютамен аудардыңыз?",
+      "role": "supports",
+      "offset_seconds": 253.0
+     },
+     {
+      "turn_idx": 18,
+      "speaker": "operator",
+      "quote": "Уақытын да сұрағыңызға қостым.",
+      "role": "supports",
+      "offset_seconds": 365.0
+     },
+     {
+      "turn_idx": 21,
+      "speaker": "operator",
+      "quote": "Қосымшадағы «Отчёты и документы» бөлімін ашып, «Отчёт брокера» тармағын таңдаңыз.",
+      "role": "supports",
+      "offset_seconds": 475.0
+     },
+     {
+      "turn_idx": 23,
+      "speaker": "operator",
+      "quote": "Иә, керекті кезеңнің басы мен соңын көрсетіп, есепті жүктеңіз.",
+      "role": "supports",
+      "offset_seconds": 526.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Жақсы, аударымға қатысты жауапты осында жібереміз. Сау болыңыз!",
+      "role": "contradicts",
+      "offset_seconds": 581.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 13,
+     "to_turn": 25
+    },
+    "flags": [
+     "escalation_no_deadline",
+     "report_path_correct"
+    ],
+    "claims": [
+     {
+      "turn_idx": 21,
+      "claim": "Отчёт брокера: раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "consistent",
+      "note": "DEV: «Меню → Отчёты и документы → Отчёт брокера»."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за произвольный период, указав начало и конец.",
+      "status": "consistent",
+      "note": "DEV: выбрать период, скачать."
+     },
+     {
+      "turn_idx": 13,
+      "claim": "Вопрос о платеже передаётся специалистам, ответ придёт в этот чат.",
+      "status": "unverified",
+      "note": "Срок обработки не назван; в справочных фактах нет данных."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "15",
+    "final_score": 15.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 269,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.9,
+    "explanation": "Эмпатия и клиентоориентированность — Да. Оператор признал тревогу клиента из-за незачисленного перевода, предложил решение через передачу запроса специалистам и сохранял вежливый тон до конца диалога. Основание — реплика [10] «Ақша көрінбей қалса, алаңдайтыныңыз түсінікті» и реплика [13] «Төлем туралы сұрағыңызды мамандарға жолдаймын».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Кеше шотқа ақша аудардым, әлі көрінбей тұр.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Ақша көрінбей қалса, алаңдайтыныңыз түсінікті. Нақты төлемді тексеру үшін жеке басыңызды растау қажет.",
+      "role": "supports",
+      "offset_seconds": 169.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Рақмет. Төлем туралы сұрағыңызды мамандарға жолдаймын.",
+      "role": "supports",
+      "offset_seconds": 253.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Жақсы, аударымға қатысты жауапты осында жібереміз. Сау болыңыз!",
+      "role": "supports",
+      "offset_seconds": 581.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "empathy_acknowledgement_present",
+     "pre_segment_concern_honoured"
+    ],
+    "claims": [
+     {
+      "turn_idx": 13,
+      "claim": "Вопрос о платеже передаётся специалистам для проверки.",
+      "status": "unverified",
+      "note": "Нет справочных данных о процедуре эскалации."
+     },
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт загружается в приложении через раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "unverified",
+      "note": "Путь меню не подтверждён справочными фактами."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за произвольный период, указав начальную и конечную даты, в том числе за один месяц.",
+      "status": "unverified",
+      "note": "Нет справочных данных."
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет отправлен в этот же чат.",
+      "status": "unverified",
+      "note": "Нет справочных данных о канале ответа."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 270,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "10",
+    "score": 10.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.85,
+    "explanation": "Управление диалогом — 10. Оператор последовательно собрал данные по переводу, ответил на вопрос о квитанции и дал точный путь к отчёту без переспросов клиента. Явных пауз, требующих предупреждения об ожидании, не было. Основание — реплики [16] и [21].",
+    "evidence": [
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Рақмет. Төлем туралы сұрағыңызды мамандарға жолдаймын. Ақшаны қай валютамен аудардыңыз?",
+      "role": "supports",
+      "offset_seconds": 253.0
+     },
+     {
+      "turn_idx": 16,
+      "speaker": "operator",
+      "quote": "Әзірге түбіртекті жібермей тұрыңыз. Алдымен аударымның шамамен қашан жасалғанын айтыңыз.",
+      "role": "supports",
+      "offset_seconds": 337.0
+     },
+     {
+      "turn_idx": 21,
+      "speaker": "operator",
+      "quote": "Қосымшадағы «Отчёты и документы» бөлімін ашып, «Отчёт брокера» тармағын таңдаңыз.",
+      "role": "supports",
+      "offset_seconds": 475.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Жақсы, аударымға қатысты жауапты осында жібереміз. Сау болыңыз!",
+      "role": "supports",
+      "offset_seconds": 581.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "menu_labels_ru_in_kz_ok",
+     "no_explicit_hold"
+    ],
+    "claims": [
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт скачивается в приложении через раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "unverified",
+      "note": "Справочные данные о пути меню не предоставлены."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за один месяц, указав начало и конец нужного периода.",
+      "status": "unverified",
+      "note": "Справочные данные не предоставлены."
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет направлен клиенту в этот же чат.",
+      "status": "unverified",
+      "note": "Справочные данные о сроках и канале ответа не предоставлены."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "10",
+    "final_score": 10.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 271,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 5.0,
+    "weight_applied": 5.0,
+    "earned": 5.0,
+    "confidence": 0.85,
+    "explanation": "Завершение — Да. Оператор подвёл итог по переданному специалистам вопросу о зачислении (ответ придёт в этот чат) после того, как клиент подтвердил загрузку отчёта, и попрощался. Основание — реплика [25] «Жақсы, аударымға қатысты жауапты осында жібереміз. Сау болыңыз!».",
+    "evidence": [
+     {
+      "turn_idx": 24,
+      "speaker": "client",
+      "quote": "Жүктелді. Аударым бойынша осы чаттан жауап күтемін.",
+      "role": "context",
+      "offset_seconds": 545.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Жақсы, аударымға қатысты жауапты осында жібереміз. Сау болыңыз!",
+      "role": "supports",
+      "offset_seconds": 581.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "escalated_question_summarized"
+    ],
+    "claims": [
+     {
+      "turn_idx": 13,
+      "claim": "Вопрос о платеже передаётся специалистам.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт скачивается в приложении: раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "unverified",
+      "note": "Путь меню не подтверждён справочными фактами."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за месяц, указав начало и конец периода.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет отправлен в этот же чат.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 5.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 272,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Грубые ошибки — Нет. Оператор не оскорблял клиента, не предлагал платных услуг или личных каналов в обход компании и не раскрывал данные счёта; запрос по платежу передан специалистам после подтверждения идентификации. Основание — реплики [10]–[25] и событие [12].",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Нақты төлемді тексеру үшін жеке басыңызды растау қажет.",
+      "role": "context",
+      "offset_seconds": 169.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "system",
+      "quote": "Клиенттің жеке басы расталды.",
+      "role": "context",
+      "offset_seconds": 214.0
+     },
+     {
+      "turn_idx": 16,
+      "speaker": "operator",
+      "quote": "Әзірге түбіртекті жібермей тұрыңыз. Алдымен аударымның шамамен қашан жасалғанын айтыңыз.",
+      "role": "context",
+      "offset_seconds": 337.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [],
+    "claims": [
+     {
+      "turn_idx": 21,
+      "claim": "Брокерский отчёт: раздел «Отчёты и документы» → «Отчёт брокера».",
+      "status": "consistent",
+      "note": "Совпадает с DEV: «Меню → Отчёты и документы → Отчёт брокера»."
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Отчёт можно получить за месяц, указав начало и конец периода.",
+      "status": "consistent",
+      "note": "DEV: выбрать период, скачать."
+     },
+     {
+      "turn_idx": 13,
+      "claim": "Вопрос о платеже передаётся специалистам.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Ответ по переводу будет направлен в этот чат.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ },
+ "p1-en-006": {
+  "id": 52,
+  "conversation_id": "p1-en-006",
+  "checklist_version_id": 1,
+  "status": "completed",
+  "provider": "anthropic",
+  "mode": "single",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 95.0,
+  "final_total_score": 95.0,
+  "critical_error": false,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 25.0,
+    "max": 25.0
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 35.0,
+    "max": 40.0
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 35.0,
+    "max": 35.0
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.24743,
+  "input_tokens": 11936,
+  "output_tokens": 9743,
+  "latency_ms": 16452,
+  "job_id": "j_f81544d8919b",
+  "error": null,
+  "created_at": "2026-11-07T10:47:40.771896",
+  "completed_at": "2026-11-07T10:47:57.218824",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 409,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 10.0,
+    "earned": 10.0,
+    "confidence": 0.97,
+    "explanation": "Установление контакта — Да. Оператор в первой реплике после эскалации поздоровался на английском, языке клиента, и назвал своё имя. Основание — реплика [10] «Hello, I'm Sam.»",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Hello, I'm Sam. I understand why you'd want to check. We'll need to verify your identity before we look at the account.",
+      "role": "supports",
+      "offset_seconds": 163.0
+     },
+     {
+      "turn_idx": 8,
+      "speaker": "system",
+      "quote": "Chat transferred to an agent.",
+      "role": "context",
+      "offset_seconds": 76.0
+     },
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "I sent money to my brokerage account and it hasn't shown up. It's making me nervous.",
+      "role": "context",
+      "offset_seconds": 0.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [],
+    "claims": [],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 10.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 410,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.8,
+    "explanation": "Выявление потребности — Да. Оператор учёл сообщённое до подключения (перевод уже отправлен, в банке статус «отправлен») и не переспрашивал это, а уточнил недостающие детали: валюту и время перевода. Основание — реплики [13] «What currency did you send?» и [18] «Can you tell me roughly when you sent the transfer?».",
+    "evidence": [
+     {
+      "turn_idx": 4,
+      "speaker": "client",
+      "quote": "I've already sent it. Please connect me to an agent who can check the transfer.",
+      "role": "context",
+      "offset_seconds": 52.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "client",
+      "quote": "The bank app says the transfer was sent.",
+      "role": "context",
+      "offset_seconds": 96.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "I understand why you'd want to check. We'll need to verify your identity before we look at the account.",
+      "role": "supports",
+      "offset_seconds": 163.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "operator",
+      "quote": "Thanks. What currency did you send?",
+      "role": "supports",
+      "offset_seconds": 220.0
+     },
+     {
+      "turn_idx": 18,
+      "speaker": "operator",
+      "quote": "Can you tell me roughly when you sent the transfer?",
+      "role": "supports",
+      "offset_seconds": 340.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "clarification_after_partial_action",
+     "identity_verification_before_check"
+    ],
+    "claims": [
+     {
+      "turn_idx": 15,
+      "claim": "Кейс передан на проверку, обновление будет в этом чате.",
+      "status": "unverified",
+      "note": "Справочных данных о процедуре нет."
+     },
+     {
+      "turn_idx": 22,
+      "claim": "При возвращении в чат повторно объяснять не нужно: детали уже сохранены в кейсе.",
+      "status": "unverified",
+      "note": "Справочных данных нет."
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Отчёт брокера в приложении: Reports and Documents → Broker Report.",
+      "status": "unverified",
+      "note": "Справочных данных о пути меню нет."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта можно выбрать начальную и конечную дату периода и скачать отчёт.",
+      "status": "unverified",
+      "note": "Справочных данных нет; клиент подтвердил, что способ сработал."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 411,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 20.0,
+    "confidence": 0.93,
+    "explanation": "Идентификация — Да. Оператор запросил подтверждение личности до работы со счётом, и только после системного подтверждения передал обращение по пополнению на проверку. Основание — реплика [10] «We'll need to verify your identity before we look at the account» и событие [12] «Customer identity verified.»",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "I sent money to my brokerage account and it hasn't shown up.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "We'll need to verify your identity before we look at the account.",
+      "role": "supports",
+      "offset_seconds": 163.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "system",
+      "quote": "Customer identity verified.",
+      "role": "supports",
+      "offset_seconds": 193.0
+     },
+     {
+      "turn_idx": 15,
+      "speaker": "operator",
+      "quote": "I've sent the case for review with the currency you provided.",
+      "role": "supports",
+      "offset_seconds": 298.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "identity_system_event_present",
+     "verification_before_account_action",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 15,
+      "claim": "Обращение по переводу передано на проверку; ответ будет в этом чате.",
+      "status": "unverified",
+      "note": "Внутренний процесс, справочных фактов нет."
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, предоставленные данные уже сохранены в обращении.",
+      "status": "unverified",
+      "note": "Справочных фактов нет."
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Брокерский отчёт скачивается в приложении через Reports and Documents → Broker Report.",
+      "status": "unverified",
+      "note": "Путь меню не подтверждён справочными фактами."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта за месяц нужно выбрать начальную и конечную даты периода и скачать отчёт.",
+      "status": "unverified",
+      "note": "Справочных фактов нет; клиент подтвердил, что это сработало ([28])."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 20.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 412,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "15",
+    "score": 15.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 20.0,
+    "earned": 15.0,
+    "confidence": 0.6,
+    "explanation": "Корректная и полная консультация — 15. Оператор собрал детали перевода, передал случай на проверку с обратной связью в этом чате, ответил на вопросы о скриншоте, повторном обращении и отчёте брокера, но не назвал срок ответа по зачислению. Основание — реплики [15] и [29] без срока обратной связи.",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "I sent money to my brokerage account and it hasn't shown up. It's making me nervous.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 15,
+      "speaker": "operator",
+      "quote": "I've sent the case for review with the currency you provided. We'll follow up in this chat once there's an update.",
+      "role": "supports",
+      "offset_seconds": 298.0
+     },
+     {
+      "turn_idx": 29,
+      "speaker": "operator",
+      "quote": "We'll follow up here about the transfer. Goodbye!",
+      "role": "contradicts",
+      "offset_seconds": 689.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "In the app, open Reports and Documents, then Broker Report.",
+      "role": "supports",
+      "offset_seconds": 583.0
+     },
+     {
+      "turn_idx": 27,
+      "speaker": "operator",
+      "quote": "Yes, select the start and end dates for the period you need, then download the report.",
+      "role": "supports",
+      "offset_seconds": 634.0
+     },
+     {
+      "turn_idx": 22,
+      "speaker": "operator",
+      "quote": "You can return to this chat. The details you've given me are already in the case.",
+      "role": "supports",
+      "offset_seconds": 474.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 15,
+     "to_turn": 29
+    },
+    "flags": [
+     "escalation_without_timeline",
+     "menu_path_abbreviated"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Отчёт брокера: в приложении открыть Reports and Documents, затем Broker Report",
+      "status": "consistent",
+      "note": "Совпадает с DEV: «Меню → Отчёты и документы → Отчёт брокера»; пункт «Меню» опущен."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта нужно выбрать даты начала и конца периода, затем скачать",
+      "status": "consistent",
+      "note": "DEV: выбрать период, скачать."
+     },
+     {
+      "turn_idx": 15,
+      "claim": "Случай передан на проверку, ответ будет в этом чате",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, детали уже сохранены в заявке",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "15",
+    "final_score": 15.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 413,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.82,
+    "explanation": "Эмпатия и клиентоориентированность — Да. Оператор отреагировал на тревогу клиента из-за непоступившего перевода признанием и проверкой, снял опасение о повторном объяснении и оставался вежлив до конца диалога. Основание — реплики [10] «I understand why you'd want to check» и [22] «The details you've given me are already in the case».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "I sent money to my brokerage account and it hasn't shown up. It's making me nervous.",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "Hello, I'm Sam. I understand why you'd want to check. We'll need to verify your identity before we look at the account.",
+      "role": "supports",
+      "offset_seconds": 163.0
+     },
+     {
+      "turn_idx": 21,
+      "speaker": "client",
+      "quote": "Will I need to explain everything again if I come back later?",
+      "role": "context",
+      "offset_seconds": 445.0
+     },
+     {
+      "turn_idx": 22,
+      "speaker": "operator",
+      "quote": "You can return to this chat. The details you've given me are already in the case.",
+      "role": "supports",
+      "offset_seconds": 474.0
+     },
+     {
+      "turn_idx": 29,
+      "speaker": "operator",
+      "quote": "You're welcome. We'll follow up here about the transfer. Goodbye!",
+      "role": "supports",
+      "offset_seconds": 689.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "pre_segment_concern_addressed",
+     "acknowledgment_somewhat_generic"
+    ],
+    "claims": [
+     {
+      "turn_idx": 15,
+      "claim": "Кейс передан на проверку, обновление будет в этом чате.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, предоставленные данные уже сохранены в кейсе.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Брокерский отчёт скачивается в приложении: Reports and Documents → Broker Report.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта за месяц нужно выбрать даты начала и конца периода и скачать отчёт.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 414,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "10",
+    "score": 10.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 15.0,
+    "earned": 15.0,
+    "confidence": 0.7,
+    "explanation": "Управление диалогом — 10. Оператор отвечал ясно и последовательно, дал конкретный путь к брокерскому отчёту и порядок выбора периода, клиенту не пришлось переспрашивать. Основание — реплики [25] и [27] и подтверждение клиента «That worked» в [28].",
+    "evidence": [
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "In the app, open Reports and Documents, then Broker Report.",
+      "role": "supports",
+      "offset_seconds": 583.0
+     },
+     {
+      "turn_idx": 27,
+      "speaker": "operator",
+      "quote": "Yes, select the start and end dates for the period you need, then download the report.",
+      "role": "supports",
+      "offset_seconds": 634.0
+     },
+     {
+      "turn_idx": 28,
+      "speaker": "client",
+      "quote": "That worked. I'll wait here for the transfer update.",
+      "role": "supports",
+      "offset_seconds": 653.0
+     },
+     {
+      "turn_idx": 15,
+      "speaker": "operator",
+      "quote": "I've sent the case for review with the currency you provided. We'll follow up in this chat once there's an update.",
+      "role": "context",
+      "offset_seconds": 298.0
+     },
+     {
+      "turn_idx": 18,
+      "speaker": "operator",
+      "quote": "Hold off on the screenshot for now. Can you tell me roughly when you sent the transfer?",
+      "role": "context",
+      "offset_seconds": 340.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "menu_path_without_guillemets_not_fault",
+     "sequence_case_sent_before_timing_minor"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Брокерский отчёт скачивается в приложении через «Reports and Documents» → «Broker Report».",
+      "status": "unverified",
+      "note": "Справочных данных о пути меню не предоставлено."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта за период нужно выбрать начальную и конечную даты и скачать отчёт.",
+      "status": "unverified",
+      "note": "Клиент подтвердил, что это сработало."
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, и данные уже сохранены в кейсе.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 15,
+      "claim": "Кейс по переводу передан на проверку, ответ придёт в этот чат.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "10",
+    "final_score": 10.0,
+    "final_earned": 15.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 415,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 5.0,
+    "weight_applied": 5.0,
+    "earned": 5.0,
+    "confidence": 0.82,
+    "explanation": "Завершение — Да. Оператор подвёл итог по переводу (ответ последует в этом чате) и попрощался после того, как клиент подтвердил решение вопроса с отчётом. Основание — реплика [29] «We'll follow up here about the transfer. Goodbye!».",
+    "evidence": [
+     {
+      "turn_idx": 28,
+      "speaker": "client",
+      "quote": "That worked. I'll wait here for the transfer update.",
+      "role": "context",
+      "offset_seconds": 653.0
+     },
+     {
+      "turn_idx": 29,
+      "speaker": "operator",
+      "quote": "You're welcome. We'll follow up here about the transfer. Goodbye!",
+      "role": "supports",
+      "offset_seconds": 689.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "transfer_case_pending_escalated",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 15,
+      "claim": "Обращение по переводу передано на проверку, ответ будет дан в этом чате.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, предоставленные данные уже сохранены в обращении.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 25,
+      "claim": "Брокерский отчёт в приложении: Reports and Documents → Broker Report.",
+      "status": "unverified",
+      "note": "Справочные данные о пути меню не предоставлены."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта за месяц нужно выбрать начальную и конечную даты периода и скачать отчёт.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 5.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 416,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Грубые ошибки — Нет. Оператор не оскорблял клиента, не предлагал личных каналов или платных услуг в обход компании и не раскрывал данных счёта; до проверки перевода он запросил идентификацию. Основание — реплика [10] и событие [12] «Customer identity verified».",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "operator",
+      "quote": "We'll need to verify your identity before we look at the account.",
+      "role": "context",
+      "offset_seconds": 163.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "system",
+      "quote": "Customer identity verified.",
+      "role": "context",
+      "offset_seconds": 193.0
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "In the app, open Reports and Documents, then Broker Report.",
+      "role": "context",
+      "offset_seconds": 583.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 10,
+     "to_turn": 29
+    },
+    "flags": [
+     "identity_verified_before_account_work"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Брокерский отчёт доступен в приложении: Reports and Documents → Broker Report.",
+      "status": "consistent",
+      "note": "DEV: «Меню → Отчёты и документы → Отчёт брокера»; оператор опустил «Меню», но путь совпадает."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Для отчёта за месяц нужно выбрать даты начала и конца периода и скачать отчёт.",
+      "status": "consistent",
+      "note": "DEV: выбрать период, скачать."
+     },
+     {
+      "turn_idx": 15,
+      "claim": "Обращение передано на проверку, ответ будет в этом чате.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 22,
+      "claim": "Клиент может вернуться в этот чат, данные уже сохранены в обращении.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ },
+ "p4-ru-001": {
+  "id": 62,
+  "conversation_id": "p4-ru-001",
+  "checklist_version_id": 1,
+  "status": "completed",
+  "provider": "anthropic",
+  "mode": "single",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 61.33,
+  "final_total_score": 61.33,
+  "critical_error": false,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 33.33,
+    "max": 33.33
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 20.0,
+    "max": 26.67
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 8.0,
+    "max": 40.0
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.293026,
+  "input_tokens": 13075,
+  "output_tokens": 11795,
+  "latency_ms": 19308,
+  "job_id": "j_f81544d8919b",
+  "error": null,
+  "created_at": "2026-11-07T10:48:24.081403",
+  "completed_at": "2026-11-07T10:48:43.384950",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 489,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 13.3333,
+    "earned": 13.3333,
+    "confidence": 0.9,
+    "explanation": "Установление контакта — Да. Оператор в первой реплике после подключения агента поздоровался на русском языке клиента, назвал компанию и представился (имя скрыто маской). Основание — реплика [12] «Компания в виду меня зовут [Имя скрыто] Здравствуйте, чем могу вам помочь».",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "system",
+      "quote": "Агент присоединился к разговору с клиентом.",
+      "role": "context",
+      "offset_seconds": 56.312921
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "operator",
+      "quote": "Компания в виду меня зовут [Имя скрыто] Здравствуйте, чем могу вам помочь.",
+      "role": "supports",
+      "offset_seconds": 62.064492
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "asr_noise",
+     "name_masked"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техническая поддержка не даёт консультаций по ценным бумагам; консультации даёт только персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не имеет доступа к брокерскому счёту клиента; это может делать только закреплённый персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 13.3333,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 490,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 20.0,
+    "confidence": 0.6,
+    "explanation": "Выявление потребности — Да. Оператор не переспрашивал уже сказанное и ответил с опорой на детали клиента: потерю персонального менеджера из-за небольшого портфеля и вопрос о рекомендациях по покупке. Основание — реплика оператора [26] «Если вас не хватает активов для закрепления…» в ответ на слова клиента [21] о небольшом портфеле.",
+    "evidence": [
+     {
+      "turn_idx": 21,
+      "speaker": "client",
+      "quote": "Оно ввиду Того, что у меня портфель не такой большой.",
+      "role": "context",
+      "offset_seconds": 90.66783
+     },
+     {
+      "turn_idx": 24,
+      "speaker": "client",
+      "quote": "Точно также, как тот брокер, который вот раньше был со мной, тоже заходите всё вот как то вот рекомендуете покупку или скажите, как это у вас происходит?",
+      "role": "context",
+      "offset_seconds": 116.28698399999999
+     },
+     {
+      "turn_idx": 26,
+      "speaker": "operator",
+      "quote": "Если вас не хватает активов для закрепления, то вам пока нужно будет самостоятельно совершать торги.",
+      "role": "supports",
+      "offset_seconds": 141.73033900000001
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Нет, вы сейчас обращаетесь в техническую поддержку клиентов.",
+      "role": "supports",
+      "offset_seconds": 135.096035
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "asr_noise",
+     "possible_factual_claim",
+     "borderline_na"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техническая поддержка не даёт консультаций по ценным бумагам, консультирует только персональный менеджер",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостаточном объёме активов для закрепления менеджера клиент совершает торги самостоятельно",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не имеет доступа к брокерскому счёту клиента; доступ есть только у закреплённого персонального менеджера",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Клиент теперь может обращаться только в поддержку",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 35,
+      "claim": "Поддержка помогает с технической частью приложения, например подсказывает, как вывести деньги",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 20.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 491,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": false,
+    "na_reason": "Запрос не требовал идентификации. Клиентка задала общий вопрос о формате работы поддержки после потери персонального менеджера. Оператор не открывал счёт, не раскрывал данные счёта и не выполнял защищённых действий.",
+    "answer": null,
+    "score": null,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.88,
+    "explanation": "Идентификация — N/A. Клиентка спрашивала о формате работы поддержки и об отсутствии персонального менеджера, оператор отвечал общими правилами без обращения к данным счёта и без защищённых действий. Основание — реплика клиентки [24] «как это у вас происходит?» и ответ оператора [25].",
+    "evidence": [
+     {
+      "turn_idx": 24,
+      "speaker": "client",
+      "quote": "Мне как как вы вообще вот помогаете? Точно также, как тот брокер, который вот раньше был со мной, тоже заходите всё вот как то вот рекомендуете покупку или скажите, как это у вас происходит?",
+      "role": "supports",
+      "offset_seconds": 116.28698399999999
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Нет, вы сейчас обращаетесь в техническую поддержку клиентов. Мы со своей стороны помогаем вам отвечать на вопросы касательно брокерской части, но консультацию никакую по ценным бумагам.",
+      "role": "supports",
+      "offset_seconds": 135.096035
+     },
+     {
+      "turn_idx": 27,
+      "speaker": "operator",
+      "quote": "И у нас нет возможности пользоваться вашим брокерским счётом. Мы не можем туда заходить, это может делать только ваш персональный менеджер, который закреплён за вами.",
+      "role": "context",
+      "offset_seconds": 152.803635
+     },
+     {
+      "turn_idx": 18,
+      "speaker": "client",
+      "quote": "[Персональные данные скрыты]",
+      "role": "context",
+      "offset_seconds": 79.718399
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "asr_noise",
+     "identity_not_required",
+     "no_account_data_disclosed"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техподдержка не даёт консультаций по ценным бумагам; консультации даёт только персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостатке активов для закрепления персонального менеджера клиент совершает торги самостоятельно.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не может заходить в брокерский счёт клиента; это может делать только закреплённый персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 42,
+      "claim": "Поддержка изначально была технической и остаётся ею; инвестиционными рекомендациями не занимается.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": null,
+    "final_score": null,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 492,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "15",
+    "score": 15.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 26.6667,
+    "earned": 20.0,
+    "confidence": 0.6,
+    "explanation": "Корректная и полная консультация — 15. Оператор верно объяснил, что техподдержка не даёт инвестиционных рекомендаций, их даёт только персональный менеджер, и пояснил, что такое техническая помощь, но не назвал условия закрепления менеджера и не предложил помощь в технической части совершения покупки, о сложности которой сказала клиентка. Основание — реплики оператора [26] и [29] при вопросе клиентки [28].",
+    "evidence": [
+     {
+      "turn_idx": 24,
+      "speaker": "client",
+      "quote": "Точно также, как тот брокер, который вот раньше был со мной, тоже заходите всё вот как то вот рекомендуете покупку или скажите, как это у вас происходит?",
+      "role": "context",
+      "offset_seconds": 116.28698399999999
+     },
+     {
+      "turn_idx": 25,
+      "speaker": "operator",
+      "quote": "Мы со своей стороны помогаем вам отвечать на вопросы касательно брокерской части, но консультацию никакую по ценным бумагам. К сожалению, мы не можем давать консультация вам дает только персональный менеджер.",
+      "role": "supports",
+      "offset_seconds": 135.096035
+     },
+     {
+      "turn_idx": 26,
+      "speaker": "operator",
+      "quote": "Если вас не хватает активов для закрепления, то вам пока нужно будет самостоятельно совершать торги.",
+      "role": "contradicts",
+      "offset_seconds": 141.73033900000001
+     },
+     {
+      "turn_idx": 28,
+      "speaker": "client",
+      "quote": "Ну то есть, а у меня теперь нет персонального менеджера, который закреплён за мной тогда что?",
+      "role": "context",
+      "offset_seconds": 161.251837
+     },
+     {
+      "turn_idx": 29,
+      "speaker": "operator",
+      "quote": "Вы самостоятельно совершаете торги, никакую консультацию. Мы со своей стороны, к сожалению, не можем вам предоставлять.",
+      "role": "supports",
+      "offset_seconds": 176.463613
+     },
+     {
+      "turn_idx": 35,
+      "speaker": "operator",
+      "quote": "Например, вы не понимаете, как вывести деньги, и мы вам подсказываем, куда нужно зайти дально и помогаем это сделать.",
+      "role": "supports",
+      "offset_seconds": 226.509998
+     },
+     {
+      "turn_idx": 36,
+      "speaker": "client",
+      "quote": "там вот что то как то купить, какую эту вот это вот здесь, конечно, сложность. Действительно где нужна помощь",
+      "role": "context",
+      "offset_seconds": 245.270049
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "asr_noise",
+     "client_ended_call"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техподдержка не даёт консультаций по ценным бумагам; консультации даёт только персональный менеджер",
+      "status": "consistent",
+      "note": "DEV и Регламент 2.4: рекомендации — только персональный менеджер"
+     },
+     {
+      "turn_idx": 26,
+      "claim": "Персональный менеджер закрепляется при достаточном объёме активов; иначе клиент торгует самостоятельно",
+      "status": "unverified",
+      "note": "Порог закрепления в справочных фактах не указан"
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не имеет доступа к брокерскому счёту клиента; это может только закреплённый персональный менеджер",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 23,
+      "claim": "Клиентка теперь может обращаться только в службу поддержки",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 35,
+      "claim": "Поддержка помогает с техническими вопросами, например подсказывает путь вывода денег",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "15",
+    "final_score": 15.0,
+    "final_earned": 20.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 493,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 0.0,
+    "confidence": 0.85,
+    "explanation": "Эмпатия и клиентоориентированность — Нет. Клиент несколько раз выразил расстройство («отфутболили», «как будто я навязываюсь»), а оператор ответил сухим «Нет, не делаем» и защитной фразой о неправильном информировании, не предложив никакой альтернативы. Основание — реплики 39 и 42.",
+    "evidence": [
+     {
+      "turn_idx": 33,
+      "speaker": "client",
+      "quote": "Короче, у меня просто отфутболили выходит так.",
+      "role": "context",
+      "offset_seconds": 210.794408
+     },
+     {
+      "turn_idx": 38,
+      "speaker": "client",
+      "quote": "И даже не предлагаете никакие бумаги, какие сейчас цене, что там, какие там удачные, тоже не делаете этого.",
+      "role": "context",
+      "offset_seconds": 254.957147
+     },
+     {
+      "turn_idx": 39,
+      "speaker": "operator",
+      "quote": "Нет, не делаем.",
+      "role": "supports",
+      "offset_seconds": 256.69262499999996
+     },
+     {
+      "turn_idx": 41,
+      "speaker": "client",
+      "quote": "я тоже такое вот неприятное прям чувство, что как будто я вот ну навязываюсь прям.",
+      "role": "context",
+      "offset_seconds": 279.12170199999997
+     },
+     {
+      "turn_idx": 42,
+      "speaker": "operator",
+      "quote": "Да я вас понимаю, но видимо вас неправильно проинформировали про нашу поддержку. Мы такими делами не занимаемся.",
+      "role": "supports",
+      "offset_seconds": 298.33439999999996
+     }
+    ],
+    "checked_span": {
+     "from_turn": 31,
+     "to_turn": 42
+    },
+    "flags": [
+     "asr_noise",
+     "defensive_tone",
+     "no_alternative_offered",
+     "client_ended_call_after_operator_reply"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техническая поддержка не даёт консультаций по ценным бумагам, консультацию даёт только персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостаточном объёме активов для закрепления менеджера клиент совершает торги самостоятельно.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не имеет доступа к брокерскому счёту клиента, заходить в него может только закреплённый персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 494,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "4",
+    "score": 4.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 20.0,
+    "earned": 8.0,
+    "confidence": 0.6,
+    "explanation": "Управление диалогом — 4. Оператор сначала сказал, что при нехватке активов клиент торгует сам, а затем сослался на «ваш персональный менеджер, который закреплён за вами» и употребил термин «техническая часть» без пояснения, из-за чего клиентке пришлось дважды переспрашивать; итоговая реплика сформулирована сбивчиво. Основание — реплики [26]–[28], [34], [42].",
+    "evidence": [
+     {
+      "turn_idx": 26,
+      "speaker": "operator",
+      "quote": "Если вас не хватает активов для закрепления, то вам пока нужно будет самостоятельно совершать торги.",
+      "role": "supports",
+      "offset_seconds": 141.73033900000001
+     },
+     {
+      "turn_idx": 27,
+      "speaker": "operator",
+      "quote": "это может делать только ваш персональный менеджер, который закреплён за вами.",
+      "role": "supports",
+      "offset_seconds": 152.803635
+     },
+     {
+      "turn_idx": 28,
+      "speaker": "client",
+      "quote": "Ну то есть, а у меня теперь нет персонального менеджера, который закреплён за мной тогда что?",
+      "role": "supports",
+      "offset_seconds": 161.251837
+     },
+     {
+      "turn_idx": 34,
+      "speaker": "client",
+      "quote": "А что значит технические части? Это что значит о технической части? Как то это можете рассказать?",
+      "role": "supports",
+      "offset_seconds": 217.209647
+     },
+     {
+      "turn_idx": 42,
+      "speaker": "operator",
+      "quote": "Ну у вас, видимо, неправильно проинформировались, в связи с чем у вас остались такие впечатления об этом?",
+      "role": "supports",
+      "offset_seconds": 298.33439999999996
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "asr_noise",
+     "no_hold",
+     "client_reasked",
+     "fast_speech_rate"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техническая поддержка не даёт консультаций по ценным бумагам; консультацию даёт только персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостаточном объёме активов для закрепления менеджера клиент совершает торги самостоятельно.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не может заходить в брокерский счёт клиента; это может делать только закреплённый персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 35,
+      "claim": "Поддержка помогает с технической частью приложения, например подсказывает, как вывести деньги.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "4",
+    "final_score": 4.0,
+    "final_earned": 8.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 495,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": false,
+    "na_reason": "Клиент завершил звонок ([43] «Клиент завершил разговор.») через несколько секунд после встречного вопроса оператора в [42]. У оператора не было возможности подвести итог и попрощаться, разговор оборвался по инициативе клиента.",
+    "answer": null,
+    "score": null,
+    "max_points": 1.0,
+    "weight": 5.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.8,
+    "explanation": "Завершение — N/A. Клиент завершил звонок сразу после встречного вопроса оператора, и у оператора не было возможности подвести итог и попрощаться. Основание — системное событие [43] «Клиент завершил разговор.»",
+    "evidence": [
+     {
+      "turn_idx": 42,
+      "speaker": "operator",
+      "quote": "Ну у вас, видимо, неправильно проинформировались, в связи с чем у вас остались такие впечатления об этом?",
+      "role": "context",
+      "offset_seconds": 298.33439999999996
+     },
+     {
+      "turn_idx": 43,
+      "speaker": "system",
+      "quote": "Клиент завершил разговор.",
+      "role": "supports",
+      "offset_seconds": 305.356226
+     },
+     {
+      "turn_idx": 44,
+      "speaker": "client",
+      "quote": "Мы сейчас хотя бы както слышу какойто отклик от вас както более ну.",
+      "role": "context",
+      "offset_seconds": 305.657497
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "client_ended_call",
+     "post_segment_ignored",
+     "asr_noise"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техническая поддержка не даёт консультаций по ценным бумагам; консультации даёт только персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не может заходить в брокерский счёт клиента; это может делать только закреплённый персональный менеджер.",
+      "status": "unverified",
+      "note": ""
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостаточном объёме активов для закрепления менеджера клиент совершает торги самостоятельно.",
+      "status": "unverified",
+      "note": ""
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": null,
+    "final_score": null,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 496,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.9,
+    "explanation": "Грубые ошибки — Нет. Оператор не оскорблял клиента, не предлагал платных услуг или личных каналов в обход компании и не раскрывал данные счёта; упоминание недостатка активов для закрепления менеджера повторяет слова самой клиентки о небольшом портфеле. Основание — реплики оператора 12–42.",
+    "evidence": [
+     {
+      "turn_idx": 42,
+      "speaker": "operator",
+      "quote": "Да я вас понимаю, но видимо вас неправильно проинформировали про нашу поддержку.",
+      "role": "context",
+      "offset_seconds": 298.33439999999996
+     },
+     {
+      "turn_idx": 26,
+      "speaker": "operator",
+      "quote": "Если вас не хватает активов для закрепления, то вам пока нужно будет самостоятельно совершать торги.",
+      "role": "context",
+      "offset_seconds": 141.73033900000001
+     }
+    ],
+    "checked_span": {
+     "from_turn": 12,
+     "to_turn": 42
+    },
+    "flags": [
+     "asr_noise",
+     "no_identity_confirmation_but_no_disclosure"
+    ],
+    "claims": [
+     {
+      "turn_idx": 25,
+      "claim": "Техподдержка не даёт консультаций по ценным бумагам; консультации даёт только персональный менеджер",
+      "status": "consistent",
+      "note": "DEV и Регламент 2.4: рекомендации — только персональный менеджер."
+     },
+     {
+      "turn_idx": 26,
+      "claim": "При недостаточном объёме активов персональный менеджер не закрепляется, клиент торгует самостоятельно",
+      "status": "unverified",
+      "note": "В справочных фактах нет порога закрепления менеджера."
+     },
+     {
+      "turn_idx": 27,
+      "claim": "Поддержка не может заходить в брокерский счёт клиента; это может только закреплённый персональный менеджер",
+      "status": "unverified",
+      "note": "Справочные факты этого не описывают."
+     },
+     {
+      "turn_idx": 35,
+      "claim": "Поддержка помогает с техническими вопросами, например подсказывает, как вывести деньги",
+      "status": "unverified",
+      "note": "Справочные факты не описывают перечень задач поддержки."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ },
+ "p1-ru-022": {
+  "id": 23,
+  "conversation_id": "p1-ru-022",
+  "checklist_version_id": 1,
+  "status": "completed",
+  "provider": "anthropic",
+  "mode": "single",
+  "model": "anthropic:claude-opus-5-5",
+  "prompt_version": "v1",
+  "total_score": 25.63,
+  "final_total_score": 25.63,
+  "critical_error": true,
+  "sections": [
+   {
+    "code": "S1",
+    "title": "Начало и понимание запроса",
+    "score": 12.5,
+    "max": 31.25
+   },
+   {
+    "code": "S2",
+    "title": "Безопасность и решение",
+    "score": 0.0,
+    "max": 25.0
+   },
+   {
+    "code": "S3",
+    "title": "Ведение и завершение диалога",
+    "score": 13.13,
+    "max": 43.75
+   },
+   {
+    "code": "S4",
+    "title": "Грубые нарушения",
+    "score": 0.0,
+    "max": 0.0
+   }
+  ],
+  "cost_usd": 0.21589,
+  "input_tokens": 12306,
+  "output_tokens": 8092,
+  "latency_ms": 14768,
+  "job_id": "j_f81544d8919b",
+  "error": null,
+  "created_at": "2026-11-07T10:45:23.523826",
+  "completed_at": "2026-11-07T10:45:38.288182",
+  "review_state": "none",
+  "criteria": [
+   {
+    "id": 177,
+    "code": "C1",
+    "title": "Установление контакта",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 1.0,
+    "max_points": 1.0,
+    "weight": 10.0,
+    "weight_applied": 12.5,
+    "earned": 12.5,
+    "confidence": 0.95,
+    "explanation": "Установление контакта — Да. Оператор поздоровался на русском языке клиента и назвал имя в первой реплике. Основание — реплика [9] «Здравствуйте, я Кирилл.»",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Здравствуйте, я Кирилл.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Хочу выбрать облигации. Можете подсказать, что купить, чтобы деньги выросли?",
+      "role": "context",
+      "offset_seconds": 0.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "compliance_violation_outside_criterion",
+     "possible_fraud_solicitation",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вложение денег через личную карту оператора можно оформить без участия компании («через компанию оформлять не надо»).",
+      "status": "unverified",
+      "note": "Справочные факты не предоставлены; утверждение указывает на грубое нарушение комплаенса, оценивается другими критериями."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 1.0,
+    "final_earned": 12.5,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 178,
+    "code": "C2",
+    "title": "Выявление потребности",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 18.75,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Выявление потребности — Нет. Оператор проигнорировал запрос клиента о выборе облигаций и контекст бота о поиске бумаг в приложении, ничего не уточнил и сразу предложил перевести деньги ему на карту. Основание — реплика [9] «Скиньте деньги мне на карту, я сам их вложу с выгодой» и ответ клиента [10] «Я про консультацию в приложении спрашивал».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Хочу выбрать облигации. Можете подсказать, что купить, чтобы деньги выросли?",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 3,
+      "speaker": "bot",
+      "quote": "Могу объяснить, как найти бумаги и посмотреть информацию о них в приложении.",
+      "role": "context",
+      "offset_seconds": 12.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Здравствуйте, я Кирилл. Скиньте деньги мне на карту, я сам их вложу с выгодой.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Вы серьёзно? Я про консультацию в приложении спрашивал.",
+      "role": "supports",
+      "offset_seconds": 99.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 9,
+     "to_turn": 11
+    },
+    "flags": [
+     "possible_factual_claim",
+     "possible_fraud",
+     "compliance_violation"
+    ],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Оператор лично вложит деньги клиента с выгодой, если клиент переведёт их на карту оператора",
+      "status": "unverified",
+      "note": "Предложение перевода на личную карту сотрудника; справочных фактов нет, вероятное нарушение комплаенса/мошенничество."
+     },
+     {
+      "turn_idx": 11,
+      "claim": "Оформлять через компанию не надо",
+      "status": "unverified",
+      "note": "Утверждение о порядке обслуживания вне компании; справочными фактами не подтверждено."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 179,
+    "code": "C3",
+    "title": "Идентификация",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": false,
+    "na_reason": "Запрос не требовал идентификации: клиент задал общий вопрос о выборе облигаций в приложении; данные конкретного счёта не раскрывались, защищённые действия по счёту не выполнялись.",
+    "answer": null,
+    "score": null,
+    "max_points": 1.0,
+    "weight": 20.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.85,
+    "explanation": "Идентификация — N/A. Клиент задал общий вопрос о выборе облигаций, оператор не раскрывал данные счёта и не выполнял защищённых действий по счёту. Основание — реплика клиента [0] «Хочу выбрать облигации…».",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Хочу выбрать облигации. Можете подсказать, что купить, чтобы деньги выросли?",
+      "role": "supports",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Я про консультацию в приложении спрашивал.",
+      "role": "supports",
+      "offset_seconds": 99.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Скиньте деньги мне на карту, я сам их вложу с выгодой.",
+      "role": "context",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "system",
+      "quote": "Оператор закрыл чат.",
+      "role": "context",
+      "offset_seconds": 180.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "no_account_data_disclosed",
+     "compliance_violation_suspected_fraud",
+     "off_platform_money_request"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Личное предложение оператора по вложению средств клиента через перевод на карту оператора, оформление через компанию не требуется.",
+      "status": "unverified",
+      "note": "Предложение вне компании; относится к комплаенсу, а не к идентификации."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": null,
+    "final_score": null,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 180,
+    "code": "C4",
+    "title": "Корректная и полная консультация",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 20,
+      "label": "20",
+      "points": 20,
+      "anchor": "Все существенные вопросы закрыты или дан корректный следующий шаг."
+     },
+     {
+      "value": 15,
+      "label": "15",
+      "points": 15,
+      "anchor": "Основной вопрос решён, пропущена второстепенная деталь."
+     },
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Часть запроса закрыта, существенный вопрос остался открытым."
+     },
+     {
+      "value": 5,
+      "label": "5",
+      "points": 5,
+      "anchor": "Есть общая подсказка, но клиенту всё ещё непонятно, как действовать."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Ответа по существу нет или ключевая рекомендация ошибочна."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "0",
+    "score": 0.0,
+    "max_points": 20.0,
+    "weight": 20.0,
+    "weight_applied": 25.0,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Корректная и полная консультация — 0. Оператор не объяснил, что поддержка не даёт инвестиционных рекомендаций, не направил к персональному менеджеру и не описал, как покупаются облигации, а вместо этого предложил перевести деньги ему на личную карту в обход компании. Основание — реплики [9] и [11].",
+    "evidence": [
+     {
+      "turn_idx": 0,
+      "speaker": "client",
+      "quote": "Хочу выбрать облигации. Можете подсказать, что купить, чтобы деньги выросли?",
+      "role": "context",
+      "offset_seconds": 0.0
+     },
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Скиньте деньги мне на карту, я сам их вложу с выгодой.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Вы серьёзно? Я про консультацию в приложении спрашивал.",
+      "role": "context",
+      "offset_seconds": 99.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Да, это я лично предлагаю, через компанию оформлять не надо.",
+      "role": "supports",
+      "offset_seconds": 116.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 9,
+     "to_turn": 13
+    },
+    "flags": [
+     "fraud_risk",
+     "compliance_violation",
+     "possible_factual_claim",
+     "closed_by_operator"
+    ],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Клиенту следует перевести деньги на личную карту оператора, который сам их вложит с выгодой",
+      "status": "contradicted",
+      "note": "По DEV и Регламенту 2.4 техподдержка не даёт инвестиционных рекомендаций; рекомендации — только персональный менеджер; облигации покупаются через трейдеров/деск компании."
+     },
+     {
+      "turn_idx": 11,
+      "claim": "Оформлять инвестирование через компанию не надо",
+      "status": "contradicted",
+      "note": "Противоречит DEV: покупка облигаций осуществляется через звонок с соединением с трейдерами или письмом на деск компании."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "0",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 181,
+    "code": "C5",
+    "title": "Эмпатия и клиентоориентированность",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 15.0,
+    "weight_applied": 18.75,
+    "earned": 0.0,
+    "confidence": 0.93,
+    "explanation": "Эмпатия и клиентоориентированность — Нет. На возражение клиента о том, что он просил консультацию в приложении, оператор не признал проблему и не предложил помощь, а повторил предложение перевести деньги лично ему; после отказа клиента чат закрыт без ответа. Основание — реплики [10], [11] и событие [13].",
+    "evidence": [
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Вы серьёзно? Я про консультацию в приложении спрашивал.",
+      "role": "context",
+      "offset_seconds": 99.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Да, это я лично предлагаю, через компанию оформлять не надо.",
+      "role": "supports",
+      "offset_seconds": 116.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Нет, спасибо.",
+      "role": "context",
+      "offset_seconds": 152.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "system",
+      "quote": "Оператор закрыл чат.",
+      "role": "supports",
+      "offset_seconds": 180.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 9,
+     "to_turn": 13
+    },
+    "flags": [
+     "closed_after_objection",
+     "compliance_violation_personal_funds_solicitation",
+     "possible_fraud"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вложение средств клиента можно оформить лично через оператора, без оформления через компанию",
+      "status": "unverified",
+      "note": "Справочные факты не предоставлены; утверждение выглядит как нарушение комплаенса, оценивается в другом критерии."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 182,
+    "code": "C6",
+    "title": "Управление диалогом, скорость и грамотность",
+    "answer_type": "scale",
+    "options": [
+     {
+      "value": 10,
+      "label": "10",
+      "points": 10,
+      "anchor": "Ответы ясные и связные. Если было явное ожидание, оператор предупредил."
+     },
+     {
+      "value": 7,
+      "label": "7",
+      "points": 7,
+      "anchor": "Один заметный сбой, но клиент может понять ответ и продолжить."
+     },
+     {
+      "value": 4,
+      "label": "4",
+      "points": 4,
+      "anchor": "Клиенту приходится переспрашивать из-за формулировок или порядка ответов."
+     },
+     {
+      "value": 0,
+      "label": "0",
+      "points": 0,
+      "anchor": "Из-за бессвязных или противоречивых реплик ход диалога непонятен."
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "7",
+    "score": 7.0,
+    "max_points": 10.0,
+    "weight": 15.0,
+    "weight_applied": 18.75,
+    "earned": 13.125,
+    "confidence": 0.6,
+    "explanation": "Управление диалогом — 7. Реплики оператора короткие и однозначные, клиент понял их смысл и ответил отказом, но использовано разговорное «Скиньте», что является одним заметным сбоем формулировки. Основание — реплика [9] «Скиньте деньги мне на карту».",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Скиньте деньги мне на карту, я сам их вложу с выгодой.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Вы серьёзно? Я про консультацию в приложении спрашивал.",
+      "role": "context",
+      "offset_seconds": 99.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Да, это я лично предлагаю, через компанию оформлять не надо.",
+      "role": "context",
+      "offset_seconds": 116.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Нет, спасибо.",
+      "role": "context",
+      "offset_seconds": 152.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "colloquial_wording",
+     "compliance_issue_other_criterion",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 9,
+      "claim": "Оператор лично вложит деньги клиента с выгодой, если клиент переведёт их ему на карту",
+      "status": "unverified",
+      "note": "Справочных фактов нет; предложение по сути недопустимо и относится к критериям соответствия, не к C6."
+     },
+     {
+      "turn_idx": 11,
+      "claim": "Через компанию оформлять инвестирование не надо",
+      "status": "unverified",
+      "note": "Справочных фактов нет; утверждение относится к политике компании."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "7",
+    "final_score": 7.0,
+    "final_earned": 13.125,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 183,
+    "code": "C7",
+    "title": "Завершение",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 1
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "no",
+    "score": 0.0,
+    "max_points": 1.0,
+    "weight": 5.0,
+    "weight_applied": 6.25,
+    "earned": 0.0,
+    "confidence": 0.95,
+    "explanation": "Завершение — Нет. Оператор закрыл чат без прощания и без предложения дальнейшей помощи, а вопрос клиента о консультации по облигациям в приложении остался нерешённым. Основание — последняя реплика оператора [11] «Да, это я лично предлагаю…» и событие [13] «Оператор закрыл чат.»",
+    "evidence": [
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Да, это я лично предлагаю, через компанию оформлять не надо.",
+      "role": "supports",
+      "offset_seconds": 116.0
+     },
+     {
+      "turn_idx": 12,
+      "speaker": "client",
+      "quote": "Нет, спасибо.",
+      "role": "context",
+      "offset_seconds": 152.0
+     },
+     {
+      "turn_idx": 13,
+      "speaker": "system",
+      "quote": "Оператор закрыл чат.",
+      "role": "supports",
+      "offset_seconds": 180.0
+     }
+    ],
+    "checked_span": {
+     "from_turn": 12,
+     "to_turn": 13
+    },
+    "flags": [
+     "closed_without_farewell",
+     "open_client_question",
+     "possible_fraud_solicitation",
+     "possible_factual_claim"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вложение денег через личную карту оператора можно оформить без участия компании («через компанию оформлять не надо»).",
+      "status": "unverified",
+      "note": "Справочных фактов нет; утверждение выглядит как предложение обойти компанию — относится к критериям комплаенса, на оценку C7 не влияет."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "no",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   },
+   {
+    "id": 184,
+    "code": "C8",
+    "title": "Грубые ошибки",
+    "answer_type": "binary",
+    "options": [
+     {
+      "value": "yes",
+      "label": "Да",
+      "points": 0
+     },
+     {
+      "value": "no",
+      "label": "Нет",
+      "points": 0
+     }
+    ],
+    "applicable": true,
+    "na_reason": null,
+    "answer": "yes",
+    "score": 0.0,
+    "max_points": 0.0,
+    "weight": 0.0,
+    "weight_applied": 0.0,
+    "earned": 0.0,
+    "confidence": 0.98,
+    "explanation": "Грубые ошибки — Да. Оператор предложил клиенту перевести деньги ему лично для инвестирования в обход компании и подтвердил это после переспроса клиента. Основание — реплики [9] «Скиньте деньги мне на карту, я сам их вложу с выгодой» и [11] «через компанию оформлять не надо».",
+    "evidence": [
+     {
+      "turn_idx": 9,
+      "speaker": "operator",
+      "quote": "Скиньте деньги мне на карту, я сам их вложу с выгодой.",
+      "role": "supports",
+      "offset_seconds": 83.0
+     },
+     {
+      "turn_idx": 11,
+      "speaker": "operator",
+      "quote": "Да, это я лично предлагаю, через компанию оформлять не надо.",
+      "role": "supports",
+      "offset_seconds": 116.0
+     },
+     {
+      "turn_idx": 10,
+      "speaker": "client",
+      "quote": "Вы серьёзно? Я про консультацию в приложении спрашивал.",
+      "role": "context",
+      "offset_seconds": 99.0
+     }
+    ],
+    "checked_span": null,
+    "flags": [
+     "off_company_service_offer",
+     "personal_card_transfer_request",
+     "antiscam_violation"
+    ],
+    "claims": [
+     {
+      "turn_idx": 11,
+      "claim": "Вложение денег можно оформить лично через оператора, через компанию оформлять не надо",
+      "status": "contradicted",
+      "note": "Регламент 10.5 / антискам: пополнение на личные карты сотрудников невозможно."
+     }
+    ],
+    "votes": null,
+    "review_state": "none",
+    "final_answer": "yes",
+    "final_score": 0.0,
+    "final_earned": 0.0,
+    "appeal": null,
+    "appeals": []
+   }
+  ]
+ }
+}
