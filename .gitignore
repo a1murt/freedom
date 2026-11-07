@@ -1,0 +1,22 @@
+# Hackathon source materials (never publish; contain the signed organizer URL and recordings)
+*.pdf
+*.MP4
+*.mp4
+*.mp3
+*.txt
+!requirements*.txt
+!web/**/*.txt
+.env
+.env.*
+!.env.example
+data/
+api/data/
+# tooling
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/

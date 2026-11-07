@@ -1,0 +1,25 @@
+services:
+  api:
+    build: ./api
+    env_file: .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/cqa.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - cqa-data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: ""
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  cqa-data:
