@@ -82,3 +82,10 @@ C4         19  0.63   3.2   0.71   0.95
 ...
 total MAE 4.8   cost $0.18/dialog   provider anthropic/claude-opus-5-5   prompt v3
 ```
+
+## Observed on the first DEV run (Opus 5.5 single, v1 prompts, 2026-11-07)
+
+- Run time about 20 s and about $0.20 per chat; 8 traces per dialog; all expected gross errors (ru-009, ru-022, ru-023, ru-029, kz-013, en-013, kz-015, en-014) were flagged with no false positives in the first 41 dialogs.
+- Run-to-run variance exists on borderline criteria: `p1-ru-029` scored C2 = N/A, C7 = Да in one run and C2 = Нет, C7 = Нет in the next (70.00 vs 50.63). Claude 5.5 has no temperature, so the fix is decision steps that leave no room (C2 and C7 specs were tightened in `seeds/judge_specs_v1.json` and synced into version 1), plus voting. The ensemble supports repeating the same model: set `ensemble_members` to Opus, Opus, Sonnet in Settings to get three votes with the arbiter on disagreement.
+- Start the harness from `eval/gold.template.json`: `uv run python -m cqa.eval.harness --gold eval/gold.json --split validation` scores the stored verdicts; add `--run --provider ensemble` to re-judge first.
+- Criterion C7 is the most label-sensitive: the organizer PDF says "подвёл итог или предложил дальнейшую помощь и попрощался", yet most synthetic "good" chats end with a bare farewell after the client confirms. The current spec treats a farewell with no open question as Да. If the gold set shows the organizers read it literally, flip step 6 of the C7 spec and re-run.

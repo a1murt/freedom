@@ -1,0 +1,10 @@
+{
+  "_instructions": "Copy to gold.json. Label each dialog with the organizer checklist literally: C1,C2,C3,C5,C7,C8 are yes/no (C2,C3,C7 may be N/A), C4 is 20/15/10/5/0 or N/A, C6 is 10/7/4/0. total is optional (the harness recomputes nothing; put the total you computed by the PDF rules or omit). Each labeler fills their own file (gold_<name>.json), then reconcile into gold.json and record reasons in decisions.md.",
+  "split": {
+    "train": ["p1-ru-001", "p1-ru-003", "p1-ru-006", "p1-ru-009", "p1-ru-016", "p1-ru-018", "p1-ru-022", "p1-ru-029", "p1-kz-003", "p1-kz-008", "p1-kz-013", "p1-en-006", "p1-en-007", "p1-en-015", "p4-ru-001"],
+    "validation": ["p1-ru-007", "p1-ru-026", "p1-kz-005", "p1-kz-015", "p1-en-002", "p1-en-014", "p4-ru-005", "p1-ru-025"]
+  },
+  "labels": {
+    "p1-ru-029": {"C1": "yes", "C2": "N/A", "C3": "N/A", "C4": 20, "C5": "no", "C6": 7, "C7": "no", "C8": "yes", "_note": "example row; replace with your own labels"}
+  }
+}

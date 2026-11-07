@@ -128,6 +128,15 @@ def _answer_label(crit: Criterion | None, answer: Any) -> str:
     return _fmt_num(answer) if isinstance(answer, (int, float)) else str(answer)
 
 
+def _title_column_width(titles: list[str], style: ParagraphStyle) -> float:
+    """Wide enough for the longest single word of any title (no mid-word breaks), within 30-48 mm."""
+    widest = 0.0
+    for title in titles:
+        for word in str(title).split():
+            widest = max(widest, pdfmetrics.stringWidth(word, style.fontName, style.fontSize))
+    return max(30 * mm, min(48 * mm, widest + 7))
+
+
 def _criteria_table(ev: Evaluation, crit_by_code: dict[str, Criterion], st: dict[str, ParagraphStyle]) -> Table:
     rows = sorted(
         ev.criteria,
@@ -158,7 +167,8 @@ def _criteria_table(ev: Evaluation, crit_by_code: dict[str, Criterion], st: dict
                 _explanation_paragraph(r, st),
             ]
         )
-    widths = [11 * mm, 30 * mm, 22 * mm, 16 * mm, 11 * mm, 18 * mm]
+    titles = [crit_by_code[r.code].title if r.code in crit_by_code else r.code for r in rows]
+    widths = [11 * mm, _title_column_width(titles, st["cell"]), 22 * mm, 15 * mm, 10 * mm, 17 * mm]
     widths.append(PAGE_WIDTH - sum(widths))
     table = Table(data, colWidths=widths, repeatRows=1)
     table.setStyle(

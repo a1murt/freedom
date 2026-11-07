@@ -56,6 +56,7 @@ def _runtime_settings(db: Session) -> dict[str, Any]:
         "local_model": settings.local_model,
         "judge_effort": settings.judge_effort,
         "ensemble_members": [{"provider": "anthropic", "model": settings.default_model},
+                             {"provider": "anthropic", "model": settings.default_model},
                              {"provider": "anthropic", "model": settings.secondary_model}],
     }
     for row in db.execute(select(Setting)).scalars():

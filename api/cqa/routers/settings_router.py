@@ -20,7 +20,7 @@ def current(db: Session) -> dict[str, Any]:
     base: dict[str, Any] = {
         "default_provider": settings.default_provider, "default_model": settings.default_model, "secondary_model": settings.secondary_model,
         "explanation_language": settings.explanation_language, "pii_masking": settings.pii_masking, "fewshot_from_reviews": settings.fewshot_from_reviews,
-        "ensemble_members": [{"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.secondary_model}],
+        "ensemble_members": [{"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.secondary_model}],
         "local_endpoint": settings.local_endpoint, "local_model": settings.local_model, "judge_effort": settings.judge_effort,
         "max_parallel_criteria": settings.max_parallel_criteria, "cost_rates": settings.cost_rates,
     }

@@ -186,7 +186,8 @@ def _operator_wpm(active: list[_Turn], rows: list[_Turn]) -> float | None:
     total_words = sum(t.words for t in measured)
     if total_words <= 0:
         return None
-    weighted = sum(t.words * (t.words / t.gap * 60.0) for t in measured)  # type: ignore[operator]
+    # per-turn rate clamped to a plausible speaking range so ASR micro-turns do not inflate the estimate
+    weighted = sum(t.words * min(260.0, max(40.0, t.words / t.gap * 60.0)) for t in measured)  # type: ignore[operator]
     return weighted / total_words
 
 

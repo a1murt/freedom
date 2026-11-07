@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>CQA · Freedom Broker</title>
+    <script>
+      // Runtime override of the API base (Dynamics 365 web resource):
+      // window.CQA_CONFIG = { apiUrl: "https://cqa.example.com" };
+      try {
+        var t = localStorage.getItem("cqa.theme");
+        if (t === "light") document.documentElement.classList.remove("dark");
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
