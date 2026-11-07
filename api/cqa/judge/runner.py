@@ -26,8 +26,8 @@ from .providers import ProviderError, get_provider
 from .providers.base import JudgeProvider
 from ..review.service import _settled_review_state, recompute_final
 from .reference import reference_facts_for
-from .validate import (CONTACT_OUTSIDE_RECORDING_FLAG, credit_unrecorded_opening, effective_na, is_contact_criterion,
-                       opening_outside_recording, retry_instruction, unusable_reason, validate_verdict)
+from .validate import (CONTACT_OUTSIDE_RECORDING_FLAG, apply_c7_bare_farewell_policy, credit_unrecorded_opening, effective_na,
+                       is_contact_criterion, opening_outside_recording, retry_instruction, unusable_reason, validate_verdict)
 
 log = logging.getLogger("cqa.judge")
 PROMPT_VERSION = "v1"
@@ -86,6 +86,7 @@ def _runtime_settings(db: Session) -> dict[str, Any]:
         "local_endpoint": settings.local_endpoint,
         "local_model": settings.local_model,
         "judge_effort": settings.judge_effort,
+        "c7_bare_farewell_policy": settings.c7_bare_farewell_policy,
         "ensemble_members": [{"provider": "anthropic", "model": settings.default_model},
                              {"provider": "anthropic", "model": settings.default_model},
                              {"provider": "anthropic", "model": settings.secondary_model}],
@@ -302,7 +303,7 @@ async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[s
             if traces is not None and e.billed:
                 traces.append(_failed_trace(provider, system, messages, e) | {"kind": kind, "prompt_version": prompt_version})
             msg = str(e).lower()
-            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out"))
+            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out", "invalid json"))
             if not transient or attempt == len(delays):
                 raise
             log.warning("%s/%s transient error (attempt %d): %s", provider.name, provider.model, attempt + 1, e)
@@ -409,6 +410,7 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
                     merged.flags.append("arbiter_decided")
             except Exception as e:  # keep the vote
                 outcome.issues.append(f"arbiter failed: {e}")
+        merged = apply_c7_bare_farewell_policy(merged, crit, rs.get("c7_bare_farewell_policy"), conv.channel)
         outcome.verdict = merged
         outcome.cost_usd = sum(t.get("cost_usd", 0.0) for t in outcome.traces)
     except Exception as e:

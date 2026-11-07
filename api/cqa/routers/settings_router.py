@@ -24,8 +24,9 @@ router = APIRouter(prefix="/api", tags=["settings"])
 
 EDITABLE = {"default_provider", "default_model", "secondary_model", "explanation_language", "pii_masking", "fewshot_from_reviews",
             "ensemble_members", "local_endpoint", "local_model", "judge_effort", "max_parallel_criteria",
-            "mascot_enabled", "team_name", "default_theme", "default_checklist_id"}
+            "mascot_enabled", "team_name", "default_theme", "default_checklist_id", "c7_bare_farewell_policy"}
 MAX_ENSEMBLE_MEMBERS = 5
+C7_BARE_FAREWELL_POLICIES = ("yes", "na", "no")
 MODEL_NAME_MAX = 200
 
 
@@ -90,6 +91,9 @@ def _validate(key: str, value: Any, errors: list[dict[str, str]]) -> None:
     elif key == "local_model":
         if value is not None and (not isinstance(value, str) or len(value) > MODEL_NAME_MAX):
             _err(errors, key, "Имя локальной модели — строка не длиннее 200 символов.")
+    elif key == "c7_bare_farewell_policy":
+        if not isinstance(value, str) or value.strip().lower().replace("/", "") not in C7_BARE_FAREWELL_POLICIES:
+            _err(errors, key, "Политика C7 для прощания без итога: «yes», «na» или «no».")
 
 
 def current(db: Session) -> dict[str, Any]:
@@ -98,6 +102,7 @@ def current(db: Session) -> dict[str, Any]:
         "explanation_language": settings.explanation_language, "pii_masking": settings.pii_masking, "fewshot_from_reviews": settings.fewshot_from_reviews,
         "ensemble_members": [{"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.secondary_model}],
         "local_endpoint": settings.local_endpoint, "local_model": settings.local_model, "judge_effort": settings.judge_effort,
+        "c7_bare_farewell_policy": settings.c7_bare_farewell_policy,
         "max_parallel_criteria": settings.max_parallel_criteria, "cost_rates": settings.cost_rates,
         "mascot_enabled": False, "default_theme": "light", "team_name": settings.team_name,
         "default_checklist_id": settings.default_checklist_id,

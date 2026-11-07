@@ -2,6 +2,7 @@
 Uses response_format json_schema where supported; falls back to prompting for JSON and parsing the first object."""
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -10,6 +11,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from ...config import settings
 from ..contract import ProviderResult, Usage
 from .base import ProviderError
 
@@ -32,11 +34,24 @@ def _extract_json(text: str) -> dict[str, Any]:
         pass
     m = re.search(r"\{.*\}", text, flags=re.S)
     if not m:
-        raise ProviderError("Local model returned no JSON object")
+        raise ProviderError("Local model returned no JSON object (invalid JSON)")
     try:
         return json.loads(m.group(0))
-    except json.JSONDecodeError as e:  # a ProviderError, so the runner reports it per criterion instead of crashing
+    except json.JSONDecodeError as e:  # a ProviderError, so the runner reports it per criterion; "invalid json" is retried
         raise ProviderError(f"Local model returned invalid JSON: {e}") from e
+
+
+_SLOTS: dict[tuple[str, int], asyncio.Semaphore] = {}
+
+
+def _slot(base_url: str) -> asyncio.Semaphore:
+    """One semaphore per endpoint and event loop. A laptop Ollama serves requests one by one: sending the eight criteria of
+    several dialogs at once only queues them server-side until the HTTP timeout fires, so the client limits concurrency
+    (settings.local_max_parallel, 1 by default; raise it for vLLM on a GPU)."""
+    key = (base_url, id(asyncio.get_running_loop()))
+    if key not in _SLOTS:
+        _SLOTS[key] = asyncio.Semaphore(max(1, int(getattr(settings, "local_max_parallel", 1) or 1)))
+    return _SLOTS[key]
 
 
 class OpenAICompatibleProvider:
@@ -48,6 +63,10 @@ class OpenAICompatibleProvider:
 
     async def complete(self, system: str, messages: list[dict[str, Any]], schema: type[BaseModel], *, effort: str = "high",
                        max_tokens: int = 4096) -> ProviderResult:
+        async with _slot(self.base_url):
+            return await self._complete(system, messages, schema, max_tokens=max_tokens)
+
+    async def _complete(self, system: str, messages: list[dict[str, Any]], schema: type[BaseModel], *, max_tokens: int) -> ProviderResult:
         t0 = time.perf_counter()
         json_schema = schema.model_json_schema()
         body: dict[str, Any] = {
@@ -58,8 +77,9 @@ class OpenAICompatibleProvider:
             "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
         }
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        timeout = float(getattr(settings, "local_timeout_s", 900) or 900)  # an 8B model on a laptop needs 1-3 minutes per criterion
         try:
-            async with httpx.AsyncClient(timeout=300.0) as c:
+            async with httpx.AsyncClient(timeout=timeout) as c:
                 r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
                 if r.status_code == 400 and "response_format" in r.text:
                     body.pop("response_format", None)

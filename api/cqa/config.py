@@ -39,11 +39,16 @@ class Settings(BaseSettings):
     # extra endpoints PUT /api/settings may select (comma-separated scheme://host[:port][/path]); LOCAL_API_KEY is sent
     # only to LOCAL_ENDPOINT and these. Off the hosted instance loopback and private addresses are accepted as well.
     local_endpoint_allowlist: str | None = None
+    local_max_parallel: int = 1       # concurrent requests to the local endpoint (Ollama on a laptop: 1; vLLM on a GPU: 8+)
+    local_timeout_s: float = 900.0    # one criterion call on an 8B model on a laptop takes 1-3 minutes
 
     explanation_language: str = "ru"
     pii_masking: bool = True
     fewshot_from_reviews: bool = True
     judge_effort: str = "high"
+    # C7 when the operator said goodbye after a resolved question with no summary, no offer of further help and nothing left
+    # open (the judge marks it with the flag "bare_farewell"): "yes" | "na" | "no". The organizers answered "N/a" for this case.
+    c7_bare_farewell_policy: str = "na"   # ML-owner decision 2026-11-07: organizer answer "N/a" read as the value N/A
     max_parallel_criteria: int = 8
     max_parallel_conversations: int = 3
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])  # env CORS_ORIGINS='["https://cqa-freedom-pi.vercel.app","http://localhost:5173"]'

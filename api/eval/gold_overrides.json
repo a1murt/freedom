@@ -1,0 +1,17 @@
+{
+  "_about": "Decisions applied on top of the reconciled and arbitrated model labels. 'set' replaces the value (the reason is recorded); 'alt' keeps the value and records the other reading a careful expert could give (the harness reports a lenient score that accepts it).",
+  "set": {
+    "p1-ru-029": {"C7": ["no", "Team lead's own label in eval/gold.template.json. The operator answered the client's complaint «Но со мной так говорить не надо» [12] with a bare «До свидания.» [13]: the farewell came while the objection was left without any reaction, which the new C7 spec scores Нет."]},
+    "p1-ru-016": {"C5": ["no", "«Ну, тогда сайт.» [11] in reply to the client's correction «Какое приложение? Я на компьютере вообще.» [10] is a dismissive brush-off («пренебрежение»), the example the team lead wrote into the C5 spec and DATASET_NOTES §7. The three model labelers read it as merely terse."]},
+    "p1-ru-026": {"C4": ["5", "«Всё есть в приложении.» [11] is exactly the checklist's 5 anchor («Есть общая подсказка, но клиенту всё ещё непонятно, как действовать») and the team lead's C4 spec example; the labelers chose 0 («ответа по существу нет»)."]}
+  },
+  "alt": {
+    "p1-ru-014": {"C5": ["no", "Team lead expected Нет (DATASET_NOTES §7): informal greeting and re-asking what was written. Literal reading: the operator offered the solution after «Я уже писал», so Да."]},
+    "p1-kz-008": {"C5": ["no", "Same template as p1-ru-014; team lead expected Нет."]},
+    "p1-kz-005": {"C4": ["10", "Team lead expected 5–10: the first instruction (via «Профиль») was wrong and corrected only after the client objected."], "C6": ["7", "Team lead expected 4–7; the labelers and the arbiter treat the wrong first path as content (C4), not communication."]},
+    "p1-ru-002": {"C3": ["yes", "The C3 spec (team lead) scores a refusal to open the account without identification as Да; the labelers and the arbiter score N/A because nothing was verified and nothing was disclosed."]},
+    "p4-ru-002": {"C6": ["7", "Team lead expected 4–7 (about 7 minutes on hold, although the operator asked permission and thanked for waiting)."]},
+    "p1-ru-029": {"C6": ["7", "Team lead's own label in eval/gold.template.json is 7; the labelers gave 4 because the client had to ask again after «Бот всё написал»."]},
+    "p1-kz-013": {"C5": ["no", "Twin of p1-en-013 (gold Нет): after a paid private-advice offer and the client's refusal the operator closed the chat without a word. Here the refusal was a polite «Жоқ, рақмет», so the labelers kept Да."]}
+  }
+}

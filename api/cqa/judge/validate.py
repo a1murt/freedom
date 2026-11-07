@@ -267,6 +267,42 @@ def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, 
     return ValidationResult(verdict=v, issues=issues, needs_retry=retry, confidence_penalty=penalty)
 
 
+BARE_FAREWELL_FLAG = "bare_farewell"
+
+
+def apply_c7_bare_farewell_policy(v: Verdict, crit: CriterionPack, policy: str | None, channel: str | None = None) -> Verdict:
+    """Deterministic C7 answer for a polite farewell after a resolved question with no summary, no offer of further help and
+    nothing left open. The judge classifies the closing and adds the flag "bare_farewell" (whatever value it chose itself); the
+    team policy decides the value: "na" (default: the organizers answered "N/a" for this case), "yes" (a farewell is enough) or
+    "no" (literal reading: a summary or an offer of help is required). Switching the policy needs no prompt change or redeploy."""
+    if crit.code != "C7" or BARE_FAREWELL_FLAG not in (v.flags or []):
+        return v
+    p = (policy or "na").strip().lower().replace("/", "")
+    refs = ", ".join(f"[{e.turn_idx}]" for e in v.evidence[:3]) or "последняя реплика оператора"
+    if p == "na":
+        if not effective_na(crit, channel)[0]:
+            return v
+        if v.applicable or not (v.na_reason or "").strip():
+            v.na_reason = ("Оператор попрощался после решённого вопроса без итога и без предложения дальнейшей помощи; "
+                           "по ответу организаторов такой случай оценивается как N/A.")
+            v.explanation = (f"Завершение — N/A. Оператор попрощался после решения вопроса, не подводя итог и не предлагая дальнейшую "
+                             f"помощь; по ответу организаторов такой случай не оценивается. Основание — {refs}.")
+            v.flags.append("rule_c7_bare_farewell_na")
+        v.applicable = False
+        v.answer = ""
+    elif p == "no":
+        v.applicable, v.answer, v.na_reason = True, "no", ""
+        v.explanation = (f"Завершение — Нет. Оператор попрощался, но не подвёл итог и не предложил дальнейшую помощь. "
+                         f"Основание — {refs}.")
+        v.flags.append("rule_c7_bare_farewell_no")
+    elif not v.applicable or str(v.answer).lower() != "yes":
+        v.applicable, v.answer, v.na_reason = True, "yes", ""
+        v.explanation = (f"Завершение — Да. Оператор попрощался после решения вопроса; открытых вопросов не осталось. "
+                         f"Основание — {refs}.")
+        v.flags.append("rule_c7_bare_farewell_yes")
+    return v
+
+
 def retry_instruction(issues: list[str]) -> str:
     return ("Your previous verdict had problems: " + "; ".join(issues) +
             ". Return a corrected verdict JSON: cite only existing turn indices with verbatim quotes, "
