@@ -84,3 +84,27 @@ The ML teammate built a second gold set: 65 DEV dialogs including calls, three b
 - The deployed specs (876c1de), single Opus, score **0,936** on the ML gold, 0,938 on the panel gold and **0,984** on the ML holdout. Before the night's spec work: 0,854 / 0,844 / 0,859.
 - The C7 bare-farewell policy switch (default `na`) with the merged code scores **97%** on C7 in the lab and 95% on hosted, which is run-to-run variance.
 - The harness reads both gold formats: `uv run python -m cqa.eval.harness --gold eval/gold_ai_panel.json --api <hosted>`.
+
+## Round 7: three narrow fixes where both gold sets agree (2026-11-08, 04:00–04:35)
+
+**Method.** We listed every chat cell where the two gold sets agree with each other and the deployed judge does not: 14 of 480. We set aside:
+- p1-ru-029, a live-demo dialog (C2, C7);
+- three cells where the judge follows a rule the team lead set on purpose (p1-ru-002 C3, p1-ru-014 C5, the «Ну, тогда сайт» = 7 example).
+
+The rest fall into three patterns. Each fix was measured in the lab on all 60 chats against both gold sets before it shipped (`ce25bbe`):
+
+| Criterion | Fix | ML gold (lab) | Panel gold (lab) | Fixed / broken |
+|---|---|---|---|---|
+| C3 | A guess or general rule without opening the account is not disclosure → N/A | 58 → 59 | 58 → 59 | 1 / 0 |
+| C4 | A reference-fact caveat the request did not need is not a missed detail; a step needed for the client's goal still is | 54 → 56 | 49 → 51 | 2 / 0 |
+| C6 | The improper offer itself (card transfer, paid advice, personal number) is C8 and does not lower C6 when it is clear | 50 → 53 | 54 → 56 | 2 / 0 |
+
+- **C6 took three attempts.** Wider wordings broke contradictory replies (should be 0) and forced re-asks (should be 4).
+- **The C4 D-account case.** The first C4 wording forgave a missing "transfer between accounts first", which the ML labelers marked 15 unanimously. The final wording names that case.
+
+**Hosted, after re-judging C3/C4/C6 on 56 chats (1141be2, $5,61):**
+- Panel gold: **94,6% → 95,0%**. ML gold: **94,8% → 95,2%**.
+- 5 cells fixed (p1-ru-018 C3, p1-kz-012 C4, p1-ru-015 C4, p1-ru-022 C6, p1-en-013 C6).
+- 3 cells moved the other way. p1-en-008 C4 and p1-kz-015 C4 sit at the 15/20 and 5/10 borders, and their new rationales do not use the new rule. p1-ru-018 C6 sits at the 0/4 border (the ML arbiter itself moved it from 4 to 0).
+
+**Variance.** Two single-Opus runs with the same specs differ on about 2 of 60 C4 or C6 cells. That variance is the reason the control run uses the ensemble.

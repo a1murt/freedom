@@ -68,7 +68,7 @@ Numbers are from the hosted instance (`https://api-production-58ab4.up.railway.a
 
 12. Methodologist role, then Checklist Studio on v1 (read-only baseline), then «Создать версию».
 13. Change C7's weight from 5 to 10. The what-if panel (`…/impact`) answers instantly with no model calls: how many dialogs change, the new mean, and who crosses 60 or 85.
-    - Hosted on 08.11 (build 876c1de): **20 dialogs change (↑8 ↓12), mean 83,10 → 82,72**.
+    - Hosted on 08.11 (build 1141be2): **19 dialogs change (↑7 ↓12), mean 83,88 → 83,46**.
     - If asked why so few: C7 is N/A on the many chats that end with a polite goodbye and no summary or offer of help. That is the organizers' own answer (`docs/eval/ACCURACY.md`).
 14. Add C9 «Персонализация» and use «Проверить на диалоге» (`test-criterion`, ~$0,03). Then «Сохранить как черновик», then the diff (old → new values).
 15. «Применить» to three dialogs (partial):
