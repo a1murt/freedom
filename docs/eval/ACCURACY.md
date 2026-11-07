@@ -16,19 +16,21 @@
 
 ## Results
 
-Per-criterion agreement with the provisional gold, 7 of 9 labeler batches. Every dialog has at least two lenses, and 24 cells were still missing at the time. The same scratch copy of the hosted data was used throughout, and only the changed criterion was re-judged with the real Claude judge (claude-opus-5-5).
+The final gold set: 9 of 9 labeler batches, 423 of 480 cells unanimous across the three lenses, and 1 three-way split decided by the reconciler. The hosted judge was measured before and after the spec deploy (build 4ab648a). In the "after" column, 56 chats were re-judged on C2/C6/C7 with the real judge for ,61. The four demo dialogs (p1-ru-029, p1-ru-005, p1-kz-005, p1-en-007) were left untouched for the jury script, so they keep their earlier C2/C6/C7.
 
-| Criterion | Hosted judge (spec before) | New specs | Note |
+| Criterion | Hosted judge, old specs | Hosted judge, new specs | Remaining differences |
 |---|---|---|---|
 | C1 Установление контакта | 100% | 100% | |
-| C2 Выявление потребности | 83% | **95%** | the judge called «Да» whenever the answer used the client's details, where the checklist's own N/A condition («данных для ответа хватало с самого начала») applies |
-| C3 Идентификация | 97% | 97% | |
-| C4 Консультация | 79% | 79% | **unchanged on purpose**, see below |
-| C5 Эмпатия | 95% | 95% | |
-| C6 Ведение диалога | 88% | 88% | memo rule added; neutral on DEV |
-| C7 Завершение | **53%** | **98%** | see below |
+| C2 Выявление потребности | 83% | **98%** | p1-ru-029 (demo, old spec) |
+| C3 Идентификация | 97% | 97% | 2 |
+| C4 Консультация | 78% | 78% | **unchanged on purpose**, see below |
+| C5 Эмпатия | 93% | 93% | 4 |
+| C6 Ведение диалога | 85% | **90%** | 6 |
+| C7 Завершение | **40%** | **95%** | 3, one of them the demo dialog p1-ru-029 |
 | C8 Грубые ошибки | 100% | 100% | |
-| **All cells** | **87.9%** | **93.9%** | 456 compared cells |
+| **All 480 cells** | **84,6%** | **94,0%** | **+9,4 points** |
+
+The lab runs on a scratch copy, measured against the provisional gold, showed the same picture: C7 53% → 98% and C2 83% → 95% over two runs.
 
 **C7 is the big one.**
 - The organizers were asked about «Пожалуйста. Хорошего вечера!» with no summary and no offer of help, and they answered «N/a». Our spec listed exactly that as a «Да» example.

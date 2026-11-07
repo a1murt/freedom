@@ -178,7 +178,7 @@ The body is always `{"error": {"code", "message", ...extra}}` and `message` is R
 - **What-if (new):** `POST /api/checklists/{id}/versions/{vid}/impact` with the draft body (+ `conversation_ids?`, `dataset_id?`, `basis: "final"|"ai"`).
   - **Response:** per-dialog `before → after → delta`, `summary` (mean before/after, how many go up or down, crossings of 60 and 85, gross-error counts), and `changes` (`weight_only`, `rejudge_codes`, `pending_codes`, `notes`).
   - **Cost:** zero model calls, about 20 ms for 65 dialogs; every role may call it.
-  - **Use:** show it live while weights are edited ("изменение веса C7 с 5 на 15: 30 диалогов изменятся, средний −1,21").
+  - **Use:** show it live while weights are edited ("изменение веса C7 с 5 на 10: 23 диалога изменятся (↑11 ↓12), средний 82,40 → 82,08", hosted 08.11).
 - **Test a draft criterion:** `POST /api/checklists/test-criterion {criterion, conversation_id}` returns the verdict, `judge_spec` (save it with the criterion) and `cost_usd`. Nothing is stored.
 - **Diff:** `GET /api/checklists/{id}/versions/{a}/diff/{b}` adds `changed[].values {field: {old, new}}`, `added_criteria`, `removed_criteria`, `from_version_no`/`to_version_no` and `weights {from, to}`. **Activate:** `POST …/activate`.
 - **Two editors:** send `base_version_id` (the version the editor opened) with a save. If someone saved meanwhile, the answer is 409 `version_conflict {latest_version_no}`.
