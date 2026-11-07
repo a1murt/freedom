@@ -31,8 +31,49 @@ def _normalize_criterion(c: dict[str, Any], order: int) -> dict[str, Any]:
     return out
 
 
+def sync_seed_into_organizer_version(db: Session) -> list[str]:
+    """Keep the organizer checklist (version 1 of the seeded checklist) in step with the repo seeds.
+
+    Only judge-facing guidance is synced (judge_spec and channel_overrides); weights, options and N/A rules of
+    version 1 are never touched. This lets judge-spec improvements and organizer clarifications reach the hosted
+    instance on deploy. Disable with SEED_SYNC=0.
+    """
+    import logging
+    import os
+
+    if os.environ.get("SEED_SYNC", "1") == "0":
+        return []
+    seed = json.loads((settings.seeds_dir / "checklist_freedom_v1.json").read_text(encoding="utf-8"))
+    specs_path = settings.seeds_dir / "judge_specs_v1.json"
+    specs = json.loads(specs_path.read_text(encoding="utf-8")) if specs_path.exists() else {}
+    cl = db.execute(select(Checklist).where(Checklist.name == seed.get("name")).order_by(Checklist.id)).scalars().first()
+    if cl is None:
+        return []
+    v1 = db.execute(select(ChecklistVersion).where(ChecklistVersion.checklist_id == cl.id, ChecklistVersion.version_no == 1)
+                    .options(selectinload(ChecklistVersion.criteria))).scalar_one_or_none()
+    if v1 is None:
+        return []
+    seed_by_code = {c["code"]: c for c in seed["criteria"]}
+    changed: list[str] = []
+    for c in v1.criteria:
+        sc = seed_by_code.get(c.code)
+        if sc is None:
+            continue
+        if specs.get(c.code) and c.judge_spec != specs[c.code]:
+            c.judge_spec = specs[c.code]
+            changed.append(f"{c.code}.judge_spec")
+        if (sc.get("channel_overrides") or {}) != (c.channel_overrides or {}):
+            c.channel_overrides = sc.get("channel_overrides") or {}
+            changed.append(f"{c.code}.channel_overrides")
+    if changed:
+        db.commit()
+        logging.getLogger("cqa.seed").info("organizer checklist v1 synced from seeds: %s", ", ".join(changed))
+    return changed
+
+
 def ensure_seed(db: Session) -> None:
     if db.execute(select(Checklist.id)).first():
+        sync_seed_into_organizer_version(db)
         return
     seed = json.loads((settings.seeds_dir / "checklist_freedom_v1.json").read_text(encoding="utf-8"))
     specs_path = settings.seeds_dir / "judge_specs_v1.json"
