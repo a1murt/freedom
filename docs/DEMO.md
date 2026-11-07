@@ -84,7 +84,7 @@ If behind schedule, drop step 8 first, then step 7.
 ## Control-stage runbook (H+22 → H+24)
 
 `scripts/control_run.py` runs import → dry-run guard → evaluate → resume after a restart → retry → export → validate → commit → push.
-- Rehearsal, free and with no git: `--rehearse --provider fake`.
+- Rehearsal, free and with no git, against a local API (see `docs/ARCHITECTURE_V2.md` §10 step 4): `--api http://127.0.0.1:8019 --rehearse --provider fake`. Against the hosted instance `--rehearse` is refused unless `--allow-hosted-rehearsal` is added, because it re-evaluates 10 DEV cards there. The live-demo dialogs and dialogs with appeals are always skipped.
 - Real run: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>`. If the organizers hand over a URL or a file instead: `--source-url` / `--source-file`.
 
 1. **H+22:00 · Freeze.**

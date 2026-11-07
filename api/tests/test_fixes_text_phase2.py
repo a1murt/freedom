@@ -175,15 +175,27 @@ ADVERSARIAL = [  # CALLS-1: one pasted turn of 100 000 characters must not stall
 ]
 
 
-@pytest.mark.parametrize("text", [pytest.param(text, id=name) for name, text in ADVERSARIAL])
-def test_detection_takes_milliseconds_on_a_100k_character_turn(text):
-    assert len(text) == N
+def _best_of(text: str, runs: int = 5) -> float:
     best = float("inf")
-    for _ in range(5):
+    for _ in range(runs):
         t0 = time.perf_counter()
         steering_turns([{"idx": 0, "text": text}])
         best = min(best, time.perf_counter() - t0)
-    assert best < 0.05, f"{best * 1000:.1f} ms"
+    return best
+
+
+@pytest.mark.parametrize("text", [pytest.param(text, id=name) for name, text in ADVERSARIAL])
+def test_detection_takes_milliseconds_on_a_100k_character_turn(text):
+    """Linear time on adversarial input. Machine-independent: catastrophic backtracking on 100k characters takes
+    seconds to minutes, while a linear scan takes tens of milliseconds even on a slow CI runner (55 ms on GitHub's
+    ubuntu-latest, under 20 ms on an M4). So the absolute ceiling is generous and the growth check carries the weight:
+    a quarter of the text must take at least about a quarter of the time (quadratic growth would be 16x, linear 4x)."""
+    assert len(text) == N
+    full = _best_of(text)
+    assert full < 0.5, f"{full * 1000:.1f} ms"
+    if full > 0.005:  # below 5 ms fixed costs dominate and the ratio is noise
+        quarter = _best_of(text[: N // 4])
+        assert full / max(quarter, 1e-6) < 10, f"{full * 1000:.1f} ms vs {quarter * 1000:.1f} ms on a quarter: not linear"
 
 
 def _bundle(texts: list[str]) -> str:

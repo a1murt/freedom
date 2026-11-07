@@ -49,6 +49,9 @@ from cqa.export.results_json import from_api, summarize, validate_document, writ
 
 HOSTED = "https://api-production-58ab4.up.railway.app"
 ACTOR_HEADERS = {"X-CQA-Role": "admin", "X-CQA-User": "control-run"}
+# dialogs the demo runbook (docs/DEMO.md) shows live; a rehearsal never re-evaluates them (same list as
+# cqa.platform.readiness.LIVE_DEMO). Dialogs with appeals or decisions are skipped too (the seeded ones).
+LIVE_DEMO = ("p1-ru-029", "p1-ru-005")
 PUSH_ATTEMPTS = 3
 
 
@@ -148,6 +151,13 @@ def resolve_version(http: httpx.Client, base: str, version_id: int | None) -> in
     if best is None:
         raise SystemExit("no organizer checklist (version 1) found on the API")
     return best
+
+
+def rehearsal_ids(convs: list[dict], n: int = 10) -> list[str]:
+    """Up to n DEV chats spread over the list (RU, KZ, EN), never a live-demo dialog or one with an appeal or a decision."""
+    pool = [c["id"] for c in convs if str(c.get("id", "")).startswith("p1-") and c["id"] not in LIVE_DEMO
+            and (c.get("review_state") or "none") == "none"]
+    return pool[:: max(1, len(pool) // n)][:n]
 
 
 def import_group(http: httpx.Client, base: str, group: str) -> list[str]:
@@ -286,6 +296,9 @@ def main() -> int:
     ap.add_argument("--skip-import", action="store_true", help="use already imported conversations given by --ids")
     ap.add_argument("--ids", help="comma-separated ids (with --skip-import)")
     ap.add_argument("--rehearse", action="store_true", help="dry run on 10 DEV chats: no import, writes api/data/rehearsal/results.json, no git")
+    ap.add_argument("--allow-hosted-rehearsal", action="store_true",
+                    help="let --rehearse re-evaluate 10 DEV chats on the hosted jury instance (they become the latest evaluations "
+                         "there; the live-demo dialogs and dialogs with appeals are still skipped)")
     ap.add_argument("--source-url", help="full GET URL of the control set (if the organizers give a URL instead of a group_id); fetched on this laptop and uploaded")
     ap.add_argument("--source-file", help="path to a downloaded control-set JSON (organizer format); uploaded to the API")
     ap.add_argument("--no-snapshot", action="store_true", help="do not back up the API database before the control run")
@@ -303,6 +316,13 @@ def main() -> int:
                          "dialogs, and exporting without evaluating them again would mark a stale verdict VALID.\n"
                          "To re-export dialogs that are already evaluated, use --export-only with --skip-import --ids <ids> "
                          "or with --group <group>; to upload and evaluate the file, drop --export-only.")
+    if args.rehearse and args.api.rstrip("/") == HOSTED and args.provider != "fake" and not args.allow_hosted_rehearsal:
+        # a paid rehearsal on the jury instance makes 10 new "latest" evaluations: cards, analytics and the numbers the
+        # demo runbook quotes (the C7 what-if count, the overview) can change
+        raise SystemExit("--rehearse against the hosted jury instance re-evaluates 10 DEV chats there: their cards, the analytics "
+                         "and the numbers in docs/DEMO.md can change. Rehearse on a local API instead "
+                         "(--api http://127.0.0.1:8019, free with --provider fake), or add --allow-hosted-rehearsal "
+                         "if that is really intended (the live-demo dialogs and dialogs with appeals are skipped).")
     if args.provider == "fake":
         if args.api.rstrip("/") == HOSTED:  # fake verdicts would become the latest evaluations of the jury instance
             raise SystemExit("--provider fake is for rehearsals against a local or scratch API (--api http://127.0.0.1:...), "
@@ -326,7 +346,7 @@ def main() -> int:
 
         if args.rehearse:
             convs = http.get(f"{base}/api/conversations", params={"page_size": 500, "channel": "agent chat"}).json()["items"]
-            ids = [c["id"] for c in convs if c["id"].startswith("p1-")][:: max(1, len(convs) // 10)][:10]
+            ids = rehearsal_ids(convs)
             out = ROOT / "api" / "data" / "rehearsal" / "results.json"  # git-ignored, never mixed with results/
             args.no_git = True
         elif args.skip_import:

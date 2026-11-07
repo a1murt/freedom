@@ -200,7 +200,9 @@ Before (H+22):
 4. Rehearse locally, for free, against a scratch copy of the database (never the hosted instance: fake verdicts would become the latest evaluations):
    `DATABASE_URL=sqlite:////tmp/cqa-rehearsal/cqa.db DATA_DIR=/tmp/cqa-rehearsal uvicorn cqa.main:app --port 8019` and
    `api/.venv/bin/python scripts/control_run.py --api http://127.0.0.1:8019 --rehearse --provider fake`.
-   A paid rehearsal on the hosted API: `--rehearse` (10 DEV chats, no git, ≈ $2).
+   A paid rehearsal on the hosted API: `--rehearse --allow-hosted-rehearsal` (10 DEV chats, no git, ≈ $2). It makes 10 new latest evaluations on the jury
+   instance, so cards, analytics and the numbers in `docs/DEMO.md` can change; the live-demo dialogs and dialogs with appeals are skipped. Without the flag
+   the script refuses before sending anything.
 5. Freeze the judge (provider, model, prompt version) per `docs/HANDOFF_ML.md`; avoid other runs during the hour (`MAX_CONCURRENT_JOBS=2`).
 
 During (H+23):

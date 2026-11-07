@@ -91,7 +91,7 @@ Full text and our decisions: [ORGANIZER_UPDATES.md](ORGANIZER_UPDATES.md). The o
   ```bash
   api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble
   ```
-  Rehearse it beforehand with `--rehearse` (10 DEV chats, no git, about $2–4).
+  Rehearse it beforehand on your local API: `--api http://127.0.0.1:8000 --rehearse` (10 DEV chats, no git, about $2–4 with Claude, free with `--provider fake`). Against the hosted instance the script refuses unless you add `--allow-hosted-rehearsal`.
 - Tell the team lead which provider and prompt version win on your validation split before H+22, so the control run uses them.
 
 ## Architecture changes that touch the judge (2026-11-07 evening)
@@ -115,3 +115,16 @@ None of these change the judge prompts or `api/seeds/judge_specs_v1.json`; they 
 - **Gross-error criterion.** `analytics/violations.py` takes the version's `is_critical` criterion instead of a hard-coded C8. The keyword type classifier ignores types named only in a negated clause («оскорблений не было»). The 8 DEV violations keep their types.
 - **What-if for checklist changes.** `POST /api/checklists/{id}/versions/{vid}/impact` recomputes totals over stored answers with zero model calls. It is handy for weight experiments on the gold set.
 - **Experiments on the hosted instance.** Run them on your local copy. The hosted instance is the jury's: every evaluation there becomes "the latest" for the card, the analytics and `results/dev`.
+
+## Working on main (2026-11-08 00:50 +05)
+
+`main` has every backend change. Pull it before you start, and branch from it.
+
+- **Push path.** Push to a branch named `ml/<topic>` and open a PR into `main`. CI runs the API tests on every push and PR (`.github/workflows/ci.yml`, about 1.5 minutes, offline, with no keys). The API job must be green before merge. The web job only reports. If you push straight to `main`, run `uv run pytest -q` in `api/` first.
+- **Your files.** The files listed in "Where things live" are yours. Add `api/eval/gold.json` and `api/judge_config_control.md` when they are ready. Nothing else in `api/` needs to change for judge work. If it does, say so and the architecture side changes it.
+- **Freeze times (+05).** Judge and config freeze at 12:00 (H+22). The control run is at 13:00 (H+23), and the stop-code is at 14:00 (H+24). After 12:00 only the control results land on `main`.
+- **Hosted settings to know about.**
+  - `fewshot_from_reviews` is **off**, so reviewer decisions made during rehearsals and jury live asks do not feed the judge. Turn it on (the few-shot switch on the Settings page, or `PUT /api/settings` with `{"fewshot_from_reviews": true}`) only if your validation run shows it helps.
+  - C1 was re-judged on the five calls under the organizers' rule (greeting not recorded → N/A): p4-ru-002 is now N/A, with a total of 89,44.
+  - `results/dev/results.json` was regenerated from that state.
+- **Changing the judge for the control run.** Edit `api/seeds/judge_specs_v1.json` or the prompts, run the harness locally, and write the winner into `api/judge_config_control.md`. Version 1 re-syncs from the repo on start-up (`SEED_SYNC`), so a merged spec change reaches the hosted instance with the next deploy. Ask the architecture side to deploy before 12:00.
