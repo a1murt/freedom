@@ -68,6 +68,7 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
 2. Frontend: the call banner text and the «Засчитано правилом» badge (`docs/FRONTEND_INTEGRATION.md`, «Calls»); the appeal dialog offers only Да/Нет for C1.
 3. `GET /api/system/readiness` is green, and `scripts/smoke_asks.py` gives 7/7.
 4. The Git link has been sent to the organizers.
-5. 13:00: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`. Use `--source-url` or `--source-file` if they hand over a link or a file.
+5. Disk: 251 MB free (the warning starts at about 204 MB). The 13:00 run takes a pre-control snapshot (about 45 MB). If `GET /api/system/health` shows `disk_low`, delete `post-deploy-d6c55d5` and `pre-deploy-round4` (`DELETE /api/admin/snapshots/<name>` with the admin token). Checksum-verified copies are in `api/data/offsite/`.
+6. 13:00: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`. Use `--source-url` or `--source-file` if they hand over a link or a file.
    - The ensemble measured +1,5 points over single Opus on the noisy criteria (27 chats, 95,6% vs 94,1%) and lowers variance.
    - It costs about $6 for the 10 chats.
