@@ -8,6 +8,7 @@ Owner: ML. Files: `gold.json` (labels, splits, `_alt` for disputed labels), `gol
 - **Three independent labelers per dialog** (Claude Opus 5.5 subagents). Each read only `PROTOCOL.md` (the organizer checklist verbatim, the organizer answers, neutral data-format notes and the knowledge-base facts) and the transcripts. None saw the judge's specs, prompts or verdicts, `DATASET_NOTES.md` or another labeler's work. Dialog order was varied per labeler.
 - **Reconciliation:** 14 labels where the three did not all agree went to a senior-reviewer pass that re-read the transcript and wrote the decision note shown below.
 - **Blind arbitration against the judge:** every label where the reconciled gold differed from the baseline judge (local run, specs v1) went to an arbiter that saw both values and rationales without knowing which came from the judge: 47 items, gold confirmed 41, judge's reading adopted 4 (all C6), both readings defensible 2 (gold kept, alternative recorded).
+- **Organizer answer 2026-11-08:** C1 on calls has no N/A any more; p4-ru-002 relabeled N/A → Да (greeting outside the recording, system rule).
 - **Team decisions:** three labels follow the team lead's own labels and spec examples (see below); twelve disputed labels carry `_alt` with the other reading, mostly where the model labelers disagree with `DATASET_NOTES.md` §7. The harness reports a lenient score that accepts them.
 - **Human review is still pending.** These are model labels. The team lead should label the 23 template dialogs alone (`gold.template.json` protocol) and compare with `labelers/`; disagreements go into this file.
 
@@ -35,56 +36,76 @@ Pairwise exact agreement between the three labelers before reconciliation. Three
 - **C1 on calls:** N/A when the greeting is not in the recording; a masked name counts as introduced.
 - **C3 on calls:** identification = two identifiers (ФИО + ИИН, address or registration phone) or an SMS code before disclosure; masked identifiers count as provided.
 
-## Rules learned from the disagreements (now judge decision steps, specs v2)
+## What the gold set shows, and where it is in the judge
 
-1. **C2.** N/A whenever the data sufficed and the operator answered on the substance; an answer that "uses the details" is not Да. Да only when something was missing and the operator asked before answering. Нет for re-asking what the client wrote, ignoring a message typed while waiting, or guessing when data was missing. Rudeness, a bot referral or a wrong answer to a clear request belong to C5, C6 and C4.
-2. **C5.** Only tone and the reaction to expressed dissatisfaction. An ignored question without dissatisfaction is C4; a compliance breach is C8; a dismissive brush-off of the client's correction («Ну, тогда сайт.») and a complaint left without any reaction are Нет.
-3. **C6.** Communication only, independent of correctness: one off-topic reply = 7; the client had to re-ask or correct because of wording or order = 4; contradictory replies = 0. Wrong content, re-asking known data and rudeness are other criteria; colloquial but clear words («Скиньте», «Привет») are not literacy errors.
-4. **C7.** Classify the closing: summary or offer of help + farewell = Да; bare farewell = policy; farewell while a question is open or right after a complaint with no reaction = Нет (p1-ru-029, the team lead's own label); operator closed the chat without a farewell = Нет; connection lost or client left = N/A.
-5. **C4.** In a chat an escalation needs a channel («сообщим в этом чате»), not a timeframe; factually wrong information corrected only after the client objected = 15; an unsuitable guess made without clarifying is C2, not C4; an action the client needs for the goal (transfer from the D-account) must be stated even if not asked; do not lower for caveats the goal does not need.
-6. **C3.** Guesses and general rules without opening the account are not disclosure (N/A); on calls the registration phone plus the name are two identifiers.
+The architecture side tuned the specs on its own AI-panel gold in parallel (`docs/eval/ACCURACY.md`, commit 876c1de). The deployed specs already carry most of these rules; this branch keeps those specs and adds only the C7 `bare_farewell` flag. The rules marked *proposal* were in the ML specs v2.2, which tied with the deployed specs on independent data (table below), so they were not merged.
 
-## Judge vs gold (C7 policy N/A)
+| # | Rule from the disagreements | In the deployed specs |
+|---|---|---|
+| 1 | **C2.** N/A whenever the data sufficed and the operator answered on the substance, even if the answer uses the details; Да only when something was missing and was asked before answering; rudeness, a bot referral or a wrong answer to a clear request are C5/C6/C4. | yes (146d9c6) |
+| 2 | **C5.** Only tone and the reaction to a stated complaint; an ignored question without dissatisfaction is C4; a compliance breach is C8; a dismissive brush-off of the client's correction («Ну, тогда сайт.») and a complaint with no reaction are Нет. | yes (876c1de) |
+| 3 | **C7.** Summary or offer + farewell = Да; polite farewell with neither and nothing open = N/A (organizer answer); farewell with an open question = Нет; operator closed without farewell = Нет; broken-off chat = N/A. | yes (146d9c6); flag added here |
+| 4 | **C7.** A farewell right after a complaint that got no reaction («Со мной так говорить не надо» → «До свидания.», the team lead's own label for p1-ru-029) is Нет, not N/A. | proposal |
+| 5 | **C4.** In a chat an escalation needs the channel («сообщим в этом чате»), not a deadline. | yes (876c1de) |
+| 6 | **C4.** Factually wrong information corrected only after the client objected = 15; an unsuitable guess made without clarifying is C2, not C4; an action the client needs for the goal (transfer from the D-account) must be stated even if not asked. | proposal |
+| 7 | **C6.** Communication only: one off-topic reply = 7; the client had to re-ask because of wording or order = 4; contradictory replies = 0; wrong content, re-asking known data, rudeness and colloquial but clear words do not lower C6. | partly (memo rule, 146d9c6) |
+| 8 | **C3.** Guesses and general rules without opening the account are not disclosure (N/A); on calls the registration phone plus the name are two identifiers. | proposal |
 
-`baseline` = single Opus 5.5, prompts v1, specs v1 (before this work). `v2` = single Opus 5.5, specs v2.2, C7 policy N/A, on the rebased main. `tuned_on` = the 41 dialogs used for the error analysis; `holdout` = the other 24, not looked at for specs v2 and v2.1. Three holdout C4 errors (p1-kz-011, p1-ru-024, p1-en-008) then informed the v2.2 C4 wording (necessary action, unanswered follow-up), so holdout C4 is no longer fully independent; the other criteria are.
+## Judges against both gold sets (C7 policy N/A, single Opus 5.5)
 
-| Criterion | all 65 · baseline | all 65 · v2 | holdout 24 · baseline | holdout 24 · v2 |
-|---|---|---|---|---|
-| C1 Установление контакта | 0.98 | 0.98 | 1.00 | 1.00 |
-| C2 Выявление потребности | 0.85 | 0.94 | 0.88 | 0.96 |
-| C3 Идентификация | 0.95 | 0.97 | 1.00 | 1.00 |
-| C4 Консультация | 0.88 | 0.91 | 0.92 | 0.92 |
-| C5 Эмпатия | 0.91 | 1.00 | 1.00 | 1.00 |
-| C6 Управление диалогом | 0.80 | 0.92 | 1.00 | 0.96 |
-| C7 Завершение | 0.46 | 1.00 | 0.08 | 1.00 |
-| C8 Грубые ошибки | 1.00 | 1.00 | 1.00 | 1.00 |
-| **Mean per-criterion agreement** | **0.854** | **0.965** | **0.859** | **0.979** |
-| Lenient (documented alternatives count) | 0.863 | 0.971 | 0.859 | 0.979 |
+Two independent AI-panel gold sets exist: this one (`gold.json`, 65 dialogs) and the architecture side's (`gold_ai_panel.json`, 60 chats). **They agree on 95.6% of the 480 shared chat labels** (C1, C3, C8 100%; C2 98%; C7 97%; C5 95%; C6 88%; C4 87%), so C4 and C6 are where any gold set is soft. `baseline` = specs before 2026-11-07 evening; `ML v2.2` = this branch's tuned specs (not merged); `deployed` = upstream specs at 876c1de plus the C7 flag, the configuration of the control run. Fresh local runs, same code.
 
-Run-to-run noise: two independent single-Opus runs agree on about 96.5% of labels (hosted vs local baseline), and two v2.1 runs differed by 0.3 points overall, so differences under about 3 points on one split are not significant.
+| Criterion | ML gold 65 · baseline | ML gold 65 · ML v2.2 | ML gold 65 · deployed | panel gold 60 · baseline | panel gold 60 · ML v2.2 | panel gold 60 · deployed | ML holdout 24 · baseline | ML holdout 24 · ML v2.2 | ML holdout 24 · deployed |
+|---|---|---|---|---|---|---|---|---|---|
+| C1 Установление контакта | 0.98 | 0.98 | 0.98 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| C2 Выявление потребности | 0.85 | 0.94 | 0.92 | 0.85 | 0.97 | 0.93 | 0.88 | 0.96 | 1.00 |
+| C3 Идентификация | 0.95 | 0.97 | 0.95 | 0.97 | 0.98 | 0.97 | 1.00 | 1.00 | 1.00 |
+| C4 Консультация | 0.88 | 0.91 | 0.88 | 0.78 | 0.80 | 0.82 | 0.92 | 0.92 | 0.92 |
+| C5 Эмпатия | 0.91 | 1.00 | 0.94 | 0.92 | 0.95 | 0.95 | 1.00 | 1.00 | 1.00 |
+| C6 Управление диалогом | 0.80 | 0.92 | 0.85 | 0.83 | 0.88 | 0.88 | 1.00 | 0.96 | 0.96 |
+| C7 Завершение | 0.46 | 1.00 | 0.97 | 0.40 | 0.97 | 0.95 | 0.08 | 1.00 | 1.00 |
+| C8 Грубые ошибки | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| **Mean** | **0.854** | **0.965** | **0.936** | **0.844** | **0.944** | **0.938** | **0.859** | **0.979** | **0.984** |
 
-Remaining v2 disagreements on all 65 dialogs:
+ML v2.2 wins only on the gold set it was tuned on (ML gold 0.965 vs 0.936). On the panel gold, which the deployed specs were tuned on, the two tie (0.944 vs 0.938), and on the ML holdout they tie as well (0.979 vs 0.984; three holdout C4 cases informed v2.2). With run-to-run noise of about 3 points per split there is no evidence that v2.2 generalizes better, so the deployed specs stay and the proposals above wait for human labels.
+
+Remaining disagreements of the deployed specs with the ML gold (all 65 dialogs):
 
 | Criterion | Dialog | Gold | Judge |
 |---|---|---|---|
 | C1 | p4-ru-005 | yes | no |
-| C2 | p1-ru-003 | no | yes |
-| C2 | p1-ru-017 | yes | no |
+| C2 | p1-en-014 | N/A | no |
+| C2 | p1-kz-013 | N/A | no |
+| C2 | p1-kz-015 | N/A | no |
 | C2 | p1-ru-022 | N/A | no |
-| C2 | p4-ru-002 | yes | N/A |
+| C2 | p1-ru-029 | N/A | no |
 | C3 | p1-ru-002 | N/A | yes |
+| C3 | p1-ru-018 | N/A | no |
 | C3 | p4-ru-005 | yes | no |
-| C4 | p1-en-008 | 15 | 20 |
+| C4 | p1-kz-005 | 15 | 20 |
+| C4 | p1-kz-012 | 20 | 10 |
 | C4 | p1-kz-013 | 20 | 15 |
-| C4 | p1-kz-015 | 5 | 10 |
 | C4 | p1-ru-009 | 5 | 10 |
+| C4 | p1-ru-015 | 20 | 15 |
 | C4 | p1-ru-024 | 10 | 15 |
+| C4 | p4-ru-001 | 20 | 15 |
 | C4 | p4-ru-004 | 15 | 20 |
+| C5 | p1-kz-008 | yes | no |
+| C5 | p1-kz-015 | yes | no |
+| C5 | p1-ru-007 | yes | no |
+| C5 | p1-ru-014 | yes | no |
 | C6 | p1-en-008 | 7 | 10 |
+| C6 | p1-en-013 | 10 | 7 |
+| C6 | p1-kz-005 | 10 | 4 |
+| C6 | p1-kz-008 | 10 | 7 |
 | C6 | p1-kz-015 | 10 | 7 |
+| C6 | p1-ru-014 | 10 | 7 |
 | C6 | p1-ru-015 | 10 | 7 |
+| C6 | p1-ru-016 | 4 | 7 |
 | C6 | p1-ru-022 | 10 | 7 |
-| C6 | p4-ru-005 | 7 | 4 |
+| C6 | p1-ru-029 | 4 | 7 |
+| C7 | p1-ru-029 | no | N/A |
+| C7 | p4-ru-005 | yes | N/A |
 
 ## Disputed labels for the team lead (`_alt`)
 
@@ -125,7 +146,7 @@ Remaining v2 disagreements on all 65 dialogs:
 | p1-ru-026 | C6 | L1 4, L2 4, L3 7 | 4 | Applied the C6 level-4 wording literally: the generic «Чем могу помочь?» in [9] ignored the question already asked before the operator joined, so the order of replies forced the client to ask again ('Я писал выше…' [10]). 7 was rejected because it covers a slip the client can get past without asking again, and 0 because the dialog stays coherent; the unhelpful [11] is a C4 content gap, not a second C6 fault. |
 | p1-ru-029 | C6 | L1 4, L2 4, L3 7 | 4 | A forced re-ask sets C6 to 4 even when the dialog recovers later: [9] pointed to the bot's vague answer instead of naming the site, and the client had to ask again in [10] before getting the clear answer in [11]. 7 was rejected because it describes a slip after which the client can understand and continue without asking again; the rudeness in [9] was kept out of C6 because it belongs to C5/C8. |
 | p4-ru-001 | C4 | L1 20, L2 20, L3 15 | 20 | Decided on the literal C4 test (every client question answered, nothing contradicts KB fact 13, actions explained): the difficulty the client voiced at [36]/[38] is which securities to buy. That is advice, which support correctly declines, and the operator had already invited brokerage-part questions at [29]–[30]. L3's 15 was rejected because it docks C4 for not volunteering help with placing orders, which the client never asked about; offering what support can do is a C5 matter (offered a solution), so deducting it here as well would count one fault twice. |
-| p4-ru-002 | C1 | L1 no, L2 N/A, L3 N/A | N/A | I applied the organizers' N/A condition for calls literally. The «Запись и транскрибирование запущены» event [4] is logged after the operator's first utterance [2], so the recording started after the operator began speaking and the greeting is not in the recording; 'no' was rejected because it treats the pre-recording fragment [2], which opens with a bare «Да» and may be clipped, as a full record of the opening, and 'yes' because no greeting appears anywhere (rule: when the recording-start event follows the operator's first utterance, C1 = N/A whatever the earlier lines contain). |
+| p4-ru-002 | C1 | L1 no, L2 N/A, L3 N/A | yes | Organizer answer 2026-11-08: no N/A for C1 on calls; the greeting outside the recording is credited by the system rule (Да). |
 | p4-ru-002 | C2 | L1 yes, L2 yes, L3 N/A | yes | N/A applies only when the data sufficed from the start, and here it did not: the operator's starting information (colleagues said a limit order would work) proved wrong, so he built on the earlier conversation and got the missing fact before the final answer [63] (the retry result [8]–[10], his own check [11], the trader consultation), which matches the literal 'учёл известные детали и уточнил недостающее до ответа'. N/A was rejected because a check the client runs and reports back counts as clarification even without a direct question, and 'no' because nothing needed was left unclarified. |
 | p4-ru-004 | C4 | L1 15, L2 15, L3 20 | 15 | Decided by the literal C4 test «ответил ли оператор на все вопросы клиента»: the main request (why the client's own orders are rejected and how to buy) got a correct answer under fact 15, with the right channels and the note that the market had closed. But the client asked «при каждой покупке?» three times and each time the operator only restated the channels, and never said when the traders could act, so a secondary detail was missed and the score is 15. I rejected 20 because an answer the client can only infer, plus his closing «Понятно», does not close a direct question he repeated (the repeated phrase itself is scored under C6), and I rejected 10 because the client knows exactly how to act. |
 | p4-ru-005 | C1 | L1 yes, L2 no, L3 yes | yes | Decided by the protocol's ASR-noise rule applied to a scripted opening: [16] follows the script exactly (company, intro slot, greeting, «чем могу вам помочь»), the company name in the same line is also garbled, and the intro slot holds speech the ASR could not render («и операции»). The likeliest reading is a misrecognised name, which is not an operator fault. L2's no was rejected because a missing [Имя скрыто] mask does not show the name was skipped: a mask can only appear where the ASR produced a recognisable name. Keep C1=no for openings where the company name runs straight into the greeting or the name is plainly skipped; confidence stays low because the audio cannot be checked. |
