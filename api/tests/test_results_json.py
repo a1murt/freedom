@@ -45,6 +45,18 @@ def test_na_rationale_mentions_condition():
     assert disc["value"] is None and disc["rationale"].startswith("N/A")
 
 
+def test_na_rationale_has_one_period_between_reason_and_explanation():
+    ev = evaluation()
+    ev["criteria"][1] = dict(crit("C2", None, applicable=False), na_reason="Данных хватало с самого начала.", explanation="Уточнять было нечего.")
+    ev["criteria"][2] = dict(crit("C3", None, applicable=False), na_reason="Запрос общий", explanation="Данные счёта не раскрывались.")
+    ev["criteria"][6] = dict(crit("C7", None, applicable=False), na_reason="Связь прервалась…", explanation="")
+    r = {c["criterion_id"]: c["rationale"] for c in build_record("x", ev, n_turns=12)["criteria"]}
+    assert r["discovery"] == "N/A — Данных хватало с самого начала. Уточнять было нечего."
+    assert r["identification"] == "N/A — Запрос общий. Данные счёта не раскрывались."
+    assert r["closure"] == "Связь прервалась…"  # no explanation: the reason alone, as before
+    assert not any(".." in t.replace("…", "") for t in r.values())
+
+
 def test_critical_flag_follows_c8_and_does_not_zero_total():
     ev = evaluation()
     ev["criteria"][7] = crit("C8", "yes")

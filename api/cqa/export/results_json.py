@@ -64,6 +64,12 @@ class ExportError(Exception):
 # --------------------------------------------------------------------------------------------- building
 
 
+def _sentence(text: str) -> str:
+    """One sentence ending in a single period (the N/A reason is often already a full sentence)."""
+    t = (text or "").strip()
+    return t if t.endswith(("…", "!", "?")) else t.rstrip(".").rstrip() + "."
+
+
 def _round2(x: float) -> float:
     return float(Decimal(repr(x)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
@@ -179,7 +185,7 @@ def build_record(conversation_id: str, evaluation: dict[str, Any] | None, *, n_t
             value = criterion_value(answer_type, applicable, answer)
             rationale = (r.get("explanation") or r.get("na_reason") or "").strip()
             if not r.get("applicable", True) and r.get("na_reason") and r.get("na_reason") not in rationale:
-                rationale = f"N/A — {r.get('na_reason')}. {rationale}".strip()
+                rationale = f"N/A — {_sentence(r.get('na_reason'))} {rationale}".strip()
             if answers == "final" and r.get("review_state") == "changed":
                 reason = (((r.get("appeal") or {}).get("decision") or {}).get("reason") or "").strip()
                 note = f"Решение ревьюера: {reason}" if reason else "Оценка изменена ревьюером"
