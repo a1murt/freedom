@@ -668,16 +668,25 @@ Each story lists: priority, status, personas; As a / I want / So that; acceptanc
 - Surfaces: Transcript turn menu, AppealDialog, ReviewPage | Backend: annotations table with POST/GET/DELETE (new, audited) | States: note on a duplicate (attached to the original), Visitor role (hidden).
 - Evidence: none.
 
-### CALL-09 · C1 on calls: greeting not in the recording becomes N/A
-`must-demo` · **Status: partial** · Personas: calls, reviewer, operator, jury
-- **As a** QA specialist **I want** the card to warn when the operator segment starts before the recording does, cite the organizer rule, and let a reviewer set C1 to N/A **so that** operators are not penalised for a greeting the recording never captured.
+### CALL-09 · C1 on calls: an opening outside the recording is credited by rule
+`must-demo` · **Status: backend done (2026-11-08), UI badge and banner open** · Personas: calls, reviewer, operator, jury
+- **As a** QA specialist **I want** the card to show when the operator's opening was said before the recording started, and the system to credit «Установление контакта» by rule **so that** operators are not penalised for a greeting nobody can listen to, the results file keeps contact true/false, and the telephony team sees where recordings start late.
+- Organizer answers:
+  - First: N/A.
+  - 2026-11-08: JSON 1.0 contact is true/false only; DEV calls are for the UI; the control set has no calls; the approach is ours to choose and justify for the business.
 - Acceptance:
-  - Given p4-ru-002, whose first operator turn (№3) comes before the recording-start event (№5), then a banner reads «Запись началась после начала разговора оператора: приветствие могло не попасть в запись. Правило организаторов для звонков: C1 = N/A».
-  - Given C1 = Нет (0 / 10, flags `missing_greeting`, `callback_continuation`), when «Оспорить оценку» is pressed, then the dialog is prefilled with that reason and the range №2–№5; in the review queue N/A is offered because `na_allowed_for_channel` is true, the preview shows 80,50 → 89,44, and after saving the card shows «Нет → N/A» with weights rescaled.
-  - Given the five DEV calls, before the demo they are re-judged on C1 only (`POST /api/evaluations/run {conversation_ids: [p4-ru-001…005], mode: partial, base_version_id: 1, only_codes: [C1]}`) so the stored verdicts follow the rule; no banner appears on the other calls; chats never show it.
-- Jury: accuracy · process-correctness · business-task | Refs: R6, R7, ORG-2, ORG-3.2
-- Surfaces: card banner, CriterionRow C1, AppealDialog prefill, ReviewPage options | Backend: voice-call override `na_allowed` in `api/seeds/checklist_freedom_v1.json` and validator (exists); `meta.recording_start_idx` (CALL-03) | States: no start event («Начало записи не определено»), C1 already N/A, appeal already open.
-- Evidence: the validator honours per-channel N/A (`api/cqa/judge/validate.py`). Missing: banner, prefill, the review panel gates N/A on `na_allowed` (`web/src/features/review/ReviewPage.tsx:201`); hosted call evaluations predate the rule (p4-ru-002 C1 = Нет).
+  - Given p4-ru-002, whose first operator turn (№3) comes before the recording-start event (№5), then C1 = Да with the flag `rule_contact_outside_recording` and the badge «Засчитано правилом: начало звонка вне записи».
+    - The explanation names №5, 30,2 s and quotes №3.
+    - The total is 90,50 (80,50 with «Нет»).
+    - The banner reads «Запись началась после начала разговора оператора. «Установление контакта» засчитано по правилу: снижать балл можно только по фрагменту, который можно прослушать. Звонок отмечен как пробел записи.»
+  - Given the rule, the decision is the same on every run: the model's own C1 answer for such a call is ignored, so there is no retry and no N/A.
+  - Given the appeal dialog on C1 of any call, only Да / Нет are offered (`na_allowed_for_channel` false).
+  - Given `GET /api/analytics/recording-gaps`, then DEV shows 1 of 5 calls, 30,2 s unrecorded, `credited_by_rule: ["C1"]` on p4-ru-002.
+  - Given `results/dev/results.json`, then p4-ru-002 contact is true with the rule's rationale, and the validator reports no errors.
+- Jury: accuracy · process-correctness · business-task | Refs: R6, R7, ORG-2, ORG-3.2, docs/ORGANIZER_UPDATES.md §5, docs/PITCH.md §06a
+- Surfaces: card banner, CriterionRow C1 badge, analytics card (optional).
+- Backend (exists): `cqa/judge/validate.py` `opening_outside_recording`; the seed's C1 call override without N/A; `GET /api/analytics/recording-gaps`; `meta.recording_start_idx` (CALL-03).
+- States: no start event (rule off, judged as usual), opening inside the recording (rule off).
 
 ### CALL-10 · C3 identification-by-voice ledger
 `should` · **Status: missing** · Personas: calls
@@ -899,12 +908,12 @@ Each story lists: priority, status, personas; As a / I want / So that; acceptanc
 - Surfaces: ReviewPage decision panel | Backend: `POST /api/appeals/preview`, `POST /api/appeals/{id}/decision` with recompute and half-up rounding (exist); server-side reason validation (new) | States: preview loading, saving, «appeal already decided» (reload), total null when nothing applicable.
 - Evidence: confirm / change with option picker, reason and live preview in `web/src/features/review/ReviewPage.tsx:64-102`; recompute in `api/cqa/review/service.py`. Missing: section deltas, disabled AI answer, reason minimum (the API accepts an empty reason), «итог не изменился» message.
 
-### APL-08 · Set or remove N/A with weight redistribution, including C1 on calls
+### APL-08 · Set or remove N/A with weight redistribution
 `must-demo` · **Status: partial** · Personas: reviewer, calls, operator
 - **As a** reviewer handling applicability disputes **I want** N/A offered only where the checklist allows it for this dialog's channel, with the preview showing the redistributed weights **so that** N/A decisions follow the checklist and the organizers' answers.
 - Acceptance:
   - Given p1-ru-025 C2 (AI Да), when I choose Изменить → N/A, then the preview shows «100,00 → 100,00 (итог не изменился)» and a weights table (C1 18,18 → 25,00; C5 27,27 → 37,50; C6 27,27 → 37,50; C2 27,27 → —).
-  - Given the call p4-ru-002 C1 (AI Нет), then N/A is offered because `na_allowed_for_channel` is true, with the condition «Приветствие оператора не попало в запись», and the preview shows 80,50 → 89,44 (applicable weight 90); saving sends "N/A" and succeeds.
+  - Given the call p4-ru-002 C1, then no N/A is offered: C1 has no N/A on any channel since 2026-11-08 (JSON 1.0 contact is true/false only; the opening outside the recording is credited by rule, CALL-09).
   - Given a chat appeal on C1, C5, C6 or C8, then no N/A option is shown and a forced request shows the API's 400 inline; given every weighted criterion would become N/A, «Итог не рассчитывается: нет применимых критериев» and the card shows «—».
 - Jury: process-correctness · accuracy · business-task | Refs: R4, R7, ORG-2
 - Surfaces: ReviewPage decision panel, weights table | Backend: `na_allowed_for_channel` on appeal items and channel-aware validation in decide (exist); preview returns per-criterion weight_applied (new) | States: preview error, N/A never on C8.
@@ -1083,7 +1092,7 @@ Each story lists: priority, status, personas; As a / I want / So that; acceptanc
 `must-demo` · **Status: partial** · Personas: methodologist, calls, reviewer
 - **As a** methodologist responsible for chats and calls **I want** N/A per criterion with a required condition, a «Чат | Звонок» toggle showing the effective wording and N/A rule per channel, and an editable call override that never loses its other fields **so that** N/A is used only where allowed (C2, C3, C4, C7; C1 only on calls) and calls are judged fairly.
 - Acceptance:
-  - Given v1, then C2, C3, C4 and C7 show «N/A допустим» with their conditions and C1, C5, C6, C8 «N/A недоступен»; C1's «Звонок» side shows «N/A допустим только для звонков · Приветствие оператора не попало в запись».
+  - Given v1, then C2, C3, C4 and C7 show «N/A допустим» with their conditions and C1, C5, C6, C8 «N/A недоступен»; C1's «Звонок» side shows the call instruction and «Без N/A: начало вне записи засчитывается правилом» (since 2026-11-08).
   - Given I edit only the call instruction of C1 and save, then the override still has `na_allowed: true` and its condition (today the editor replaces the override with `{instruction}` and drops the call N/A); an override with N/A but no instruction is kept.
   - Given N/A on with an empty condition, then saving is blocked with «Укажите условие N/A»; given N/A turned off in a draft, the editor shows how many dialogs currently have that criterion N/A; «Как считается N/A» shows the worked example contact Да, discovery N/A, identification N/A, consultation 15, empathy Да, dialogue 7, closure Да → 85,38.
 - Jury: accuracy · functionality · business-task · usability | Refs: R1, R2, R3, R4, ORG-2
@@ -1818,7 +1827,7 @@ These stories are product UI and API around the judge; prompts, judge specs, the
 - **As the** ML engineer (or a call QA specialist recording «Моя оценка») **I want** a labeling view with the transcript and the eight criteria offering only allowed answers, an evidence picker and a note, with the AI verdict hidden until I save, and every label change kept with author and time **so that** my labels are an independent reference and a slip never corrupts it.
 - Acceptance:
   - Given p1-ru-029 and labeler «Данияр», then C1, C5, C8 offer Да / Нет; C2, C3, C7 add N/A; C4 offers 20/15/10/5/0/N/A; C6 10/7/4/0; no AI answer is visible; keys 1 / 2 / 3 and arrows label quickly; clicking a turn adds it as 1-based evidence; autosave after 800 ms via `PUT /api/calibration/labels` with «Не сохранено · Повторить» on failure; «Показать оценку ИИ» reveals mismatches after all 8 are labeled.
-  - Given a call (p4-ru-005), then the two-track player seeks on turn click, consultation and post-hang-up lines are separated, C1 offers N/A with «приветствие не попало в запись», a masked name counts as introduced, and a missing recording leaves the transcript labelable.
+  - Given a call (p4-ru-005), then the two-track player seeks on turn click, consultation and post-hang-up lines are separated, C1 offers Да / Нет only (an opening outside the recording is credited by rule since 2026-11-08), a masked name counts as introduced, and a missing recording leaves the transcript labelable.
   - Given a label changed 0 → 5, then the history shows both with author and time and «Вернуть»; a concurrent save returns 409 `label_conflict` with «Оставить моё» / «Принять их»; clearing a label sets it «не размечено» and excludes it from metrics.
 - Jury: accuracy · usability · functionality | Refs: R1, R2, R3, R5, ORG-2
 - Surfaces: new `#/calibration/label/:conversationId`, reused Transcript and AudioPlayer | Backend: `PUT/GET /api/calibration/labels` validated against the checklist incl. channel N/A *(uncommitted)*; evidence_turns on labels, label history and conflict check (new) | States: no official evaluation, unknown labeler (prompt once), read-only role.
@@ -1962,7 +1971,7 @@ These stories are product UI and API around the judge; prompts, judge specs, the
 - Acceptance:
   - Given `#/my/evaluations?as=Нина`, then p1-ru-005 (78,46) shows with no open appeal on C6 (a pre-demo check fails if one exists); open → «Почему снижена оценка» → «Перейти к фрагменту» (№12) → «Оспорить оценку» (C6) → requested 7 → comment → «Отправить на апелляцию» takes under 60 s and the row shows «На рассмотрении».
   - Given the switch to Ревьюер, then Нина's appeal is first under «Открытые», and changing to 7 with a reason shows 78,46 → 85,38 before saving; switching back, «Мои апелляции» reads «Изменено: 4 → 7 · итог 78,46 → 85,38» and the card shows the struck-through original.
-  - Given the jury asks for a call, then the backup path is p4-ru-002: chip №3 plays from 0:27, the operator appeals C1 = Нет asking for N/A, preview 80,50 → 89,44 (the call must be assigned to the demo operator first, OPR-06); `docs/DEMO.md` describes this path in the light theme with the Operator role (today it scripts the analyst as appellant and the dark theme).
+  - Given the jury asks for a call, then the backup path is p4-ru-002: chip №3 plays from 0:27, C1 shows «Да» by the recording-gap rule (total 90,50, «Нет» would be 80,50) and the explanation quotes the unrecorded opening; an operator appeal on another criterion works as on chats (the call must be assigned to the demo operator first, OPR-06); `docs/DEMO.md` describes this path in the light theme with the Operator role (today it scripts the analyst as appellant and the dark theme).
 - Jury: functionality · usability · business-task · process-correctness | Refs: ORG-3.2, ORG-3.4, R14, R6, R7
 - Surfaces: `#/my/evaluations`, card, AppealDialog, `#/review`, `#/my/appeals`, `docs/DEMO.md`, pre-demo check script | Backend: appeals, preview and decision (exist) | States: an appeal left open by a rehearsal (reset first), API cold start (open 2 minutes early), network loss (local Docker tab).
 - Evidence: backend appeal → decision → recompute works (`api/cqa/routers/appeals.py`, `api/cqa/review/service.py`). Missing: Operator UI (OPR-01..05), N/A decision fix (APL-08), updated runbook (`docs/DEMO.md:8` says «QA analyst; … dark theme»).
@@ -1971,7 +1980,7 @@ These stories are product UI and API around the judge; prompts, judge specs, the
 `must-demo` · **Status: partial** · Personas: reviewer, jury, admin, lead
 - **As the** team before the demo **I want** the hosted instance to hold DEV fully evaluated, at least one open and one decided appeal, the call recordings cached and an up-to-date snapshot, verified by one go / no-go checklist **so that** every scenario has something to show without waiting, and problems are found an hour before the jury does.
 - Acceptance:
-  - Given an idempotent seed (CLI or admin action), then `GET /api/appeals?status=open` returns at least operator Алексей on p1-ru-029 C7 and a QA-analyst appeal on p4-ru-002 C1 (decidable as N/A), and `?status=decided` at least one (e.g. p1-ru-023 C8 confirmed); seeded decisions use `add_to_fewshot = false`, are labelled «демо-пример», never touch control dialogs, and running the seed twice creates no duplicates.
+  - Given an idempotent seed (CLI or admin action), then `GET /api/appeals?status=open` returns at least operator Алексей on p1-ru-029 C7 and a QA-analyst appeal on a call criterion other than C1 (C1 on p4-ru-002 is decided by the recording-gap rule), and `?status=decided` at least one (e.g. p1-ru-023 C8 confirmed); seeded decisions use `add_to_fewshot = false`, are labelled «демо-пример», never touch control dialogs, and running the seed twice creates no duplicates.
   - Given `#/admin/system → Готовность`, then checks run in under 5 s with no paid call: API reachable, DB writable, Claude configured, organizer API configured, v1 present with Σ 100, DEV imported (65) and evaluated (65 / 65 on v1), DEV results.json valid, p1-ru-029, p1-ru-022 and p4-ru-002 present with audio cached, one decided appeal, a snapshot younger than 2 hours, at least $10 of budget left, web and API built from the same commit; each failing item gives the reason and a fix or a link.
   - Given the mock fallback (`?mock=1`), then the same appeals exist in fixtures with current totals.
 - Jury: usability · process-correctness · functionality | Refs: ORG-3.5, R14, R9
@@ -2547,7 +2556,7 @@ Review of 2026-11-07 (evening) against `docs/ORGANIZER_UPDATES.md`, the student 
 `could` · **Status: missing** · Personas: completeness review, analyst, reviewer, lead, admin
 - **As a** QA specialist whose dialog failed evaluation, or whose dialog must not leave the perimeter while no local model is configured **I want** to fill the active checklist by hand (answers, evidence turns, explanations) and have the same engine compute the total **so that** the process completes without the AI and human and AI evaluations of one dialog can be compared.
 - Acceptance:
-  - Given p1-ru-029 with «Ошибка оценки» (CONV-08), when «Оценить вручную» is chosen (QA analyst, reviewer, lead), then a form shows the 8 criteria with only the answers allowed for the channel (N/A on C1 for calls only), a turn picker for evidence and the justification template («Завершение — Нет. … Основание — реплика №14»); saving computes the total by the same rules (N/A redistribution, half-up rounding), and the card reads «Ручная оценка · Айгерим С. · дата».
+  - Given p1-ru-029 with «Ошибка оценки» (CONV-08), when «Оценить вручную» is chosen (QA analyst, reviewer, lead), then a form shows the 8 criteria with only the answers allowed for the channel (no N/A on C1 on any channel since 2026-11-08), a turn picker for evidence and the justification template («Завершение — Нет. … Основание — реплика №14»); saving computes the total by the same rules (N/A redistribution, half-up rounding), and the card reads «Ручная оценка · Айгерим С. · дата».
   - Given a dialog with a manual and an AI evaluation, then the compare view (CARD-11) shows them side by side and the match counts as a human check (EXE-03, APL-20); appeals and decisions work on a manual evaluation as on an AI one.
   - Given results.json, then a manual evaluation is never exported as the system's answer: the record stays the latest AI evaluation or an error «Оценено только вручную» (EXP-02); analytics show «оценено людьми: N», and a filter «Источник оценки: ИИ / специалист» applies everywhere.
 - Jury: process-correctness · functionality · business-task | Refs: R2, R3, R4, ORG-1

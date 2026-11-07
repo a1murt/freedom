@@ -4,6 +4,11 @@ Columns: conversation_id, channel, language, operator_name, <code>_answer…, <c
 <code>_applicable…, <code>_final…, total_score, final_total_score, critical_error, provider, model,
 cost_usd, evaluated_at. Criterion codes come from the checklist version's criteria in order, so the
 export works for any checklist. The text starts with a UTF-8 BOM so Excel opens Cyrillic correctly.
+
+Text cells (dialog id, channel, language, operator name, a free-text answer, provider, model) go through
+csv_safe.safe_cell, the same neutraliser as the registers and the audit log: a formula-like start, or a formula character
+right after a ``;``, tab or line break inside the text, gets an apostrophe. Operator names are typed by people
+(PUT /api/conversations/{id}/operator, paste, upload). Numbers, flags and dates are written as is.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from ..analytics.service import criterion_rows, latest_evaluations
 from ..models import ChecklistVersion, Criterion, Evaluation, EvaluationCriterion
+from .csv_safe import safe_cell
 
 BOM = "﻿"
 NA = "N/A"
@@ -66,7 +72,8 @@ def _number(value: Any) -> str:
 
 
 def render_answer(answer: Any) -> str:
-    """"yes" / "no" / number / "" (unknown). Not-applicable rows are handled by the caller."""
+    """"yes" / "no" / number / "" (unknown) / other text, made inert by csv_safe.safe_cell. Not-applicable rows are
+    handled by the caller."""
     if answer is None:
         return ""
     if isinstance(answer, bool):
@@ -82,7 +89,7 @@ def render_answer(answer: Any) -> str:
     try:
         return _number(float(text))
     except ValueError:
-        return text
+        return safe_cell(text)  # only free text is prefixed: a number such as "-5" stays a number
 
 
 def _answer_cell(row: EvaluationCriterion | None) -> str:
@@ -135,11 +142,12 @@ def evaluations_csv(db: Session, checklist_version_id: int | None = None) -> str
     for ev in evaluations:
         conv = ev.conversation
         by_code = {r.code: r for r in rows_by_eval.get(ev.id, [])}
+        # text columns go through safe_cell (CSV injection); numbers, flags and dates are written as is
         cells: list[str] = [
-            ev.conversation_id,
-            (conv.channel if conv is not None else "") or "",
-            (conv.language if conv is not None else "") or "",
-            (conv.operator_name if conv is not None else "") or "",
+            safe_cell(ev.conversation_id),
+            safe_cell((conv.channel if conv is not None else "") or ""),
+            safe_cell((conv.language if conv is not None else "") or ""),
+            safe_cell((conv.operator_name if conv is not None else "") or ""),
         ]
         cells += [_answer_cell(by_code.get(c)) for c in codes]
         cells += [_score_cell(by_code.get(c)) for c in codes]
@@ -149,8 +157,8 @@ def evaluations_csv(db: Session, checklist_version_id: int | None = None) -> str
             _number(ev.total_score),
             _number(ev.final_total_score),
             "true" if ev.critical_error else "false",
-            ev.provider or "",
-            ev.model or "",
+            safe_cell(ev.provider or ""),
+            safe_cell(ev.model or ""),
             _number(round(float(ev.cost_usd or 0.0), 4)),
             _iso(ev.completed_at or ev.created_at),
         ]

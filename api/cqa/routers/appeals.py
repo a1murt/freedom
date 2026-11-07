@@ -186,7 +186,10 @@ def preview(body: PreviewBody, db: Session = Depends(get_db)):
     ec = db.get(EvaluationCriterion, body.evaluation_criterion_id)
     if ec is None:
         raise HTTPException(404, detail=CRITERION_NOT_FOUND)
-    return review.preview_total(db, ec, review.missing_answer_as_na(db, ec, body.new_answer))
+    try:
+        return review.preview_total(db, ec, review.missing_answer_as_na(db, ec, body.new_answer))
+    except ValueError as e:  # an N/A the criterion does not allow here: the same 400 a decision would give
+        raise HTTPException(400, detail={"code": "invalid_decision", "message": _decision_error_ru(str(e))})
 
 
 @router.get("/{appeal_id}")

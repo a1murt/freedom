@@ -193,20 +193,26 @@ def test_a_rejected_push_fails_after_retries_and_leaves_no_worktree(repos, contr
     assert _git(a, "worktree", "list").count("\n") == 0
 
 
-def test_null_contact_is_a_warning_only_where_it_can_be_a_call():
+def test_committed_dev_results_have_a_boolean_contact_everywhere():
     import json as _json
     from pathlib import Path as _Path
 
     from cqa.export.results_json import validate_document
 
     doc = _json.loads((_Path(__file__).resolve().parents[2] / "results" / "dev" / "results.json").read_text(encoding="utf-8"))
-    rec = next(r for r in doc["results"] if r["conversation_id"] == "p4-ru-002")
-    assert next(c for c in rec["criteria"] if c["criterion_id"] == "contact")["value"] is None  # N/A by the call rule
-    errors, warnings = validate_document(doc, expected_count=65)  # a bare file: no channels known
-    assert errors == [] and any("p4-ru-002" in w and "contact is null" in w for w in warnings)
-    ids = [r["conversation_id"] for r in doc["results"]]
-    channels = {cid: ("voice call" if cid.startswith("p4-") else "agent chat") for cid in ids}
-    errors, _ = validate_document(doc, expected_count=65, channels=channels)
+    contacts = {r["conversation_id"]: next(c for c in r["criteria"] if c["criterion_id"] == "contact") for r in doc["results"]
+                if r["status"] == "ok"}
+    assert all(isinstance(c["value"], bool) for c in contacts.values())
+    # p4-ru-002: the operator's opening was said before the recording started; credited by the judge rule, not N/A
+    rationale = contacts["p4-ru-002"]["rationale"]
+    assert contacts["p4-ru-002"]["value"] is True and "по правилу для звонков" in rationale
+    assert "[5]" in rationale and "[3]" in rationale  # recording start and the operator's opening, 1-based like evidence_turns
+    assert contacts["p4-ru-002"]["evidence_turns"] == [3]
+    errors, _ = validate_document(doc, expected_count=65)
     assert errors == []
-    errors, _ = validate_document(doc, expected_count=65, channels={**channels, "p4-ru-002": "agent chat"})
-    assert any("p4-ru-002" in e and "contact" in e for e in errors)  # on a chat a null contact stays an error
+    # the guard itself: the same file with a null contact is refused whatever the channel
+    rec = next(r for r in doc["results"] if r["conversation_id"] == "p4-ru-002")
+    next(c for c in rec["criteria"] if c["criterion_id"] == "contact")["value"] = None
+    for channels in (None, {"p4-ru-002": "voice call"}, {"p4-ru-002": "agent chat"}):
+        errors, _ = validate_document(doc, expected_count=65, channels=channels)
+        assert any("p4-ru-002" in e and "contact must be true or false" in e for e in errors), channels

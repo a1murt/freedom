@@ -65,9 +65,10 @@ def _normalize_criterion(c: dict[str, Any], order: int) -> dict[str, Any]:
 def sync_seed_into_organizer_version(db: Session) -> list[str]:
     """Keep the organizer checklist (version 1 of the seeded checklist) in step with the repo seeds.
 
-    Only judge-facing guidance is synced (judge_spec and channel_overrides); weights, options and N/A rules of
-    version 1 are never touched. This lets judge-spec improvements and organizer clarifications reach the hosted
-    instance on deploy. Disable with SEED_SYNC=0.
+    Only judge-facing guidance is synced (judge_spec and channel_overrides, replaced as a whole); weights, options and
+    the base N/A rules of version 1 are never touched. Channel overrides may carry a per-channel N/A, so an organizer
+    clarification can add or remove one (the C1 call N/A was removed on 2026-11-08). This lets judge-spec improvements
+    and organizer clarifications reach the hosted instance on deploy. Disable with SEED_SYNC=0.
     """
     import os
 
@@ -439,11 +440,15 @@ def active_version(db: Session) -> ChecklistVersion | None:
 def _display_verdict(verdict: dict[str, Any], max_index: int | None) -> dict[str, Any]:
     """The trial's verdict as people read it: turn references in the texts 1-based, like every other output (the judge's
     own 0-based labels stay in the raw answer)."""
+    from ..serializers import claims_out
     from ..turnrefs import display_turn_refs
 
     out = dict(verdict)
     for key in ("explanation", "na_reason"):
         out[key] = display_turn_refs(out.get(key), max_index)
+    # claim notes and step lines cite turns too: one numbering in the whole verdict (claims as on the card)
+    out["claims"] = claims_out(out.get("claims"), max_index)
+    out["step_results"] = [display_turn_refs(s, max_index) for s in out.get("step_results") or []]
     return out
 
 
@@ -529,6 +534,7 @@ async def run_criterion_test(db: Session, *, criterion: Any, conversation_id: An
     from ..judge.providers import ProviderError
     from ..judge.reference import reference_facts_for
     from ..scoring.engine import answer_points
+    from ..serializers import votes_out
 
     crit, errors, warnings = prepare_criterion_payload(criterion, path="criterion")
     cid = conversation_id.strip() if isinstance(conversation_id, str) else None
@@ -630,7 +636,7 @@ async def run_criterion_test(db: Session, *, criterion: Any, conversation_id: An
         "provider": provider_name,
         "conversation_id": conv_id,
         "code": crit["code"],
-        "votes": outcome.votes,
+        "votes": votes_out(outcome.votes, conv_max_index),  # ensemble members' explanations, numbered like the verdict
         "issues": outcome.issues,
         "input_tokens": sum(t.get("input_tokens", 0) for t in outcome.traces),
         "output_tokens": sum(t.get("output_tokens", 0) for t in outcome.traces),

@@ -29,7 +29,7 @@ def is_missing_answer(value: Any) -> bool:
 
 def na_allowed_on_channel(cdef: Criterion | None, channel: str | None) -> bool:
     """N/A is a valid answer of the criterion on this channel: allowed for the criterion itself, or by its channel
-    override (C1 = N/A on a voice call whose recording starts after the greeting)."""
+    override (a checklist may allow N/A on one channel only; the organizer checklist no longer does since 2026-11-08)."""
     if cdef is None:
         return False
     override = (cdef.channel_overrides or {}).get(channel) or {}
@@ -85,8 +85,12 @@ def recompute_final(db: Session, ev: Evaluation) -> None:
 
 
 def preview_total(db: Session, ec: EvaluationCriterion, new_answer: Any) -> dict[str, Any]:
+    """The final total if the row's answer were `new_answer` (nothing is saved). ValueError for an N/A the criterion
+    does not allow on the dialog's channel, as a decision would refuse it."""
     new_answer = normalize_na_value(new_answer)
     ev = ec.evaluation
+    if new_answer == "N/A" and not na_allowed_on_channel(criterion_definition(db, ec), ev.conversation.channel):
+        raise ValueError("N/A is not allowed for this criterion")
     saved = {r.id: (r.final_answer, r.final_score, r.final_earned) for r in ev.criteria}
     saved_total, saved_sections, saved_crit = ev.final_total_score, ev.sections, ev.critical_error
     ec.final_answer = new_answer
@@ -134,6 +138,10 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
         ec.final_answer = new_answer
         ec.review_state = "changed"
     else:
+        if not ec.applicable and cdef is not None and not na_allowed_on_channel(cdef, ev.conversation.channel):
+            # a stale N/A: the checklist no longer allows it on this channel (C1 on calls), so confirming it would export
+            # a null the results format refuses; the reviewer changes the answer instead
+            raise ValueError("N/A is not allowed for this criterion")
         ec.final_answer = ec.answer if ec.applicable else "N/A"
         ec.review_state = "confirmed"
     dec = Decision(appeal_id=ap.id, action=action, new_answer=(new_answer if action == "change" else None), reason=reason, reviewer_label=reviewer_label or "Reviewer", reviewer_role=reviewer_role)
@@ -142,7 +150,10 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
     recompute_final(db, ev)
     if action == "change":
         dec.new_score = ec.final_score
-    if add_to_fewshot:
+    from ..judge.validate import CONTACT_OUTSIDE_RECORDING_FLAG
+
+    # a row decided by the recording-gap rule never teaches the judge: its «Да» says nothing about what a greeting is
+    if add_to_fewshot and CONTACT_OUTSIDE_RECORDING_FLAG not in (ec.flags or []):
         _add_fewshot(db, ec, reason)
     db.commit()
     db.refresh(dec)

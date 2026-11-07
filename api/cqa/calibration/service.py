@@ -40,6 +40,8 @@ from sqlalchemy.orm import Session, selectinload
 from ..eval.harness import _norm, cohen_kappa, quadratic_weighted_kappa
 from ..models import ChecklistVersion, Conversation, Criterion, Evaluation, EvaluationCriterion, GoldLabel
 from ..scoring.engine import CriterionInput, answer_points, compute_score
+from ..serializers import max_turn_index
+from ..turnrefs import display_turn_refs
 
 DEFAULT_LABELER = "team"
 RECONCILED_LABELER = "team"  # the reconciled gold set; left out of the human-human ceiling
@@ -1205,9 +1207,12 @@ def agreement(db: Session, labeler: str | None = None, checklist_version_id: int
             if p.h == p.a:
                 continue
             row, conv = p.row, p.evaluation.conversation
+            # judge texts as the card shows them: 1-based turn labels, a number beyond the dialog («сообщение системы 404») as written
+            max_index = max_turn_index(conv)
             disagreements.append({
                 "conversation_id": p.conversation_id, "code": c.code, "title": c.title, "ai": p.ai, "human": p.human,
-                "explanation": row.explanation, "na_reason": row.na_reason if not row.applicable else None,
+                "explanation": display_turn_refs(row.explanation, max_index),
+                "na_reason": display_turn_refs(row.na_reason, max_index) if not row.applicable else None,
                 "confidence": row.confidence, "evaluation_id": p.evaluation.id, "evaluation_criterion_id": row.id,
                 "review_state": row.review_state, "final_answer": row.final_answer,
                 "note": human_note.get((p.conversation_id, c.code)), "split": gold_split.get(p.conversation_id),

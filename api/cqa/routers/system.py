@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from ..admin.snapshots import DISK_MARGIN_BYTES, disk_status
 from ..config import REPO_DIR, settings
 from ..db import get_db
 from ..jobs import guards
@@ -38,7 +39,7 @@ _T0 = time.monotonic()
 PYTHON = ".".join(str(x) for x in sys.version_info[:3])
 LOCAL_PROBE_TTL_S = 30.0
 LOCAL_PROBE_TIMEOUT_S = 1.0
-LOW_DISK_BYTES = 500 * 1024 * 1024
+MIB = 1024 * 1024
 _SHA = re.compile(r"[0-9a-f]{40}([0-9a-f]{24})?")
 
 
@@ -243,12 +244,41 @@ def _disk_free(path: Path) -> int | None:
         return None
 
 
+def _live_db_bytes(db_info: dict) -> int | None:
+    """One snapshot of the live database: file + WAL, as cqa.admin.snapshots estimates it. None unless it is a SQLite
+    file: Postgres does not live on the data volume and has no snapshots, so only the absolute floor applies."""
+    if db_info.get("kind") != "sqlite" or not db_info.get("size_bytes"):
+        return None
+    return int(db_info["size_bytes"]) + int(db_info.get("wal_bytes") or 0)
+
+
+def _mb(n: int) -> str:
+    """Megabytes with one decimal at most ("26 МБ", "1.5 МБ"), never 0: the snapshot count must add up for a small database too."""
+    return f"{max(n / MIB, 0.1):.1f}".removesuffix(".0") + " МБ"
+
+
+def _disk_warning(disk_free: int, db_bytes: int | None) -> str | None:
+    """The ``disk_low`` message by the rule the snapshot guard shares (cqa.admin.snapshots.disk_status), None while there
+    is room. It says how many snapshots still fit: a bare "N МБ free" means nothing without the size of the database."""
+    disk = disk_status(disk_free, db_bytes)
+    if not disk["low"]:
+        return None
+    head = f"Мало места на диске с данными: свободно {disk_free // MIB} МБ"
+    fit, size = disk["snapshots_fit"], disk["snapshot_bytes"]
+    if fit is None:  # size of the database unknown: only the absolute floor applied
+        return head + "."
+    if fit == 0:
+        return head + f", а для снимка базы ({_mb(size)}) нужно не меньше {_mb(size + DISK_MARGIN_BYTES)}."
+    snapshots = guards.plural_ru(fit, ("снимок", "снимка", "снимков"))
+    return head + f", это примерно {fit} {snapshots} базы по {_mb(size)} с запасом {_mb(DISK_MARGIN_BYTES)}."
+
+
 def _health_warnings(db_info: dict, providers: dict, job_counts: dict, disk_free: int | None, budget: dict | None) -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
     if not db_info["ok"]:
         out.append({"code": "db_unavailable", "message": "База данных недоступна."})
-    if disk_free is not None and disk_free < LOW_DISK_BYTES:
-        out.append({"code": "disk_low", "message": f"Мало места на диске с данными: свободно {disk_free // (1024 * 1024)} МБ."})
+    if disk_free is not None and (disk_low := _disk_warning(disk_free, _live_db_bytes(db_info))):
+        out.append({"code": "disk_low", "message": disk_low})
     if not providers["anthropic"]:
         out.append({"code": "anthropic_not_configured", "message": "Ключ Claude API не задан: оценка через Claude недоступна."})
     local = providers["local"]

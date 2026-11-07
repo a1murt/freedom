@@ -28,6 +28,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 from sqlalchemy.orm import Session
 
 from ..models import ChecklistVersion, Criterion, Evaluation, EvaluationCriterion, Turn
+from ..serializers import max_turn_index
 from ..turnrefs import display_turn_number, display_turn_refs
 
 log = logging.getLogger(__name__)
@@ -143,6 +144,8 @@ def _criteria_table(ev: Evaluation, crit_by_code: dict[str, Criterion], st: dict
         ev.criteria,
         key=lambda r: (crit_by_code[r.code].order if r.code in crit_by_code else 10**6, r.id),
     )
+    # same bound as the API: a number beyond the dialog («сообщение системы 404») is not a turn label
+    max_index = max_turn_index(ev.conversation)
     data: list[list[Any]] = [
         [
             _p("Код", st["cell_bold"]),
@@ -161,11 +164,11 @@ def _criteria_table(ev: Evaluation, crit_by_code: dict[str, Criterion], st: dict
             [
                 _p(r.code, st["cell_bold"]),
                 _p(title, st["cell"]),
-                _answer_paragraph(r, crit, st),
+                _answer_paragraph(r, crit, st, max_index),
                 _p("—" if not r.applicable else f"{_fmt_num(r.score)} / {_fmt_num(r.max_points)}", st["cell"]),
                 _p(_fmt_num(r.weight), st["cell"]),
                 _earned_paragraph(r, st),
-                _explanation_paragraph(r, st),
+                _explanation_paragraph(r, st, max_index),
             ]
         )
     titles = [crit_by_code[r.code].title if r.code in crit_by_code else r.code for r in rows]
@@ -188,11 +191,11 @@ def _criteria_table(ev: Evaluation, crit_by_code: dict[str, Criterion], st: dict
     return table
 
 
-def _answer_paragraph(r: EvaluationCriterion, crit: Criterion | None, st: dict[str, ParagraphStyle]) -> Paragraph:
+def _answer_paragraph(r: EvaluationCriterion, crit: Criterion | None, st: dict[str, ParagraphStyle], max_index: int | None) -> Paragraph:
     if not r.applicable:
         text = "N/A"
         if r.na_reason:
-            text += f"<br/><font size='7' color='#555555'>{escape(str(display_turn_refs(r.na_reason)))}</font>"
+            text += f"<br/><font size='7' color='#555555'>{escape(str(display_turn_refs(r.na_reason, max_index)))}</font>"
         return Paragraph(text, st["cell"])
     text = escape(_answer_label(crit, r.answer))
     if r.review_state == "changed" and r.final_answer is not None:
@@ -211,8 +214,8 @@ def _earned_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle]) -> 
     return Paragraph(text, st["cell"])
 
 
-def _explanation_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle]) -> list[Paragraph]:
-    out: list[Paragraph] = [_p(display_turn_refs(r.explanation) or "—", st["cell"])]
+def _explanation_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle], max_index: int | None) -> list[Paragraph]:
+    out: list[Paragraph] = [_p(display_turn_refs(r.explanation, max_index) or "—", st["cell"])]
     for ev in r.evidence or []:
         if not isinstance(ev, dict):
             continue

@@ -335,8 +335,21 @@ def test_missing_new_answer_is_still_required_where_na_is_not_allowed(env):
     assert (rows["C5"]["review_state"], ev["final_total_score"]) == ("under_review", AI_TOTAL)
 
 
+def test_contact_has_no_na_on_calls_in_the_organizer_checklist(env):
+    # JSON 1.0 appendix + organizer answer 2026-11-08: contact is true/false only, calls included
+    call = _file(env, code="C1", conv="call-002")
+    assert call["na_allowed_for_channel"] is False
+    r = _decide(env, call["id"], action="change", new_answer=None, reason="Приветствие не попало в запись")
+    assert r.status_code == 422 and r.json()["error"]["code"] == "new_answer_required"
+
+
 def test_missing_new_answer_follows_the_channel_override_of_na(env):
-    # C1 allows N/A only on voice calls (the greeting may have been said before the recording started)
+    # a checklist may allow N/A on one channel only. The organizer seed no longer does it anywhere (C1 on calls is
+    # credited by a judge rule instead), so this test gives C1 such an override for calls
+    with env.Session() as db:
+        c1 = db.execute(select(Criterion).where(Criterion.code == "C1")).scalar_one()
+        c1.channel_overrides = {"voice call": {"na_allowed": True, "na_condition": "Приветствие не попало в запись."}}
+        db.commit()
     chat_row, call_row = env.rows["chat-001"]["C1"], env.rows["call-002"]["C1"]
     assert _preview(env, chat_row, None) == AI_TOTAL
     assert _preview(env, call_row, None) == _preview(env, call_row, "N/A") == C1_NA_TOTAL

@@ -1,5 +1,7 @@
 # CQA design proposal · Corporate-premium, faithful to the organizer mockup
 
+> **Superseded for C1 on calls (2026-11-08).** Wherever this proposal offers N/A for C1 on a call whose greeting is not in the recording, read: C1 has no N/A. The opening outside the recording is credited by a code rule, with the badge «Засчитано правилом: начало звонка вне записи». See `docs/ORGANIZER_UPDATES.md` §5 and `docs/FRONTEND_INTEGRATION.md` «Calls».
+
 > **Angle.** Light by default; deep-green sidebar; white cards; score ring; criteria rows with check and cross tiles; two-track waveform; peach evidence highlight; «Почему снижена оценка»; a primary and a secondary button. Freedom green tokens, SF Pro with an Inter fallback, one design system in code, no cartoons, an optional dark theme, and executive-grade dashboards.
 
 | | |

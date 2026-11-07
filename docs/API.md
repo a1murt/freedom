@@ -165,7 +165,7 @@ Items are the latest evaluation per conversation where C8 is "yes" after reviewe
 `GET/PUT /api/settings` also carry `mascot_enabled` (default `false`, organizer guidance: no cartoon characters by default), `default_theme` (`light`), `team_name` (used in results.json).
 
 ### Checklist channel overrides
-`criteria[].channel_overrides["voice call"]` may contain `na_allowed: true` and `na_condition` (C1 on calls: N/A when the greeting is not in the recording, per the organizers). The UI should offer N/A for that criterion on calls.
+`criteria[].channel_overrides["voice call"]` may contain `na_allowed: true` and `na_condition`; the UI offers N/A for that criterion on calls only. The organizer checklist no longer uses this since 2026-11-08: C1 on calls has no N/A, and an opening outside the recording is credited by rule (see «Calls: opening outside the recording» below).
 
 ## Architecture phase additions
 
@@ -346,6 +346,16 @@ Additive unless marked ⚠. Screen-by-screen use: [FRONTEND_INTEGRATION.md](FRON
 
 ### Calls ⚠
 Turn `offset_seconds` of voice calls count from the recording-start event («Запись и транскрибирование запущены», «Жазу және транскрипция басталды», "Recording and transcription started"); turns before it are `null` and listed in `meta.not_in_recording`; `meta.recording_start_idx`, `meta.recording_start_offset_s`. First-response time is unchanged. Stored calls are re-derived at start-up (`cqa/ingest/renormalize.py`, acoustic features recomputed, peaks cache invalidated). Evidence `offset_seconds` in evaluation JSON follow the current transcript for calls.
+
+### Calls: opening outside the recording (2026-11-08) ⚠
+- C1 has no N/A on any channel. JSON 1.0 `contact` is true/false only, and the organizers left the unrecorded-greeting case of calls to the team.
+- When a call's first operator turn was said before «Запись и транскрибирование запущены», the C1 row is decided by code, not by the model:
+  - `answer: "yes"` and `confidence: 1`;
+  - `flags: ["rule_contact_outside_recording"]`;
+  - `evidence[0]` is that turn, with `role: "context"`;
+  - the explanation names the recording-start turn and the seconds lost.
+- `GET /api/analytics/recording-gaps?checklist_version_id=&dataset_id=` lists calls whose recording started late. The response is `{calls, with_gap, share, opening_not_recorded, seconds_not_recorded: {total, mean, max}, rule, items: [{conversation_id, operator_name, recording_start_turn, seconds_not_recorded, turns_not_recorded, operator_turns_not_recorded, opening_not_recorded, credited_by_rule: ["C1"], evaluation_id}]}`. Turn numbers in it are 1-based.
+- `GET /api/export/results/validate` reports a null contact as an error on every channel. A null can only come from an evaluation made before this change; re-judge C1 for that dialog.
 
 ### Appeals
 - `POST /api/appeals`: `comment` trimmed, 1–4000 characters (422 `comment_required` / `comment_too_long` with `errors[]`).

@@ -26,8 +26,8 @@ class ConversationPack:
     first_response_seconds: float | None
     operator_name: str | None
     acoustic: dict[str, Any] | None = None
-    # calls: index of the «запись запущена» event and the turns said before it (not in the audio file); the organizers'
-    # rule for C1 on calls is N/A when the greeting is not in the recording (cqa.ingest.normalize, CALL-03)
+    # calls: index of the «запись запущена» event and the turns said before it (not in the audio file); an operator
+    # opening said before it is credited for C1 by rule (cqa.judge.validate.opening_outside_recording, CALL-03)
     recording_start_idx: int | None = None
     not_in_recording: list[int] | None = None
 
@@ -44,6 +44,7 @@ class CriterionPack:
     channel_overrides: dict[str, Any]
     judge_spec: dict[str, Any] | None
     is_critical: bool = False
+    export_id: str | None = None  # the version's results.json id (scoring_rules.export_ids, else C1 → contact …)
 
 
 @dataclass

@@ -5,15 +5,26 @@ Numbers are from the hosted instance (`https://api-production-58ab4.up.railway.a
 ## Before the demo (morning, in this order)
 
 1. `GET /api/system/readiness`: every `required` check green.
-   - `appeals_seeded` and `baseline_snapshot` are fixed by steps 2 and 3.
+   - `appeals_seeded` and `baseline_snapshot` are fixed by steps 3 and 4; `results_json` by step 2.
    - Command: `api/.venv/bin/python scripts/smoke.py` runs it together with 17 other read-only checks.
    - `api/.venv/bin/python scripts/smoke_asks.py` checks the data each live ask needs (8 violations 1/4/3, p1-ru-029 at 51,25 with the insult at turn 10, p1-ru-005 C6 preview 78,46 → 85,38, the C7 what-if without model calls, results.json valid, readiness) and proves it wrote nothing.
-2. Seed the review queue: `api/.venv/bin/python scripts/seed_demo.py`.
+2. After a deploy that changes how a criterion is decided, re-judge only that criterion where it matters; this is done on the hosted instance as of 2026-11-08.
+   - Example: the C1 call rule on p4-ru-002.
+     ```json
+     POST /api/evaluations/run {"conversation_ids": ["p4-ru-002"], "checklist_version_id": 1, "mode": "partial", "base_version_id": 1, "only_codes": ["C1"]}
+     ```
+   - The other 7 rows are copied. A stale N/A is also judged again by any partial run.
+   - Then regenerate `results/dev/results.json`:
+     ```bash
+     cd api && .venv/bin/python -m cqa.export.results_json --api <hosted> --group DEV --out ../results/dev/results.json --expect 65
+     ```
+   - Commit only if it prints VALID.
+3. Seed the review queue: `api/.venv/bin/python scripts/seed_demo.py`.
    - It creates one open operator appeal and one decided appeal (signed «Жанар Б.» as analyst and «Айгерим С.» as reviewer), on chats the demo does not use.
    - It never touches p1-ru-029 or p1-ru-005, and never adds few-shot examples.
-3. Snapshot the prepared state: `POST /api/admin/snapshots {"name": "baseline", "note": "демо-данные для жюри"}`.
+4. Snapshot the prepared state: `POST /api/admin/snapshots {"name": "baseline", "note": "демо-данные для жюри"}`.
    - Restore it after every rehearsal and after the hands-on session: `POST /api/admin/snapshots/baseline/restore {"confirm": "baseline"}`.
-4. Tabs to have open:
+5. Tabs to have open:
    - the app on the landing page;
    - `#/violations`;
    - `#/conversations/p1-ru-029`;
@@ -41,7 +52,7 @@ Numbers are from the hosted instance (`https://api-production-58ab4.up.railway.a
 7. (If time) Trace tab: the model, prompt hash, tokens, cost (~$0,22) and latency per criterion. Every number came from a live call.
 8. (If time) Call p4-ru-002:
    - the two-track waveform, and evidence seeks that land on the right second (offsets now count from the recording start);
-   - turns 1–4, which include the operator's greeting, are «не в записи», so C1 is N/A by the organizers' rule (the judge cites «запись запущена только на реплике [5]»); the total is 89,44 instead of 80,50.
+   - turns 1–4, which include the operator's opening, are «не в записи». C1 is «Да» by the system rule: a deduction needs a fragment one can listen to and contest. The card quotes the opening the transcript kept and flags the call as a recording gap. The total is 90,50; «Нет» would have given 80,50. The arguments are in `docs/PITCH.md` §06a (organizer answer 2026-11-08: contact is true/false only).
 
 ### 3:00–4:00 · Operator appeal and reviewer decision (live ask 2)
 

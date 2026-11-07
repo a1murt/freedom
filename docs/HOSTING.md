@@ -42,7 +42,7 @@ cd api && ~/.npm-global/bin/railway init
 - Restricted CORS: `CORS_ORIGINS` must list the web origin and, for the D365 web resource, `https://freedomholdingcorporation.crm11.dynamics.com`.
 - Header-less requests: `CQA_HEADERLESS_ROLE` (default `demo`, every permission) is the role of a request without `X-CQA-Role`. Set it to `visitor` only after the deployed web app sends role headers: then direct API calls without headers can only read. `scripts/control_run.py` and `scripts/seed_demo.py` always send role headers.
 - Start-up: besides the schema migration, the API re-derives the audio timing of stored calls (`cqa/ingest/renormalize.py`, idempotent) and recomputes their acoustic features from cached recordings.
-- After each deploy: `api/.venv/bin/python scripts/smoke.py --version $(git rev-parse --short HEAD)` (read-only, 18 checks, prints the readiness summary).
+- After each deploy: `api/.venv/bin/python scripts/smoke.py --version $(git rev-parse --short HEAD)` (read-only, 18 checks, prints the readiness summary). If the build changes how a criterion is decided, re-judge just that criterion on the dialogs it affects (`mode: "partial"`, `only_codes`; `docs/DEMO.md` «Before the demo» step 2) and regenerate `results/dev/results.json` before smoke turns green.
 
 Full environment list and deployment notes: `docs/ARCHITECTURE_V2.md` §11.
 

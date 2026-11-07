@@ -125,7 +125,14 @@ The body is always `{"error": {"code", "message", ...extra}}` and `message` is R
 - **Two-track waveform:** `GET /api/audio/{id}/peaks?buckets=600` returns `tracks.client / operator / other` and `spans[]`. The cache now refreshes itself when turn timing changes.
 - **Features:** `GET /api/audio/{id}/features` (pace, pauses, holds, `summary_ru`).
 - **Timing now matches the audio.** p4-ru-002 was off by 30 s before the fix.
-- **«Не в записи».** Turns in `meta.not_in_recording` have no seek time; show them greyed. This is exactly the organizers' C1 = N/A case for calls ("приветствие не попало в запись").
+- **«Не в записи».** Turns in `meta.not_in_recording` have no seek time; show them greyed.
+- **Calls: opening outside the recording (new, 2026-11-08).** C1 has no N/A any more, because JSON 1.0 contact is true/false only.
+  - When the operator's first turn is in `meta.not_in_recording`, the C1 row comes back as `answer: "yes"` with `flags` containing `rule_contact_outside_recording`.
+  - The row also has `confidence: 1` and `evidence[0]` = that turn with `role: "context"`, without `offset_seconds`.
+  - Show a small neutral badge on the row: «Засчитано правилом: начало звонка вне записи». The `explanation` already says why.
+  - Banner text for the card (replaces the old «Правило организаторов для звонков: C1 = N/A»): «Запись началась после начала разговора оператора. «Установление контакта» засчитано по правилу: снижать балл можно только по фрагменту, который можно прослушать. Звонок отмечен как пробел записи.»
+  - The appeal dialog keeps offering only Да/Нет for C1 (`na_allowed_for_channel` is false on calls now).
+  - Optional analytics card «Пробелы записи звонков»: `GET /api/analytics/recording-gaps`. In DEV it shows 1 of 5 calls, 30 s unrecorded, C1 credited by rule on p4-ru-002. It shows the telephony team where recordings start late.
 
 ### Gross violations `#/violations` (live ask 1)
 - **Data:** `GET /api/violations?type=&language=&channel=&operator=&include_reviewed_out=` returns `{total, counts, types:[{code, ru, en, kk}], items}`.
@@ -211,7 +218,7 @@ The body is always `{"error": {"code", "message", ...extra}}` and `message` is R
    1. Change C7's weight; the live what-if (`…/impact`) updates.
    2. Add C9; «Проверить на диалоге» (`test-criterion`).
    3. «Сохранить как черновик» (`activate: false`), then the diff, then «Применить» (partial run, dry run first), then activate.
-4. **Dialog result with justification.** The card: ring, «Почему снижена оценка», evidence jumps, N/A reasons, «Как посчитан итог»; for p4-ru-002, the waveform with the cited fragment and the C1 N/A explanation ("приветствие не в записи").
+4. **Dialog result with justification.** The card: ring, «Почему снижена оценка», evidence jumps, N/A reasons, «Как посчитан итог»; for p4-ru-002, the waveform with the cited fragment and the C1 rule explanation: «Да», because the opening is outside the recording. Flag `rule_contact_outside_recording`; see «Calls: opening outside the recording» below.
 
 ---
 
@@ -232,7 +239,7 @@ All changes are additive except the three behaviour fixes marked ⚠.
 - **New endpoints:** `POST /api/checklists/{id}/versions/{vid}/impact`, `GET /api/system/readiness`, `GET /api/export/violations.csv`, `GET /api/export/decisions.csv`, `GET /api/violations/candidates`, `PUT /api/conversations/{id}/operator`.
 - **Scope params:** on `/api/overview`, `/api/analytics/summary`, `/api/operators` and `/api/violations`.
 - **Paste:** `dry_run` preview and automatic language.
-- **Judge facts for calls:** the judge now gets the recording start, so C1 = N/A when the greeting is not in the recording (organizers' rule).
+- **Judge facts for calls:** the judge gets the recording start. Since 2026-11-08, C1 on a call whose opening is outside the recording is decided by a code rule (Да, flag `rule_contact_outside_recording`), never N/A.
 - **`CQA_HEADERLESS_ROLE` (deployment variable):** set it to `visitor` once your app sends role headers. Header-less API calls then become read-only.
 
 ---

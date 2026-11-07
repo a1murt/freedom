@@ -34,6 +34,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from ..audit import service as audit
 from ..db import get_db
+from ..review import service as review
 from . import roles
 
 log = logging.getLogger("cqa.security")
@@ -432,8 +433,11 @@ def decision_text(body: Any) -> str | None:
     if body.get("action") == "confirm":
         return "оценка подтверждена"
     if body.get("action") == "change":
+        # name the saved answer: N/A aliases ("н/п", "na"…) are stored as "N/A", and so is a missing new_answer (null,
+        # "" or blank) where the criterion allows N/A; elsewhere it is refused with 422, which is never recorded
         new = body.get("new_answer")
-        return f"ответ изменён на «{new}»" if new is not None else "ответ изменён"
+        new = "N/A" if review.is_missing_answer(new) else review.normalize_na_value(new)
+        return f"ответ изменён на «{new}»"
     return None
 
 

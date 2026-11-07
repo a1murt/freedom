@@ -73,7 +73,7 @@ Full text and our decisions: [ORGANIZER_UPDATES.md](ORGANIZER_UPDATES.md). The o
 
 - **Ground truth is compared per criterion** (each Да/Нет/N/A or scale step), not by the total. Optimise the harness metrics per criterion.
 - **The control set is 10 chats only.** Calls do not count for the control score.
-- **C1 on calls:** if the greeting is not in the recording, the organizers say N/A. The voice-call override must allow N/A for C1 in that case.
+- **C1 on calls:** first the organizers said N/A when the greeting is not in the recording. Superseded on 2026-11-08: contact is true/false only, and an opening outside the recording is credited by a code rule (see «Working on main» below and `docs/ORGANIZER_UPDATES.md` §5).
 - **C7, farewell without summary or offer of help** ("Пожалуйста. Хорошего вечера!" after a solved question): the organizers answered "N/a". This reads either as "N/A" or as "no answer". The current spec scores it Да. Decide with your gold set, and keep it consistent across all dialogs.
 - **C2, all details given up front:** our discretion. The current spec says N/A.
 - **C3/C8, account data disclosed before identification:** no answer. The current spec says C3 Нет and C8 Да, because the checklist lists disclosure of confidential information as a gross error.
@@ -125,6 +125,6 @@ None of these change the judge prompts or `api/seeds/judge_specs_v1.json`; they 
 - **Freeze times (+05).** Judge and config freeze at 12:00 (H+22). The control run is at 13:00 (H+23), and the stop-code is at 14:00 (H+24). After 12:00 only the control results land on `main`.
 - **Hosted settings to know about.**
   - `fewshot_from_reviews` is **off**, so reviewer decisions made during rehearsals and jury live asks do not feed the judge. Turn it on (the few-shot switch on the Settings page, or `PUT /api/settings` with `{"fewshot_from_reviews": true}`) only if your validation run shows it helps.
-  - C1 was re-judged on the five calls under the organizers' rule (greeting not recorded → N/A): p4-ru-002 is now N/A, with a total of 89,44.
+  - C1 on calls has no N/A any more (organizer answer 2026-11-08: JSON 1.0 contact is true/false only; the control set has no calls). An operator opening said before the recording started is credited by a code rule (`cqa/judge/validate.py` `opening_outside_recording`), whatever the model answers. In DEV only p4-ru-002 is affected; its total becomes 90,50. Do not label C1 as N/A in the gold set: calibration now refuses it.
   - `results/dev/results.json` was regenerated from that state.
 - **Changing the judge for the control run.** Edit `api/seeds/judge_specs_v1.json` or the prompts, run the harness locally, and write the winner into `api/judge_config_control.md`. Version 1 re-syncs from the repo on start-up (`SEED_SYNC`), so a merged spec change reaches the hosted instance with the next deploy. Ask the architecture side to deploy before 12:00.

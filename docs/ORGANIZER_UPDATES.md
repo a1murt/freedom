@@ -69,7 +69,7 @@ Implementation: `api/cqa/export/results_json.py` (builder + validator), CLI `pyt
 | Comparison with ground truth | Per criterion (each answer), not the total | Optimise per-criterion agreement; totals follow from the engine |
 | Control set content | Only chats | Control-run script assumes chats; calls stay supported in the product |
 | Replacing a criterion at the control check | "How would you do it?"; already processed control dialogs must be re-evaluated | Add or replace a criterion in Checklist Studio, set its weight (weights are relative; the engine normalises to 100 automatically and the UI shows the sum and offers "normalise to 100"), save a new version, apply with partial re-evaluation (only the new or changed criterion is re-judged, totals recomputed) |
-| Calls, C1: greeting not in the recording | N/A | Voice-call override for C1 allows N/A when the operator segment starts after the greeting; a masked name `[Имя скрыто]` counts as introduced |
+| Calls, C1: greeting not in the recording | First N/A; on 2026-11-08 (JSON 1.0 allows only true/false for contact): "DEV calls are for the UI, the control set has no calls, your choice; justify it for the business" | C1 has no N/A on any channel. If the operator's first turn was said before «Запись и транскрибирование запущены», a code rule (not the model) answers Да, quotes the text the transcript kept and flags the call `rule_contact_outside_recording` (§5). A masked name `[Имя скрыто]` counts as introduced |
 | Calls, C3: is asking ФИО and address/phone enough? | "How would you implement it?" | Identification = the operator requests and receives at least two identifiers (ФИО + ИИН/address/phone) or an SMS code before disclosing account data; masked identifiers count as provided |
 | C4: is there a knowledge base? | Yes, the company has one; the system should act as an indicator when something went off-script, for appeals and for reworking the answer script | Claims ledger + public knowledge base; the card shows "deviations from the knowledge base" as an indicator; unverified claims are marked, never invented |
 | C7: answered and said goodbye ("Пожалуйста. Хорошего вечера!") without summary or offer of help | "N/a" | **Ambiguous.** It reads either as "N/A" or as "no answer". Current judge spec scores a farewell with no open question as Да. The ML owner decides after the gold-set comparison; see `docs/HANDOFF_ML.md` |
@@ -99,3 +99,24 @@ Decision:
 - Dark theme stays available as an option, not the default.
 - **The mascot is removed from the product UI and the landing page by default.** The recolored mascot stays in Figma and in `web/public/mascot/` and can be turned on in Settings → Appearance ("Brand mascot", default off) for informal presentations.
 - The landing page follows the corporate tone: product screenshots and real numbers instead of characters; the Figma Landing structure (hero, problem, how it works, features, languages, security, comparison, FAQ, call to action, footer) is reused with corporate visuals.
+
+## 5. Organizer answer 2026-11-08: contact is true/false, calls are ours to decide
+
+The question was: JSON 1.0 allows only true/false for `contact`, while N/A was allowed earlier when the greeting is not in a call's recording. What goes into results/dev/results.json for such DEV calls?
+
+The answer:
+- DEV calls are there mainly for the UI, not for comparing results.
+- The control set has no calls.
+- Use the transcript, the recording or our own approach.
+- At the presentation, show why the decision matters for the business. A reasoned approach can earn a small plus; an irrational one, a small minus.
+
+Our decision. The principle: a deduction needs a fragment one can listen to and contest.
+- `cqa/judge/validate.py` (`opening_outside_recording`) decides C1 on calls by rule when the operator's first turn has no audio offset, i.e. it was said before the recording-start event.
+- The answer is Да, confidence 1.0, with the turn quoted as context evidence and the flag `rule_contact_outside_recording`.
+- The explanation names the recording-start turn and the seconds lost.
+- The model's own answer for C1 is ignored for such calls, so there is no retry and the result is identical on every run.
+- The checklist seed's C1 call override lost `na_allowed`, and version 1 re-syncs on start-up.
+- The results validator now treats a null contact as an error on every channel.
+- In DEV this concerns only p4-ru-002: the recording starts 30.2 s in, and the operator's opening survives only in the text. Its C1 becomes Да; the total is 90,50, against 89,44 with N/A and 80,50 with Нет.
+- Pitch arguments: `docs/PITCH.md` §06a.
+

@@ -274,7 +274,7 @@ def test_upsert_create_update_unchanged_remove(fresh):
         {"conversation_id": "g-ru-001", "criterion_code": "c4", "value": "15"},
         {"conversation_id": "g-ru-001", "criterion_code": "total", "value": 85},
         {"conversation_id": "g-ru-001", "criterion_code": "_note", "note": "сверено с PDF"},
-        {"conversation_id": "g-call-001", "criterion_code": "C1", "value": None},  # N/A: allowed on calls by the voice override
+        {"conversation_id": "g-call-001", "criterion_code": "C7", "value": None},  # N/A: C7 allows it on every channel
         {"conversation_id": "g-ru-002", "criterion_code": "C5", "value": 1},       # binary 1/0 → yes/no
         {"conversation_id": "g-ru-002", "criterion_code": "C7", "value": 0},
     ]
@@ -287,7 +287,7 @@ def test_upsert_create_update_unchanged_remove(fresh):
     assert (got[("g-ru-001", "total")]["kind"], got[("g-ru-001", "total")]["value"]) == ("total", 85)
     note = got[("g-ru-001", "_note")]
     assert (note["kind"], note["value"], note["note"], note["split"]) == ("note", None, "сверено с PDF", "train")
-    assert got[("g-call-001", "C1")]["value"] == NA and got[("g-call-001", "C1")]["split"] is None
+    assert got[("g-call-001", "C7")]["value"] == NA and got[("g-call-001", "C7")]["split"] is None
     assert (got[("g-ru-002", "C5")]["value"], got[("g-ru-002", "C7")]["value"]) == ("yes", "no")
     assert [r["criterion_code"] for r in svc.list_labels(db, conversation_id="g-ru-001")] == ["C1", "C4", "total", "_note"]
 
@@ -488,7 +488,8 @@ def test_agreement_per_criterion(db, world):
     # exact 4/5; po .8, pe .8*.6 + .2*.4 = .56 → kappa .24/.44 = .545
     c1 = rows["C1"]
     assert (c1["n"], c1["exact"], c1["kappa"], c1["na_agree"], c1["qwk"], c1["mae"]) == (5, 0.8, 0.545, 1.0, None, None)
-    assert c1["confusion"] == {"labels": ["yes", "no", NA], "rows": "human", "columns": "ai", "matrix": [[3, 1, 0], [0, 1, 0], [0, 0, 0]]}
+    # C1 has no N/A on any channel (JSON 1.0: contact is true/false only), so its matrix has no N/A row or column
+    assert c1["confusion"] == {"labels": ["yes", "no"], "rows": "human", "columns": "ai", "matrix": [[3, 1], [0, 1]]}
     # C2 with N/A as a class: (NA,NA) (y,y) (NA,n) (n,n) (NA,y) → exact 3/5, N/A agreement 3/5;
     # human NA .6 yes .2 no .2, AI NA .2 yes .4 no .4 → pe .28 → kappa .32/.72 = .444
     c2 = rows["C2"]
@@ -713,7 +714,7 @@ def test_http_write_endpoints(fresh):
     with _client(fresh["Session"]) as client:
         ok = client.put("/api/calibration/labels", json={"labeler": "team", "items": [
             {"conversation_id": "g-ru-001", "criterion_code": "C1", "value": "Да", "split": "train"},
-            {"conversation_id": "g-call-001", "criterion_code": "C1", "value": "N/A"}]})
+            {"conversation_id": "g-call-001", "criterion_code": "C7", "value": "N/A"}]})
         assert ok.status_code == 200 and ok.json()["created"] == 2
         bad = client.put("/api/calibration/labels", json={"items": [{"conversation_id": "g-ru-001", "criterion_code": "C4", "value": 12}]})
         err = bad.json()["error"]
@@ -770,3 +771,11 @@ def test_http_read_endpoints(world):
         assert set(client.get("/api/calibration/export").json()["labels"]) == {D1, D2, D3, D4, D5, D6, D7}
         labels = client.get("/api/calibration/labels", params={"labeler": "alina"}).json()
         assert labels["total"] == 4 and [x["labeler"] for x in labels["labelers"]] == ["alina", "kassym", "team"]
+
+
+def test_contact_has_no_na_even_on_calls(fresh):
+    # JSON 1.0 appendix + organizer answer 2026-11-08: contact is true/false only, calls included (an unrecorded
+    # opening is credited by the judge rule, cqa.judge.validate.opening_outside_recording)
+    with pytest.raises(svc.ValidationFailed):
+        svc.upsert_labels(fresh["db"], [{"conversation_id": "g-call-001", "criterion_code": "C1", "value": None}])
+    assert svc.upsert_labels(fresh["db"], [{"conversation_id": "g-call-001", "criterion_code": "C1", "value": "Да"}])["created"] == 1

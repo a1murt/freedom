@@ -50,6 +50,8 @@ PRE_RESTORE_KEEP = 5  # automatic pre-restore snapshots kept after a restore (ol
 LOCK_WAIT_S = 15.0  # how long to wait for the live database's write lock (normal write transactions take milliseconds)
 OP_WAIT_S = 120.0  # how long to wait for another snapshot operation in this process
 DISK_MARGIN_BYTES = 32 * 1024 * 1024  # never fill the volume that also holds the live database
+DISK_LOW_SNAPSHOTS = 4  # disk_status: low while fewer snapshots of the live database fit (every restore also makes one)
+DISK_LOW_FLOOR_BYTES = 64 * 1024 * 1024  # disk_status: always low below this (a tiny database, or its size is unknown)
 SQLITE_MAGIC = b"SQLite format 3\x00"
 
 _op_lock = threading.RLock()
@@ -283,6 +285,22 @@ def _ensure_disk(directory: Path, needed: int) -> None:
             f"Недостаточно места на диске: свободно {_mb(usage.free)}, нужно не меньше {_mb(required)}. Удалите старые снимки",
             free_bytes=usage.free, required_bytes=required,
         )
+
+
+def disk_status(free_bytes: int, db_bytes: int | None) -> dict[str, Any]:
+    """Is the data volume low? Judged by the live database, not a fixed number: the hosted volume is 500 MB in all.
+
+    One rule with the guard above: a snapshot takes ``db_bytes`` (database file + WAL, see _db_bytes) and leaves
+    DISK_MARGIN_BYTES free, so ``snapshots_fit`` is how many creates _ensure_disk still allows one after another.
+    ``low`` while fewer than DISK_LOW_SNAPSHOTS fit or less than DISK_LOW_FLOOR_BYTES is free; an unknown size (None or
+    0: Postgres, no file yet) leaves only the floor.
+    """
+    if not db_bytes or db_bytes < 0:
+        return {"low": free_bytes < DISK_LOW_FLOOR_BYTES, "threshold_bytes": DISK_LOW_FLOOR_BYTES,
+                "snapshot_bytes": None, "snapshots_fit": None}
+    threshold = max(DISK_LOW_FLOOR_BYTES, DISK_LOW_SNAPSHOTS * db_bytes + DISK_MARGIN_BYTES)
+    return {"low": free_bytes < threshold, "threshold_bytes": threshold, "snapshot_bytes": db_bytes,
+            "snapshots_fit": max(0, (free_bytes - DISK_MARGIN_BYTES) // db_bytes)}
 
 
 def _dispose(callback: Callable[[], Any] | None) -> None:

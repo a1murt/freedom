@@ -5,8 +5,9 @@ with a dot, turn numbers 1-based (results.json `evidence_turns`), judge explanat
 People's own texts (appeal comments, reviewer reasons) are written as typed, as the API returns them.
 
 Every text cell that a spreadsheet would read as a formula (it starts with ``=``, ``+``, ``-``, ``@``, a tab or a carriage
-return) gets a leading apostrophe, so it is shown as text and never runs (CSV injection, OWASP): comments, names,
-quotes and explanations come from people and transcripts.
+return, or has one right after a ``;``, tab or line break inside the text) gets an apostrophe there, so it is shown as
+text and never runs (CSV injection, OWASP): comments, names, quotes and explanations come from people and transcripts.
+The neutraliser is csv_safe.safe_cell, shared with the evaluations CSV and the audit log so the exports never drift apart.
 """
 from __future__ import annotations
 
@@ -21,24 +22,17 @@ from ..config import settings
 from ..models import Appeal, Criterion
 from ..turnrefs import display_turn_number
 from .csv_export import BOM
+from .csv_safe import safe_cell
 
 DEFAULT_WEB_BASE_URL = "https://cqa-freedom-pi.vercel.app"
-_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _num(x: Any) -> str:
     return "" if x is None else (f"{float(x):.2f}" if isinstance(x, (int, float)) and not isinstance(x, bool) else str(x))
 
 
-def _cell(value: Any) -> Any:
-    """A text cell that starts like a formula, prefixed with an apostrophe; any other value unchanged."""
-    if isinstance(value, str) and value.startswith(_FORMULA_START):
-        return "'" + value
-    return value
-
-
 def _row(values: list[Any]) -> list[Any]:
-    return [_cell(v) for v in values]
+    return [safe_cell(v) for v in values]
 
 
 def _card_url(conversation_id: str) -> str:

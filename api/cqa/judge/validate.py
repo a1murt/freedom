@@ -2,16 +2,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from rapidfuzz import fuzz
 
-from ..ingest.normalize import NormTurn
+from ..ingest.normalize import RECORD_START_RE, NormTurn, parse_iso
 from ..scoring.engine import answer_points, normalize_answer
-from .contract import Verdict
+from .contract import Evidence, Verdict
 from .packer import CriterionPack
 
 QUOTE_MATCH_THRESHOLD = 70
+
+# The contact criterion (C1) on calls whose opening the recording missed (docs/ORGANIZER_UPDATES.md §5). The results
+# format allows only true/false for contact, and a deduction needs a fragment one can listen to and contest: an operator
+# opening said, wholly or in part, before «Запись и транскрибирование запущены» is credited by rule (the runner does not
+# even call the model, cqa.judge.runner.judge_criterion), the text the transcript kept is quoted for the reviewer, and
+# the call is listed as a recording gap (cqa.analytics.recording).
+CONTACT_OUTSIDE_RECORDING_FLAG = "rule_contact_outside_recording"
+CONTACT_EXPORT_ID = "contact"
+# turn timestamps of calls mark the END of an utterance (measured on the DEV audio: 74 % of the client/operator stamps
+# sit at the end of a speech segment); the start is estimated from the word count at a calm speaking rate
+WORDS_PER_SECOND = 2.5
+PARTIAL_MIN_MISSING_S = 1.0  # less than a second before the start is within timing noise
 
 
 @dataclass
@@ -28,6 +39,128 @@ def effective_na(crit: CriterionPack, channel: str | None) -> tuple[bool, str | 
     if ov.get("na_allowed"):
         return True, ov.get("na_condition") or crit.na_condition
     return crit.na_allowed, crit.na_condition
+
+
+def is_contact_criterion(crit: CriterionPack) -> bool:
+    """The version's contact criterion: exported as "contact" (scoring_rules.export_ids, else C1), binary with a «yes»
+    option and not the gross-error criterion. A checklist whose C1 means something else never gets the call rule."""
+    from ..checklist.validation import default_export_id
+
+    export_id = getattr(crit, "export_id", None) or default_export_id(crit.code)
+    return (export_id == CONTACT_EXPORT_ID and not crit.is_critical
+            and any(str(o.get("value")).lower() == "yes" for o in (crit.options or [])))
+
+
+@dataclass
+class RecordingGap:
+    """The operator's opening of a call was said, wholly (`partial` False) or in part, before the recording started."""
+    op: NormTurn            # the operator's first turn
+    start: NormTurn         # the recording-start event the audio clock counts from
+    lost_s: float | None    # seconds from the first event to the recording start
+    partial: bool = False   # the turn ended after the start but began before it
+    missing_s: float | None = None  # partial: estimated seconds of the opening said before the start
+
+
+def _seconds(a, b) -> float | None:
+    return (b - a).total_seconds() if a is not None and b is not None else None
+
+
+def opening_outside_recording(turns: list[NormTurn]) -> RecordingGap | None:
+    """The call's recording gap for the contact criterion, or None.
+
+    The audio clock of cqa.ingest.normalize._call_clock decides: its anchor is the first recording-start event with a
+    parseable time (offset 0.0), and turns said before it carry no offset. A first operator turn without an offset was
+    said before the recording (DEV p4-ru-002). A first operator turn stamped after the start may still have begun before
+    it, because the stamp marks the end of the utterance: its start is estimated from the word count (and never before
+    the previous turn's stamp); if at least PARTIAL_MIN_MISSING_S of it precede the start, its opening is not in the
+    audio either. Without a start event or a clock there is nothing to compare with, and the criterion is judged as usual."""
+    start = next((t for t in turns if t.speaker == "system" and t.offset_seconds is not None and RECORD_START_RE.search(t.text or "")), None)
+    if start is None:
+        return None
+    operator_turns = [t for t in turns if t.speaker == "operator" and not t.is_duplicate]
+    op = next((t for t in operator_turns if t.segment == "operator"), None) or (operator_turns[0] if operator_turns else None)
+    if op is None:
+        return None
+    first, began = parse_iso(turns[0].timestamp_raw or ""), parse_iso(start.timestamp_raw or "")
+    lost = _seconds(first, began)
+    lost = round(lost, 1) if lost is not None and lost >= 0 else None
+    if op.offset_seconds is None:
+        return RecordingGap(op=op, start=start, lost_s=lost) if op.idx < start.idx else None
+    ended = parse_iso(op.timestamp_raw or "")
+    after_start = _seconds(began, ended)
+    if after_start is None or after_start <= 0:
+        return None
+    estimated = len((op.text or "").split()) / WORDS_PER_SECOND
+    # the utterance cannot start before the previous spoken turn ended (system events such as the start itself are not speech)
+    prev = next((t for t in reversed(turns) if t.idx < op.idx and t.speaker in ("client", "operator", "bot")
+                 and parse_iso(t.timestamp_raw or "") is not None), None)
+    since_prev = _seconds(parse_iso(prev.timestamp_raw), ended) if prev is not None else None
+    if since_prev is not None:
+        estimated = min(estimated, max(since_prev, 0.0))
+    missing = estimated - after_start
+    if missing < PARTIAL_MIN_MISSING_S:
+        return None
+    return RecordingGap(op=op, start=start, lost_s=lost, partial=True, missing_s=round(missing, 1))
+
+
+def _yes_value(crit: CriterionPack) -> str:
+    options = crit.options or []
+    yes = next((str(o.get("value")) for o in options if str(o.get("value")).lower() == "yes"), None)
+    if yes is None and options:
+        yes = str(max(options, key=lambda o: float(o.get("points", 0) or 0)).get("value"))
+    return yes or "yes"
+
+
+def _safe_quote(text: str) -> str:
+    """The turn text for «…» in an explanation: one line, at most 300 characters, inner guillemets as curly quotes (the
+    turn-number shifter protects «…» spans and cannot nest them), no trailing full stop."""
+    q = " ".join((text or "").split())[:300].replace("«", "“").replace("»", "”")
+    return q[:-1] if q.endswith(".") and not q.endswith("..") else q
+
+
+def _num(x: float) -> str:
+    return f"{x:g}".replace(".", ",")
+
+
+def credit_unrecorded_opening(v: Verdict, crit: CriterionPack, gap: RecordingGap, *, model_answer: str | None = None) -> Verdict:
+    """Turn `v` into the rule verdict for a call whose opening the recording missed: «Да», confidence 1.0, the operator's
+    turn as context evidence, the rule flag only (flags and claims of a model answer it replaces are dropped: they
+    describe a verdict that no longer stands). Explanations keep the judge's 0-based labels; the output shifts them."""
+    op, start = gap.op, gap.start
+    quote = _safe_quote(op.text)
+    when = f" через {_num(gap.lost_s)} с от начала разговора" if gap.lost_s is not None else ""
+    if gap.partial:
+        heard = (f"Первая реплика оператора [{op.idx}] закончилась уже после старта записи (реплика [{start.idx}]{when}), но по длине "
+                 f"началась раньше: примерно {_num(gap.missing_s or 0)} с её начала, где звучат приветствие и представление, в аудиозаписи нет.")
+    else:
+        heard = (f"Запись и транскрибирование запущены на реплике [{start.idx}]{when}, а первая реплика оператора [{op.idx}] "
+                 "прозвучала раньше, и в аудиозаписи её нет.")
+    v.applicable, v.na_reason, v.answer = True, "", _yes_value(crit)
+    v.evidence = [Evidence(turn_idx=op.idx, speaker="operator", quote=quote, role="context")]
+    v.checked_span = None
+    v.confidence = 1.0
+    v.claims = []
+    v.flags = [CONTACT_OUTSIDE_RECORDING_FLAG]
+    v.explanation = (f"Установление контакта — Да по правилу для звонков. {heard} В тексте транскрипта реплика есть: «{quote}». "
+                     "Снизить балл можно только по фрагменту, который можно прослушать и оспорить, поэтому критерий засчитан, "
+                     "а звонок отмечен как пробел записи.")
+    v.step_results = [f"Первая реплика оператора: [{op.idx}], событие начала записи: [{start.idx}].",
+                      ("Начало реплики оператора прозвучало до старта записи." if gap.partial
+                       else "Реплика оператора прозвучала до старта записи: в аудиофайле её нет."),
+                      "Правило системы: снижение только по проверяемому фрагменту, критерий засчитан."]
+    if model_answer is not None:
+        v.step_results.append(f"Ответ модели, заменённый правилом: {model_answer}.")
+    return v
+
+
+def unusable_reason(v: Verdict, crit: CriterionPack, channel: str | None) -> str | None:
+    """Why a verdict cannot be stored as a result (an N/A the checklist forbids on this channel, an answer outside the
+    options), or None. Such a verdict would put a null or an unknown value into results.json."""
+    if not v.applicable:
+        return None if effective_na(crit, channel)[0] else "N/A is not allowed for this criterion on this channel"
+    if answer_points(crit.options, normalize_answer(crit.options, v.answer)) is None:
+        return f"answer {v.answer!r} is not an allowed option"
+    return None
 
 
 def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, conversation_terminal: str | None = None, channel: str | None = None) -> ValidationResult:
@@ -54,6 +187,17 @@ def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, 
             penalty += 0.05
         kept.append(ev)
     v.evidence = kept
+
+    # the contact criterion on a call whose opening the recording missed: decided by rule before the answer checks, so a
+    # model N/A or «Нет» neither triggers a retry nor survives (the runner normally skips the model for it altogether)
+    if channel == "voice call" and is_contact_criterion(crit):
+        gap = opening_outside_recording(turns)
+        if gap is not None:
+            model_answer = (v.answer or "") if v.applicable else "N/A"
+            if not (v.applicable and str(v.answer).lower() == "yes"):
+                issues.append(f"{crit.code} credited by rule: operator opening (turn {gap.op.idx}) precedes the recording start (turn {gap.start.idx})")
+            credit_unrecorded_opening(v, crit, gap, model_answer=model_answer)
+            penalty = 0.0  # the model's own evidence was replaced: its quote mismatches no longer apply
 
     # applicability
     na_ok, _na_cond = effective_na(crit, channel)

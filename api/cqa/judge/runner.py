@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session, selectinload
 from ..config import settings
 from ..db import SessionLocal, restore_generation
 from ..ingest.normalize import NormTurn, pack_transcript
-from ..models import (AudioAsset, ChecklistVersion, Conversation, Criterion, Evaluation, EvaluationCriterion,
-                      FewshotExample, LlmTrace, Setting)
+from ..models import (Appeal, AudioAsset, ChecklistVersion, Conversation, Criterion, Evaluation,
+                      EvaluationCriterion, FewshotExample, LlmTrace, Setting)
 from ..scoring.engine import CriterionInput, answer_points, compute_score
 from .contract import Verdict
 from .ensemble import arbiter_prompt, vote
@@ -24,14 +24,15 @@ from .packer import ConversationPack, CriterionPack, build_bundle
 from .pii import mask_turns
 from .providers import ProviderError, get_provider
 from .providers.base import JudgeProvider
-from ..review.service import recompute_final
+from ..review.service import _settled_review_state, recompute_final
 from .reference import reference_facts_for
-from .validate import retry_instruction, validate_verdict
+from .validate import (credit_unrecorded_opening, effective_na, is_contact_criterion, opening_outside_recording,
+                       retry_instruction, unusable_reason, validate_verdict)
 
 log = logging.getLogger("cqa.judge")
 PROMPT_VERSION = "v1"
 COPIED_FLAG = "copied_from_previous_version"
-DECIDED_REVIEW_STATES = ("confirmed", "changed")  # reviewer decisions carried into a partial re-evaluation
+DECIDED_REVIEW_STATES = ("confirmed", "changed")  # review states of a settled reviewer decision (no open appeal)
 LOCAL_PROVIDERS = ("local", "ollama", "openai_compatible", "vllm")
 KNOWN_PROVIDERS = ("anthropic", "ensemble", "fake", *LOCAL_PROVIDERS)
 EFFORTS = ("low", "medium", "high", "xhigh", "max")  # output_config.effort of the current Claude models
@@ -149,9 +150,14 @@ def _acoustic_from_cache(conv: Conversation, audio: AudioAsset | None) -> dict[s
 
 
 def _criterion_pack(c: Criterion) -> CriterionPack:
+    from ..checklist.validation import export_ids_for
+
+    version = getattr(c, "version", None)  # None for a transient draft criterion (single-criterion test)
+    export_id = export_ids_for([c.code], getattr(version, "scoring_rules", None))[c.code]
     return CriterionPack(code=c.code, title=c.title, instruction=c.instruction, answer_type=c.answer_type,
                          options=c.options, na_allowed=c.na_allowed, na_condition=c.na_condition,
-                         channel_overrides=c.channel_overrides or {}, judge_spec=c.judge_spec, is_critical=c.is_critical)
+                         channel_overrides=c.channel_overrides or {}, judge_spec=c.judge_spec, is_critical=c.is_critical,
+                         export_id=export_id)
 
 
 def _members(rs: dict[str, Any], provider_name: str, model: str | None) -> list[JudgeProvider]:
@@ -233,6 +239,38 @@ def codes_to_judge(criteria_codes: list[str], base_rows: dict[str, Any], only_co
     return [code for code in criteria_codes if only_codes is None or code in only_codes or code not in base_rows]
 
 
+def carry_reviews(db: Session, copies: dict[int, EvaluationCriterion], *, move_open_appeals: bool) -> int:
+    """Carry the reviewer's work on the base rows of a partial evaluation onto their copies (base row id → copy) and
+    return the number of carried decisions. Called in the write transaction, after the judges: the base rows are read
+    again, so review work done while the evaluation ran (a decision, an appeal, a withdrawal) is carried as it is now,
+    and each row's decision and review state come from one read.
+
+    - A decision (final_answer set) is carried in the settled state of the base row's decisions.
+    - An open appeal moves with the verdict it disputes onto the copy when the new evaluation completed (the one the
+      card, the lists and the exports show), so it is listed, decided and withdrawn there and its decision reaches
+      the card: the copy is "under_review", the base row returns to the settled state of its decisions (as after a
+      withdrawal). A failed evaluation leaves it on the base row, which the card keeps showing."""
+    base = db.execute(select(EvaluationCriterion).where(EvaluationCriterion.id.in_(list(copies)))
+                      .options(selectinload(EvaluationCriterion.appeals).selectinload(Appeal.decision))
+                      .with_for_update()  # Postgres: no decision lands on these rows before the commit (SQLite: no-op)
+                      .execution_options(populate_existing=True)).scalars().all()
+    carried = 0
+    for b in base:
+        row = copies[b.id]
+        if b.final_answer is not None:  # an open appeal alone changes no answer
+            row.final_answer, row.final_score = b.final_answer, b.final_score
+            carried += 1
+        open_appeals = [a for a in b.appeals if a.status == "open"]
+        if open_appeals and move_open_appeals:
+            for a in open_appeals:
+                a.evaluation_criterion = row
+            row.review_state = "under_review"
+            b.review_state = _settled_review_state(b)  # an open appeal has no decision: the moved ones change nothing
+        elif b.final_answer is not None:
+            row.review_state = b.review_state if b.review_state in DECIDED_REVIEW_STATES else _settled_review_state(b)
+    return carried
+
+
 def _failed_trace(provider: JudgeProvider, system: str, messages: list[dict[str, Any]], e: ProviderError) -> dict[str, Any]:
     """Trace of a call the provider billed but that gave no usable verdict (refusal, truncated or invalid output)."""
     usage = e.usage
@@ -308,8 +346,17 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
         if not val2.needs_retry:
             val = val2
         else:
+            # keep a usable verdict with the flag; one that would store an N/A the checklist forbids here or an answer
+            # outside the options fails instead: results.json would get a null or an unknown value (an invalid file at
+            # the control hour), while a failed criterion is retried by the job and the control run
+            first_bad = unusable_reason(val.verdict, crit, conv.channel)
+            second_bad = unusable_reason(val2.verdict, crit, conv.channel)
+            if first_bad and second_bad:
+                raise ProviderError(f"verdict still invalid after the retry: {second_bad}")
+            if first_bad:
+                val = val2
             val.verdict.flags.append("validation_failed")
-            issues.append("retry still invalid; keeping first verdict with flag")
+            issues.append("retry still invalid; keeping the usable verdict with flag")
     return val.verdict, traces, issues
 
 
@@ -318,6 +365,13 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
     effort = effort_of(rs)
     lang = rs.get("explanation_language", "ru")
     outcome = CriterionOutcome(code=crit.code, verdict=Verdict(criterion_code=crit.code, applicable=True, answer="", confidence=0, explanation=""))
+    if conv.channel == "voice call" and is_contact_criterion(crit):
+        gap = opening_outside_recording(conv.turns)
+        if gap is not None:  # decided by rule: no model call, no cost, identical on every run (cqa.judge.validate)
+            outcome.verdict = credit_unrecorded_opening(outcome.verdict, crit, gap)
+            log.debug("%s decided by rule: operator opening (turn %s) %s before the recording start (turn %s)", crit.code,
+                      gap.op.idx, "begins" if gap.partial else "ends", gap.start.idx)
+            return outcome
     member_traces: list[list[dict[str, Any]]] = [[] for _ in members]
     try:
         results = await asyncio.gather(*[
@@ -383,6 +437,9 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
     - Before writing results the evaluation checks that the database was not replaced meanwhile (a snapshot restore in
       this process bumps cqa.db.restore_generation; in any process the row must still be this dialog's running row):
       otherwise nothing is written (EvaluationAborted), so a restored row with the same id is never overwritten.
+    - A partial evaluation copies the criteria it does not judge from the base evaluation with the reviewer's work on
+      them as it is when the results are written (carry_reviews): decisions, and open appeals, which move with the
+      copied verdicts into the new evaluation.
     """
     from ..jobs import ledger
 
@@ -416,6 +473,12 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
 
         transcript_text = pack_transcript(turns)
         criteria = list(version.criteria)
+        # an N/A copied from the base would be stale where this version no longer allows N/A on the dialog's channel
+        # (C1 on calls since 2026-11-08): judge such rows again instead of carrying a value results.json refuses
+        for c in criteria:
+            b = base_rows.get(c.code)
+            if b is not None and not b.applicable and not effective_na(_criterion_pack(c), conv.channel)[0]:
+                del base_rows[c.code]
         judged = set(codes_to_judge([c.code for c in criteria], base_rows, only_codes))
         to_judge = [c for c in criteria if c.code in judged]
         fewshot_on = rs.get("fewshot_from_reviews", True)
@@ -446,7 +509,7 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         total_cost = 0.0
         in_tok = out_tok = 0
         errors = []
-        carried_decisions = 0
+        copies: dict[int, EvaluationCriterion] = {}  # base row id → its copy (partial mode)
         for c in criteria:
             o = by_code.get(c.code)
             if o is None and c.code in base_rows:  # copied from base evaluation (partial mode)
@@ -455,10 +518,7 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
                                           answer=b.answer, score=b.score, max_points=c.max_points, weight=c.weight, confidence=b.confidence,
                                           explanation=b.explanation, evidence=b.evidence, checked_span=b.checked_span,
                                           flags=[f for f in (b.flags or []) if f != COPIED_FLAG] + [COPIED_FLAG], claims=b.claims, votes=b.votes)
-                if b.review_state in DECIDED_REVIEW_STATES and b.final_answer is not None:
-                    # a reviewer's decision on an unchanged criterion stays valid: carry it (final_* recomputed below)
-                    row.review_state, row.final_answer, row.final_score = b.review_state, b.final_answer, b.final_score
-                    carried_decisions += 1
+                copies[b.id] = row  # the reviewer's work on b is carried when the rows are written (carry_reviews)
             else:
                 assert o is not None
                 if o.error:
@@ -507,9 +567,10 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         ev.completed_at = datetime.now(timezone.utc)
         ev.status = "failed" if errors and len(errors) == len(to_judge) else "completed"
         ev.error = "; ".join(errors) if errors else None
-        if carried_decisions:  # final_total_score / final_earned / sections follow the carried decisions
-            db.flush()
-            recompute_final(db, ev)
+        if copies:
+            db.flush()  # the first write takes SQLite's write lock: no request can change the base rows until the commit
+            if carry_reviews(db, copies, move_open_appeals=(ev.status == "completed")):
+                recompute_final(db, ev)  # final_total_score / final_earned / sections follow the carried decisions
         if restore_generation() != generation:  # a restore started while the rows were being prepared
             raise EvaluationAborted("database restored from a snapshot while the evaluation ran")
         db.commit()

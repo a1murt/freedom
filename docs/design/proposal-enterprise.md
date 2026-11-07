@@ -1,5 +1,7 @@
 # CQA design proposal: enterprise and Dynamics 365 first
 
+> **Superseded for C1 on calls (2026-11-08).** Wherever this proposal offers N/A for C1 on a call whose greeting is not in the recording, read: C1 has no N/A. The opening outside the recording is credited by a code rule, with the badge «Засчитано правилом: начало звонка вне записи». See `docs/ORGANIZER_UPDATES.md` §5 and `docs/FRONTEND_INTEGRATION.md` «Calls».
+
 Angle: **enterprise / Dynamics 365 first.** Real roles without a login (Operator, QA analyst, Reviewer, QA lead, Director, Methodologist, Admin, plus a read-only Guest), chosen with a role switcher or a `?role=` link and remembered; operators pick their own name from the operators found in the data; every appeal, decision and checklist change is signed and audited; the evaluation card and the main registers embed into Dynamics 365; a coaching loop and checklist governance turn scores into management actions; lists and queues stay usable at thousands of dialogs.
 
 | | |

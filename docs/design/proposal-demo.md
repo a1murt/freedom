@@ -1,5 +1,7 @@
 # CQA design proposal: win the live demo
 
+> **Superseded for C1 on calls (2026-11-08).** Wherever this proposal offers N/A for C1 on a call whose greeting is not in the recording, read: C1 has no N/A. The opening outside the recording is credited by a code rule, with the badge «Засчитано правилом: начало звонка вне записи». See `docs/ORGANIZER_UPDATES.md` §5 and `docs/FRONTEND_INTEGRATION.md` «Calls».
+
 Angle: optimise for the four live asks, a few minutes of hands-on access and the jury criteria (adequate and reasoned scores, a complete process, usability, extras, local/cloud balance). Smallest set of changes with the biggest visible effect; everything else is cut on purpose. A corporate landing explains the product in ten seconds and leads into the app.
 
 Status: proposal for the team lead, written 2026-11-07 ≈ 20:30 (UTC+5), ≈ H+6.5 if H+0 was ≈ 14:00. Binding source: `docs/ORGANIZER_UPDATES.md`. Out of scope by design: judge prompts, gold set, harness and local-model setup (ML teammate), and the results.json builder, CLI, endpoint and control-run script (team lead, in progress); this proposal only adds the UI entry point for the latter.

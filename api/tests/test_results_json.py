@@ -110,11 +110,12 @@ def test_validate_flags_turns_beyond_transcript_and_unknown_ids():
     assert any("missing conversation_ids" in e for e in errors)
 
 
-def test_contact_null_allowed_with_warning_only_on_calls():
+def test_contact_is_true_or_false_on_every_channel():
+    # JSON 1.0 appendix: contact is true/false only; the organizers (2026-11-08) left the unrecorded-greeting case of
+    # calls to us, and the judge rule credits it, so a null contact is an error on calls too
     ev = evaluation()
     ev["criteria"][0] = crit("C1", None, applicable=False)
     doc = build_document([build_record("call-1", ev, n_turns=40)], team_name="T", model={"mode": "external_api", "name": "m"})
-    errors, warnings = validate_document(doc, channels={"call-1": "voice call"})
-    assert errors == [] and any("contact is null on a voice call" in w for w in warnings)
-    errors2, _ = validate_document(doc, channels={"call-1": "agent chat"})
-    assert any("contact value None not allowed" in e for e in errors2)
+    for channels in ({"call-1": "voice call"}, {"call-1": "agent chat"}, None):
+        errors, _ = validate_document(doc, channels=channels)
+        assert any("contact must be true or false" in e and "re-judge C1" in e for e in errors), channels

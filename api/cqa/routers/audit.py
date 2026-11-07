@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..audit import service as audit
 from ..db import get_db
+from ..export.csv_safe import safe_cell
 from ..security.roles import require_permission
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
@@ -110,6 +111,7 @@ def export_audit_csv(request: Request, db: Session = Depends(get_db), _actor: di
     for ev in rows:
         d = audit.serialize_event(ev)
         d["details"] = json.dumps(d["details"], ensure_ascii=False)
-        writer.writerow([d.get(c) if d.get(c) is not None else "" for c in CSV_COLUMNS])
+        # actor names, ids and summaries come from headers and uploads: formula-like text made inert (CSV injection)
+        writer.writerow([safe_cell(d.get(c)) if d.get(c) is not None else "" for c in CSV_COLUMNS])
     return Response(content=("﻿" + buf.getvalue()).encode("utf-8"), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="audit.csv"'})

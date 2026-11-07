@@ -76,10 +76,16 @@ def _version(db: Session, checklist: Checklist, version_no: int, *, active: bool
     db.flush()
     crits = []
     for i, c in enumerate(SEED["criteria"], start=1):
+        overrides = c["channel_overrides"]
+        if c["code"] == "C1":
+            # the analytics below need a binary criterion a reviewer can set to N/A on a call (e4). The organizer seed no
+            # longer allows it for C1 (JSON 1.0: contact is true/false only), so this fixture keeps the earlier call override
+            overrides = {**overrides, "voice call": {**overrides.get("voice call", {}), "na_allowed": True,
+                                                     "na_condition": "Приветствие не попало в запись (фикстура аналитики)."}}
         crit = Criterion(code=c["code"], order=i, section=c["section"], title=c["title"], instruction=c["instruction"],
                          answer_type=c["answer_type"], options=c["options"], max_points=c["max_points"],
                          weight=(weights or {}).get(c["code"], c["weight"]), na_allowed=c["na_allowed"], na_condition=c["na_condition"],
-                         is_critical=c["is_critical"], critical_value=c.get("critical_value"), channel_overrides=c["channel_overrides"])
+                         is_critical=c["is_critical"], critical_value=c.get("critical_value"), channel_overrides=overrides)
         version.criteria.append(crit)
         crits.append(crit)
     db.flush()
