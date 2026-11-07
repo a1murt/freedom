@@ -139,3 +139,31 @@ No gold set had reached `main`, so the architecture side measured the judge agai
 - **C4 is untouched.** The judge is stricter (15 vs 20) in 9 chats, and that is a judgment call for you.
 
 The panel's labels are in `api/eval/gold_ai_panel.json`. Use them as a second opinion next to your own gold set, not as truth.
+
+## Round 7: three narrow spec fixes and the C7 policy hardening (2026-11-08, about 04:40 +05)
+
+**How the cases were picked.** Only cells where your gold set (`gold.json`) and the panel gold (`gold_ai_panel.json`) agree with each other and the deployed judge does not: 14 of 480 chat cells. Excluded on purpose:
+- p1-ru-029 (C2, C7), a live-demo dialog;
+- three cells where the judge follows a rule the team lead set in the specs or `DATASET_NOTES.md` §7: p1-ru-002 C3 «Да» for a refusal without identification, p1-ru-014 C5 «Нет», and the «Ну, тогда сайт» = 7 example in C6.
+
+Each change was measured in the lab on all 60 DEV chats against both gold sets before it went in (commit `ce25bbe`; revert it to undo all three):
+
+| Criterion | Rule added | Your gold | Panel gold | Fixed / broken (cells both golds agree on) |
+|---|---|---|---|---|
+| C3 | A guess or a general rule without opening the account («биржа отменяет такие приказы») is not disclosure: N/A | 58 → 59 | 58 → 59 | 1 / 0 (p1-ru-018) |
+| C4 | A reference-fact caveat the request did not need (a rule for «отдельные» bonds before the bond is known) is not a missed detail; a step the client needs for the goal (a transfer between accounts first) still is 15 | 54 → 56 | 49 → 51 | 2 / 0 (p1-kz-012, p1-kz-013) |
+| C6 | The improper offer itself (money to a personal card, paid advice, a personal number) is C8 and does not lower C6 when it is clear; «Скиньте» is no longer listed as a wording glitch | 50 → 53 | 54 → 56 | 2 / 0 (p1-en-013, p1-ru-022) |
+
+**Notes:**
+- **C6 took three attempts.** A broad "content belongs to other criteria" rule broke p1-ru-018, where contradictory replies should give 0, and p1-ru-029, where a re-ask should give 4.
+- **The C4 D-account case.** The first C4 wording let p1-en-010 and p1-kz-011 go 15 → 20. Your three labelers said 15 unanimously, so the final wording names that case as a real omission.
+- **Variance.** Two runs with the same specs differ on about 2 C6 cells per 60. p1-en-007 flips every run.
+
+**C7 policy hardening** (commit `1141be2`, your `apply_c7_bare_farewell_policy`), after an adversarial review of the merged PR. Nothing changes under the default `na`. The fixes:
+- **Ensemble:** the policy now runs on every ensemble member before the vote, and once more on the final verdict (idempotent). Before, the most confident member's flag alone decided the dialog.
+- **Terminal event:** the terminal-event N/A (connection lost, client left) wins over `yes`/`no`.
+- **Unknown values:** an unknown policy value falls back to `na` with one warning. Before, a typo meant `yes`.
+- **Evidence for «Нет»:** `no` cites the closing operator turn when the model gave no evidence.
+- **Partial re-runs:** a bare-farewell C7 row decided under another policy is re-judged, not copied.
+
+Tests are in `api/tests/test_round7_c7_policy.py`.

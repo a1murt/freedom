@@ -2,6 +2,11 @@
 
 Frozen by the ML owner on top of `main` at 876c1de. Evidence: two independent AI-panel gold sets (`api/eval/gold.json`, 65 dialogs; `api/eval/gold_ai_panel.json`, 60 chats), the decision log `api/eval/decisions.md`, the harness runs in `api/eval/runs.csv` and `docs/eval/ACCURACY.md`.
 
+> **Update 2026-11-08, about 04:40 +05 (architecture side).**
+> - **Specs:** `main` now also carries three narrow spec fixes (commit `ce25bbe`: C3 guesses, C4 caveats nobody asked for, C6 vs C8 offers). They were measured on the 60 DEV chats against both gold sets: +6 cells on `gold.json`, +5 on `gold_ai_panel.json`, 0 broken. See `docs/HANDOFF_ML.md` «Round 7».
+> - **C7 policy:** the hardening is in commit `1141be2`. The policy now runs on every ensemble member before the vote.
+> - **Unchanged:** the provider, effort, C7 policy and the commands below.
+
 ## What runs on the control set
 
 | Setting | Value | Why |
