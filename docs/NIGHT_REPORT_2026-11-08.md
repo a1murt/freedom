@@ -1,6 +1,6 @@
 # Night report, 2026-11-08 (00:30–03:00 +05, architecture side)
 
-For the team's morning sync. Everything below is on `main` and deployed (hosted build **876c1de**).
+For the team's morning sync. Everything below is on `main` and deployed (hosted build **b05a679**).
 
 ## What changed overnight
 
@@ -33,9 +33,18 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
   - answer matching accepts «15.0» and «true».
 - **CI on `main`** had been red since d6c55d5 (a timing test); it has been green since 607c004.
 
+**4. The ML teammate's PR #1 was merged at about 03:50** (b05a679).
+- It adds a second, independent gold set for all 65 DEV dialogs. It agrees with the panel gold on 95,6% of shared labels and independently confirms the deployed specs (0,936 / 0,938 / 0,984).
+- It adds a C7 policy switch, `c7_bare_farewell_policy`, default `na`, editable in Settings.
+- It also brings a stronger harness, local-model hardening, and the frozen control config in `api/judge_config_control.md` (ensemble).
+- Before merging: the full suite passed on the merged tree (1269), and the merged C7 was re-judged in the lab at 97%.
+- After merging: deployed, C7 re-judged on hosted DEV, smoke and asks green, baseline retaken.
+
+**5. The frontend contract.** An audit of the work packages against the API found gaps; they are closed with additive fields only. See `docs/FRONTEND_INTEGRATION.md` §7: card rows, the running state, violations counts, appeals, analytics bands and cost, export issues, checklist version counts, and Russian 404s with a `reason`.
+
 ## Hosted state (03:00)
 
-- 876c1de: smoke 18/18, live asks 7/7, readiness «Готово к контрольному часу и показу».
+- b05a679: smoke 18/18, live asks 7/7, readiness «Готово к контрольному часу и показу». Agreement with the panel gold is 94,6%.
 - **The four demo dialogs keep their numbers:**
   - p1-ru-029 is 51,25 with the insult at turn 10;
   - p1-ru-005's appeal preview is 78,46 → 85,38;

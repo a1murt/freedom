@@ -75,3 +75,12 @@ The gold set and per-lens labels are in `api/eval/gold_ai_panel.json` (`labels` 
 ## Rolling it back
 
 The spec change is a single commit, «Judge specs: C7 polite goodbye…». `git revert` it, then redeploy. Version 1 re-syncs the specs from the repo on start-up, so new evaluations follow at once. Stored evaluations change only when re-judged.
+
+## Independent confirmation (ML teammate, PR #1, merged 03:50)
+
+The ML teammate built a second gold set: 65 DEV dialogs including calls, three blind labelers plus arbitration (`api/eval/gold.json`, `api/eval/PROTOCOL.md`). Against it:
+
+- The two gold sets agree on **95,6%** of the shared chat labels. Most disagreements are in C4 and C6.
+- The deployed specs (876c1de), single Opus, score **0,936** on the ML gold, 0,938 on the panel gold and **0,984** on the ML holdout. Before the night's spec work: 0,854 / 0,844 / 0,859.
+- The C7 bare-farewell policy switch (default `na`) with the merged code scores **97%** on C7 in the lab and 95% on hosted, which is run-to-run variance.
+- The harness reads both gold formats: `uv run python -m cqa.eval.harness --gold eval/gold_ai_panel.json --api <hosted>`.
