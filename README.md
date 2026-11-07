@@ -2,7 +2,7 @@
 
 Prototype built for the Freedom Broker CQA hackathon: an LLM judge scores support dialogs (RU / KZ / EN chats and RU voice calls) against an editable, versioned checklist, shows per-criterion answers, points, weights, explanations and evidence turns, supports appeals and reviewer decisions with recalculated totals, and proves every verdict with a full trace.
 
-Hosted demo: see the link in the hackathon submission. Local run below.
+Hosted API: https://api-production-58ab4.up.railway.app (Swagger at `/docs`). Hosted UI: link in the hackathon submission. Local run below.
 
 ## Run it in three commands
 
