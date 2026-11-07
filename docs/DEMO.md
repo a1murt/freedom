@@ -41,7 +41,7 @@ Numbers are from the hosted instance (`https://api-production-58ab4.up.railway.a
 7. (If time) Trace tab: the model, prompt hash, tokens, cost (~$0,22) and latency per criterion. Every number came from a live call.
 8. (If time) Call p4-ru-002:
    - the two-track waveform, and evidence seeks that land on the right second (offsets now count from the recording start);
-   - turns 1–4, which include the operator's greeting, are «не в записи», so C1 is N/A by the organizers' rule.
+   - turns 1–4, which include the operator's greeting, are «не в записи», so C1 is N/A by the organizers' rule (the judge cites «запись запущена только на реплике [5]»); the total is 89,44 instead of 80,50.
 
 ### 3:00–4:00 · Operator appeal and reviewer decision (live ask 2)
 
