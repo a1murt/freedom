@@ -21,6 +21,7 @@ import sys
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import quote
 
 SCHEMA_VERSION = "1.0"
 
@@ -52,6 +53,8 @@ WEIGHTS: dict[str, float] = {"contact": 10, "discovery": 15, "identification": 2
 MAX_POINTS: dict[str, float] = {"consultation": 20, "dialogue": 10}
 
 RATIONALE_MAX_CHARS = 1200
+ANSWER_SOURCES = ("ai", "final")  # ai = the judge's answers (default, what the system produced); final = after reviewer decisions
+LOCAL_PROVIDERS = ("local", "ollama", "vllm", "openai_compatible", "fake")  # offline judges count as model.mode "local"
 
 
 class ExportError(Exception):
@@ -122,9 +125,36 @@ def recompute_final_score(values: dict[str, Any], weights: dict[str, float] | No
     return _round2(total * 100.0 / w_sum)
 
 
+def export_mapping(codes: Iterable[str], scoring_rules: dict[str, Any] | None) -> dict[str, str]:
+    """{our code: organizer criterion_id} for a checklist version, in organizer order: `scoring_rules.export_ids`
+    overrides, else the organizer ids of C1..C8 (cqa.checklist.validation.export_ids_for). Raises ExportError when the
+    version cannot fill all eight organizer ids (e.g. C6 replaced by C6b without `export_ids: {"C6b": "dialogue"}`)."""
+    from ..checklist.validation import export_ids_for
+
+    ids = export_ids_for(list(codes), scoring_rules or {})
+    mapping = {code: eid for code, eid in ids.items() if eid in REQUIRED_IDS}
+    missing = [rid for rid in REQUIRED_IDS if rid not in mapping.values()]
+    if missing:
+        raise ExportError("в версии чек-листа нет критериев для идентификаторов results.json: " + ", ".join(missing)
+                          + " (сопоставьте их через scoring_rules.export_ids или выгрузите версию организаторов)")
+    return dict(sorted(mapping.items(), key=lambda kv: REQUIRED_IDS.index(kv[1])))
+
+
+def _row_value(r: dict[str, Any], answers: str) -> tuple[bool, Any]:
+    """(applicable, answer) of one criterion row: the judge's answer, or with answers="final" the reviewer-final one."""
+    if answers == "final" and r.get("review_state") in ("confirmed", "changed"):
+        final = r.get("final_answer")
+        if final is None or final == "N/A":
+            return False, None
+        return True, final
+    return bool(r.get("applicable", True)), r.get("answer")
+
+
 def build_record(conversation_id: str, evaluation: dict[str, Any] | None, *, n_turns: int | None,
-                 export_ids: dict[str, str] | None = None, criteria_defs: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
-    """One results[] item. Returns an error record (never raises) when the dialog could not be evaluated."""
+                 export_ids: dict[str, str] | None = None, criteria_defs: dict[str, dict[str, Any]] | None = None,
+                 answers: str = "ai") -> dict[str, Any]:
+    """One results[] item. Returns an error record (never raises) when the dialog could not be evaluated.
+    `answers="final"` exports reviewer decisions instead of the judge's answers (opt-in; the default is the AI)."""
     export_ids = export_ids or DEFAULT_EXPORT_IDS
     if evaluation is None:
         return {"conversation_id": conversation_id, "status": "error", "criteria": [], "score": None, "error": "Диалог не был оценён."}
@@ -145,10 +175,15 @@ def build_record(conversation_id: str, evaluation: dict[str, Any] | None, *, n_t
                 raise ExportError(f"критерий {code} ({cid}) не оценён: {r.get('explanation') or 'ошибка модели'}")
             cdef = (criteria_defs or {}).get(code, {})
             answer_type = r.get("answer_type") or cdef.get("answer_type") or ("scale" if cid in ("consultation", "dialogue") else "binary")
-            value = criterion_value(answer_type, bool(r.get("applicable", True)), r.get("answer"))
+            applicable, answer = _row_value(r, answers)
+            value = criterion_value(answer_type, applicable, answer)
             rationale = (r.get("explanation") or r.get("na_reason") or "").strip()
             if not r.get("applicable", True) and r.get("na_reason") and r.get("na_reason") not in rationale:
                 rationale = f"N/A — {r.get('na_reason')}. {rationale}".strip()
+            if answers == "final" and r.get("review_state") == "changed":
+                reason = (((r.get("appeal") or {}).get("decision") or {}).get("reason") or "").strip()
+                note = f"Решение ревьюера: {reason}" if reason else "Оценка изменена ревьюером"
+                rationale = f"{note.rstrip('.')}. Обоснование модели: {rationale}" if rationale else note
             if not rationale:
                 rationale = "Обоснование не сформировано."
             criteria.append({
@@ -185,9 +220,9 @@ def model_block(model_strings: Iterable[str | None], providers: Iterable[str | N
             name = name or part
             if name not in names:
                 names.append(name)
-            kinds.add("local" if prov in ("local", "ollama", "vllm", "openai_compatible") else "external_api")
+            kinds.add("local" if prov in LOCAL_PROVIDERS else "external_api")
     for p in providers:
-        if p in ("local",):
+        if p in LOCAL_PROVIDERS:
             kinds.add("local")
         elif p in ("anthropic",):
             kinds.add("external_api")
@@ -319,25 +354,43 @@ def validate_document(doc: Any, *, expected_ids: list[str] | None = None, expect
 
 
 def from_db(db, *, group_id: str | None = None, conversation_ids: list[str] | None = None, checklist_version_id: int | None = None,
-            team_name: str) -> tuple[dict[str, Any], dict[str, int], dict[str, str]]:
-    """Build the document from the local database (used by the API endpoint and CLI --db)."""
+            team_name: str, answers: str = "ai") -> tuple[dict[str, Any], dict[str, int], dict[str, str]]:
+    """Build the document from the local database (used by the API endpoint and CLI --db).
+    Criterion ids follow the version's export ids (organizer ids for the organizer checklist).
+
+    Per dialog: the latest COMPLETED evaluation of the export version; without one, the latest evaluation of that same
+    version (a failed one becomes an error record); an evaluation of another version is never exported. An explicit
+    empty `conversation_ids` selects no dialog (None = no filter). `from_api` selects exactly the same evaluations."""
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
 
     from ..models import ChecklistVersion, Conversation, Dataset, Evaluation
     from ..serializers import evaluation_dict
 
+    if answers not in ANSWER_SOURCES:
+        raise ExportError(f"Параметр answers: допустимы {' или '.join(ANSWER_SOURCES)}")
+
     q = select(Conversation)
-    if conversation_ids:
-        q = q.where(Conversation.id.in_(conversation_ids))
+    if conversation_ids is not None:
+        q = q.where(Conversation.id.in_(list(conversation_ids)))
     elif group_id:
         ds_ids = list(db.execute(select(Dataset.id).where(Dataset.group_id == group_id)).scalars())
         if not ds_ids:
-            raise ExportError(f"no dataset imported with group_id '{group_id}'")
+            raise ExportError(f"Выборка с group_id «{group_id}» не импортирована")
         q = q.where(Conversation.dataset_id.in_(ds_ids))
     convs = db.execute(q.order_by(Conversation.imported_at, Conversation.id)).scalars().all()
     if checklist_version_id is None:
         v1 = db.execute(select(ChecklistVersion).where(ChecklistVersion.version_no == 1).order_by(ChecklistVersion.id)).scalars().first()
         checklist_version_id = v1.id if v1 else None
+    export_ids: dict[str, str] | None = None
+    criteria_defs: dict[str, dict[str, Any]] | None = None
+    if checklist_version_id:
+        version = db.execute(select(ChecklistVersion).where(ChecklistVersion.id == checklist_version_id)
+                             .options(selectinload(ChecklistVersion.criteria))).scalar_one_or_none()
+        if version is None:
+            raise ExportError(f"Версия чек-листа {checklist_version_id} не найдена")
+        export_ids = export_mapping([c.code for c in version.criteria], version.scoring_rules)
+        criteria_defs = {c.code: {"answer_type": c.answer_type, "weight": c.weight, "max_points": c.max_points} for c in version.criteria}
     records: list[dict[str, Any]] = []
     models: list[str | None] = []
     providers: list[str | None] = []
@@ -350,27 +403,73 @@ def from_db(db, *, group_id: str | None = None, conversation_ids: list[str] | No
         if checklist_version_id:
             q2 = q2.where(Evaluation.checklist_version_id == checklist_version_id)
         ev = db.execute(q2.order_by(Evaluation.id.desc())).scalars().first()
-        if ev is None:
-            failed = db.execute(select(Evaluation).where(Evaluation.conversation_id == c.id).order_by(Evaluation.id.desc())).scalars().first()
+        if ev is None:  # no completed evaluation of this version: its latest attempt (an error record), never another version's
+            q3 = select(Evaluation).where(Evaluation.conversation_id == c.id)
+            if checklist_version_id:
+                q3 = q3.where(Evaluation.checklist_version_id == checklist_version_id)
+            failed = db.execute(q3.order_by(Evaluation.id.desc())).scalars().first()
             evd = evaluation_dict(db, failed) if failed else None
         else:
             evd = evaluation_dict(db, ev)
             models.append(ev.model)
             providers.append(ev.provider)
-        records.append(build_record(c.id, evd, n_turns=c.turn_count))
+        records.append(build_record(c.id, evd, n_turns=c.turn_count, export_ids=export_ids, criteria_defs=criteria_defs,
+                                    answers=answers))
     doc = build_document(records, team_name=team_name, model=model_block(models, providers))
     return doc, turn_counts, channels
 
 
+def _api_version_mapping(http: Any, base: str, checklists: list[dict[str, Any]], version_id: int | None) -> dict[str, str] | None:
+    """Export ids of a version through the API (`export_ids` in the version JSON); None for older APIs → defaults."""
+    if not version_id:
+        return None
+    for cl in checklists:
+        if any(v.get("id") == version_id for v in cl.get("versions", [])):
+            r = http.get(f"{base}/api/checklists/{cl['id']}/versions/{version_id}")
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            ids = data.get("export_ids")
+            if not isinstance(ids, dict):
+                return None
+            return export_mapping([c.get("code") for c in data.get("criteria") or []], {"export_ids": ids})
+    return None
+
+
+def _api_evaluation(http: Any, base: str, cid: str, checklist_version_id: int | None) -> dict[str, Any] | None:
+    """The evaluation `from_db` would export for one dialog, through public read endpoints: the latest completed
+    evaluation of the version, else its latest evaluation of the version (error record), else None. Uses the history
+    (GET /api/conversations/{id}/evaluations) and GET /api/evaluations/{id}; falls back to the latest-evaluation endpoint
+    when the history is unavailable."""
+    r = http.get(f"{base}/api/conversations/{quote(cid, safe='')}/evaluations")
+    history = r.json() if r.status_code == 200 else None
+    if isinstance(history, list):
+        mine = [e for e in history if isinstance(e, dict)
+                and (not checklist_version_id or e.get("checklist_version_id") == checklist_version_id)]
+        mine.sort(key=lambda e: int(e.get("id") or 0), reverse=True)
+        pick = next((e for e in mine if e.get("status") == "completed"), None) or (mine[0] if mine else None)
+        if pick is None:
+            return None
+        detail = http.get(f"{base}/api/evaluations/{pick['id']}")
+        return detail.json() if detail.status_code == 200 else None
+    params = {"checklist_version_id": checklist_version_id} if checklist_version_id else {}
+    r = http.get(f"{base}/api/conversations/{quote(cid, safe='')}/evaluation", params=params)
+    return r.json() if r.status_code == 200 else None
+
+
 def from_api(base_url: str, *, group_id: str | None = None, conversation_ids: list[str] | None = None,
-             checklist_version_id: int | None = None, team_name: str, timeout: float = 60.0) -> tuple[dict[str, Any], dict[str, int], dict[str, str]]:
-    """Build the document from a running CQA API (hosted or local) using only public read endpoints."""
+             checklist_version_id: int | None = None, team_name: str, timeout: float = 60.0,
+             answers: str = "ai") -> tuple[dict[str, Any], dict[str, int], dict[str, str]]:
+    """Build the document from a running CQA API (hosted or local) using only public read endpoints. Selects the same
+    evaluations as `from_db`; an explicit empty `conversation_ids` selects no dialog (None = no filter)."""
     import httpx
 
+    if answers not in ANSWER_SOURCES:
+        raise ExportError(f"Параметр answers: допустимы {' или '.join(ANSWER_SOURCES)}")
     base = base_url.rstrip("/")
     with httpx.Client(timeout=timeout, follow_redirects=True) as http:
         convs = http.get(f"{base}/api/conversations", params={"page_size": 500}).json()["items"]
-        if conversation_ids:
+        if conversation_ids is not None:
             wanted = set(conversation_ids)
             convs = [c for c in convs if c["id"] in wanted]
             missing = wanted - {c["id"] for c in convs}
@@ -388,14 +487,15 @@ def from_api(base_url: str, *, group_id: str | None = None, conversation_ids: li
                 convs = [c for c in convs if c["id"].startswith(("p1-", "p4-"))]
             else:
                 raise ExportError("this API has no /api/datasets endpoint; pass --ids for a non-DEV group")
+        cls = http.get(f"{base}/api/checklists").json()
         if checklist_version_id is None:
-            cls = http.get(f"{base}/api/checklists").json()
             v1 = None
             for cl in cls:
                 for v in cl.get("versions", []):
                     if v.get("version_no") == 1 and (v1 is None or v["id"] < v1):
                         v1 = v["id"]
             checklist_version_id = v1
+        export_ids = _api_version_mapping(http, base, cls, checklist_version_id)
         records: list[dict[str, Any]] = []
         models: list[str | None] = []
         providers: list[str | None] = []
@@ -405,13 +505,11 @@ def from_api(base_url: str, *, group_id: str | None = None, conversation_ids: li
             cid = c["id"]
             turn_counts[cid] = c.get("turn_count")
             channels[cid] = c.get("channel")
-            params = {"checklist_version_id": checklist_version_id} if checklist_version_id else {}
-            r = http.get(f"{base}/api/conversations/{cid}/evaluation", params=params)
-            evd = r.json() if r.status_code == 200 else None
+            evd = _api_evaluation(http, base, cid, checklist_version_id)
             if evd is not None:
                 models.append(evd.get("model"))
                 providers.append(evd.get("provider"))
-            records.append(build_record(cid, evd, n_turns=c.get("turn_count")))
+            records.append(build_record(cid, evd, n_turns=c.get("turn_count"), export_ids=export_ids, answers=answers))
     doc = build_document(records, team_name=team_name, model=model_block(models, providers))
     return doc, turn_counts, channels
 
@@ -446,6 +544,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--team", default=os.environ.get("TEAM_NAME", "Я Тебя Могну"), help="team_name (env TEAM_NAME)")
     ap.add_argument("--out", help="output path, e.g. ../results/dev/results.json")
     ap.add_argument("--expect", type=int, help="expected number of records (prod: 10)")
+    ap.add_argument("--answers", choices=ANSWER_SOURCES, default="ai",
+                    help="ai = the judge's answers (default); final = answers after reviewer decisions")
     args = ap.parse_args(argv)
 
     if args.validate:
@@ -461,14 +561,16 @@ def main(argv: list[str] | None = None) -> int:
 
     ids = [x.strip() for x in args.ids.split(",")] if args.ids else None
     if args.api:
-        doc, turn_counts, channels = from_api(args.api, group_id=args.group, conversation_ids=ids, checklist_version_id=args.version_id, team_name=args.team)
+        doc, turn_counts, channels = from_api(args.api, group_id=args.group, conversation_ids=ids, checklist_version_id=args.version_id,
+                                              team_name=args.team, answers=args.answers)
     else:
         from ..db import SessionLocal, init_db
 
         init_db()
         db = SessionLocal()
         try:
-            doc, turn_counts, channels = from_db(db, group_id=args.group, conversation_ids=ids, checklist_version_id=args.version_id, team_name=args.team)
+            doc, turn_counts, channels = from_db(db, group_id=args.group, conversation_ids=ids, checklist_version_id=args.version_id,
+                                                 team_name=args.team, answers=args.answers)
         finally:
             db.close()
     errors, warnings = validate_document(doc, expected_ids=list(turn_counts), expected_count=args.expect, turn_counts=turn_counts, channels=channels)

@@ -30,7 +30,7 @@ Without Docker: `cd api && uv sync && uv run uvicorn cqa.main:app --reload` (API
   ```bash
   cd api && .venv/bin/python -m cqa.export.results_json --validate ../results/prod/results.json --expect 10
   ```
-- Control hour, one command (import, evaluate, retry, export, validate, commit, push):
+- Control hour, one command (snapshot, import, dry-run guard check, evaluate, resume after a restart, retry, export, validate, commit, push; runbook in `docs/ARCHITECTURE_V2.md` §10):
   ```bash
   api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>
   ```
@@ -46,7 +46,8 @@ Without Docker: `cd api && uv sync && uv run uvicorn cqa.main:app --reload` (API
 - **Appeals**: analyst disputes a criterion, reviewer confirms or changes it with a reason, totals are recalculated, and accepted decisions become few-shot examples for the judge.
 - **Calls**: audio is resolved from the organizer player page, cached and streamed with seeking; acoustic features (pace, pauses, talk ratio, holds) feed criterion 6.
 - **Analytics and export**: distributions, criterion heatmap, operator leaderboard, AI-vs-reviewer agreement, cost per provider; CSV of all per-criterion answers and totals; PDF card.
-- **Dynamics 365 ready**: the web app builds to a single HTML file, has an embed mode (`?embed=1&conversation=<id>`), uses hash routing and no auth.
+- **Dynamics 365 ready**: the web app builds to a single HTML file, has an embed mode (`?embed=1&conversation=<id>`), uses hash routing and no auth; `POST /api/integrations/dynamics/transcripts` takes Omnichannel transcripts pushed by Power Automate (admin guide: `docs/INTEGRATION_D365.md`).
+- **Enterprise layer**: nine roles with a permission matrix and an audit trail of every write (`X-CQA-Role` / `X-CQA-User` headers, `/api/roles`, `/api/audit`), daily budget and concurrency guards, restart recovery with job resume, database snapshots with one-click restore, executive overview and operator scorecards, gold-label calibration with AI-vs-human agreement, deep health, metrics and request ids. System as built: [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md).
 
 ## Model and cost
 
@@ -57,11 +58,11 @@ Default judge: `claude-opus-5-5` with adaptive thinking, effort `high`, structur
 ```
 api/      FastAPI service: ingest, checklist versions, scoring engine, judge, jobs, audio, review, analytics, export
 web/      Vite + React UI (RU/EN/KK), single-file build for Dynamics 365
-docs/     ARCHITECTURE.md · PLAN.md · API.md · ML_BRIEF.md · DATASET_NOTES.md · knowledge/
+docs/     ARCHITECTURE_V2.md (as built) · ARCHITECTURE.md (design) · API.md · ARCH_CONTRACTS.md · arch/ · PLAN.md · ML_BRIEF.md · DATASET_NOTES.md · knowledge/
 api/seeds Organizer checklist (v1) and compiled judge specs, claims ledger
 ```
 
-Tests: `cd api && uv run pytest` (scoring engine, normalization, audio, analytics, export).
+Tests: `cd api && uv run --extra dev pytest -q` (968 tests, offline: the `fake` judge replaces Claude; includes an end-to-end process test). CI: `.github/workflows/ci.yml`.
 
 ## Team
 

@@ -2,6 +2,7 @@
 
 Each installer lives in its own module so independent work packages never edit main.py:
 - cqa.platform.requestlog  → request id, timing, structured access log (WP platform)
+- cqa.platform.bodylimit   → request body size limits for writes (413 payload_too_large)
 - cqa.security.middleware  → actor (role/name) context, permission checks, audit trail (WP roles)
 A missing or failing installer is logged and skipped so the API always starts.
 """
@@ -14,7 +15,7 @@ from fastapi import FastAPI
 
 log = logging.getLogger("cqa.platform")
 
-INSTALLERS = ("cqa.platform.requestlog", "cqa.security.middleware")
+INSTALLERS = ("cqa.platform.requestlog", "cqa.platform.bodylimit", "cqa.security.middleware")
 
 
 def install(app: FastAPI) -> list[str]:

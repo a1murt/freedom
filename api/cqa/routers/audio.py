@@ -44,7 +44,8 @@ def _ensure_asset(db: Session, conversation_id: str) -> AudioAsset:
     return asset
 
 
-@router.api_route("/{conversation_id}", methods=["GET", "HEAD"])
+@router.get("/{conversation_id}")
+@router.head("/{conversation_id}", include_in_schema=False)  # same handler; kept out of OpenAPI (no duplicate operation id)
 def get_audio(conversation_id: str, db: DbSession):
     """Serve the cached MP3 for a voice call. Supports ``Range`` requests for seeking."""
     conv = _load_voice_conversation(db, conversation_id)

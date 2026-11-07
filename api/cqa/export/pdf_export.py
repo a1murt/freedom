@@ -28,6 +28,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 from sqlalchemy.orm import Session
 
 from ..models import ChecklistVersion, Criterion, Evaluation, EvaluationCriterion, Turn
+from ..turnrefs import display_turn_number, display_turn_refs
 
 log = logging.getLogger(__name__)
 
@@ -191,7 +192,7 @@ def _answer_paragraph(r: EvaluationCriterion, crit: Criterion | None, st: dict[s
     if not r.applicable:
         text = "N/A"
         if r.na_reason:
-            text += f"<br/><font size='7' color='#555555'>{escape(str(r.na_reason))}</font>"
+            text += f"<br/><font size='7' color='#555555'>{escape(str(display_turn_refs(r.na_reason)))}</font>"
         return Paragraph(text, st["cell"])
     text = escape(_answer_label(crit, r.answer))
     if r.review_state == "changed" and r.final_answer is not None:
@@ -211,7 +212,7 @@ def _earned_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle]) -> 
 
 
 def _explanation_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle]) -> list[Paragraph]:
-    out: list[Paragraph] = [_p(r.explanation or "—", st["cell"])]
+    out: list[Paragraph] = [_p(display_turn_refs(r.explanation) or "—", st["cell"])]
     for ev in r.evidence or []:
         if not isinstance(ev, dict):
             continue
@@ -219,7 +220,7 @@ def _explanation_paragraph(r: EvaluationCriterion, st: dict[str, ParagraphStyle]
         speaker = SPEAKER_LABELS.get(str(ev.get("speaker") or ""), str(ev.get("speaker") or ""))
         quote = str(ev.get("quote") or "").strip()
         role = ev.get("role")
-        head = f"#{idx}" if idx is not None else "#?"
+        head = f"#{display_turn_number(idx)}" if idx is not None else "#?"
         if speaker:
             head += f" {speaker}"
         if role and role != "supports":
@@ -235,7 +236,7 @@ def _transcript_table(turns: list[Turn], st: dict[str, ParagraphStyle]) -> Table
     for t in turns:
         style = st["cell_grey"] if t.speaker in GREY_SPEAKERS else st["cell"]
         label = SPEAKER_LABELS.get(t.speaker, t.speaker)
-        data.append([_p(t.idx, style), _p(label, style), _p(t.timestamp_raw, style), _p(t.text, style)])
+        data.append([_p(display_turn_number(t.idx), style), _p(label, style), _p(t.timestamp_raw, style), _p(t.text, style)])
     widths = [9 * mm, 22 * mm, 22 * mm]
     widths.append(PAGE_WIDTH - sum(widths))
     table = Table(data, colWidths=widths, repeatRows=1)

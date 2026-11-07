@@ -9,6 +9,7 @@ from typing import Any
 
 from ..config import settings
 from ..ingest.normalize import NormTurn, pack_transcript
+from .steering import steering_fact, steering_turns
 
 LANG_NAMES = {"ru": "Russian", "en": "English", "kk": "Kazakh", "kz": "Kazakh"}
 
@@ -25,6 +26,10 @@ class ConversationPack:
     first_response_seconds: float | None
     operator_name: str | None
     acoustic: dict[str, Any] | None = None
+    # calls: index of the «запись запущена» event and the turns said before it (not in the audio file); the organizers'
+    # rule for C1 on calls is N/A when the greeting is not in the recording (cqa.ingest.normalize, CALL-03)
+    recording_start_idx: int | None = None
+    not_in_recording: list[int] | None = None
 
 
 @dataclass
@@ -84,6 +89,14 @@ def _structural_facts(conv: ConversationPack) -> str:
     }
     if conv.acoustic:
         facts["acoustic"] = {k: conv.acoustic.get(k) for k in ("duration_s", "operator_wpm", "long_pauses_count", "talk_ratio_operator", "hold_segments", "summary_ru") if k in conv.acoustic}
+    if conv.channel == "voice call" and conv.recording_start_idx is not None and conv.not_in_recording:
+        shown = conv.not_in_recording if len(conv.not_in_recording) <= 12 else conv.not_in_recording[:12] + ["…"]
+        facts["recording"] = {"recording_start_idx": conv.recording_start_idx, "turns_not_in_recording": shown,
+                              "note": "Turns before the recording-start event are transcribed but are not in the audio recording."}
+    # only for dialogs that address the evaluator (SYS-12); ordinary dialogs get exactly the facts above
+    note = steering_fact(steering_turns(conv.turns))
+    if note:
+        facts["evaluator_steering"] = note
     return json.dumps(facts, ensure_ascii=False, indent=0)
 
 

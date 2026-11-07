@@ -33,7 +33,10 @@ def _extract_json(text: str) -> dict[str, Any]:
     m = re.search(r"\{.*\}", text, flags=re.S)
     if not m:
         raise ProviderError("Local model returned no JSON object")
-    return json.loads(m.group(0))
+    try:
+        return json.loads(m.group(0))
+    except json.JSONDecodeError as e:  # a ProviderError, so the runner reports it per criterion instead of crashing
+        raise ProviderError(f"Local model returned invalid JSON: {e}") from e
 
 
 class OpenAICompatibleProvider:
@@ -55,15 +58,21 @@ class OpenAICompatibleProvider:
             "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
         }
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        async with httpx.AsyncClient(timeout=300.0) as c:
-            r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
-            if r.status_code == 400 and "response_format" in r.text:
-                body.pop("response_format", None)
+        try:
+            async with httpx.AsyncClient(timeout=300.0) as c:
                 r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
+                if r.status_code == 400 and "response_format" in r.text:
+                    body.pop("response_format", None)
+                    r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
+        except httpx.HTTPError as e:  # "connection" in the message: the runner's _call_once retries it as transient
+            raise ProviderError(f"Local provider connection error: {type(e).__name__}: {e}") from e
         if r.status_code != 200:
             raise ProviderError(f"Local provider HTTP {r.status_code}: {r.text[:300]}")
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
+        try:
+            data = r.json()
+            text = data["choices"][0]["message"]["content"] or ""
+        except (ValueError, KeyError, IndexError, TypeError) as e:
+            raise ProviderError(f"Local provider returned an unexpected response: {r.text[:300]}") from e
         parsed = _extract_json(text)
         u = data.get("usage", {})
         usage = Usage(input_tokens=u.get("prompt_tokens", 0), output_tokens=u.get("completion_tokens", 0))

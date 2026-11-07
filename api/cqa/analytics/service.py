@@ -166,9 +166,16 @@ def first_response_threshold(db: Session, checklist_version_id: int | None) -> f
 # --------------------------------------------------------------------------- summary
 
 
-def summary(db: Session, checklist_version_id: int | None = None) -> dict[str, Any]:
-    """Dashboard summary; field names follow docs/API.md."""
+def summary(db: Session, checklist_version_id: int | None = None, *, language: str | None = None, channel: str | None = None,
+            dataset_id: int | None = None, operator: str | None = None) -> dict[str, Any]:
+    """Dashboard summary; field names follow docs/API.md. Optional scope (language, channel, dataset, operator) as in
+    GET /api/overview (ANL-01): every block covers only the conversations in scope."""
+    from .overview import scope_conversation_ids
+
+    scope_ids = scope_conversation_ids(db, language=language, channel=channel, dataset_id=dataset_id, operator=operator)
     all_completed = completed_evaluations(db, checklist_version_id)
+    if scope_ids is not None:
+        all_completed = [ev for ev in all_completed if ev.conversation_id in scope_ids]
     latest_by_conv: dict[str, Evaluation] = {}
     for ev in all_completed:
         latest_by_conv[ev.conversation_id] = ev
@@ -325,7 +332,8 @@ def summary(db: Session, checklist_version_id: int | None = None) -> dict[str, A
     threshold = first_response_threshold(db, checklist_version_id)
     frs = [
         float(v)
-        for v in db.scalars(select(Conversation.first_response_seconds).where(Conversation.first_response_seconds.is_not(None)))
+        for v in db.scalars(select(Conversation.first_response_seconds).where(Conversation.first_response_seconds.is_not(None))
+                            .where(Conversation.id.in_(scope_ids or {""}) if scope_ids is not None else True))
     ]
     first_response = {
         "mean_seconds": _round(statistics.fmean(frs), 1) if frs else None,

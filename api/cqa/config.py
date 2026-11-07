@@ -2,10 +2,18 @@
 (looked up in the api/ folder first, then the repository root)."""
 from __future__ import annotations
 
+import logging
+import os
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_log = logging.getLogger("cqa.config")
+# Railway sets these on every deployment: their presence marks the public hosted instance (CQA_PUBLIC_INSTANCE overrides).
+HOSTED_ENV_MARKERS = ("RAILWAY_ENVIRONMENT", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_ID",
+                      "RAILWAY_DEPLOYMENT_ID")
+CACHE_WRITE_MULTIPLIER = 1.25  # 5-minute prompt-cache writes are billed at 1.25x the input rate (the judge uses the 5 min TTL)
 
 API_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = API_DIR.parent
@@ -28,6 +36,9 @@ class Settings(BaseSettings):
     local_endpoint: str | None = None  # OpenAI-compatible base URL, e.g. http://host:8000/v1
     local_model: str = "qwen3:8b"
     local_api_key: str = "none"
+    # extra endpoints PUT /api/settings may select (comma-separated scheme://host[:port][/path]); LOCAL_API_KEY is sent
+    # only to LOCAL_ENDPOINT and these. Off the hosted instance loopback and private addresses are accepted as well.
+    local_endpoint_allowlist: str | None = None
 
     explanation_language: str = "ru"
     pii_masking: bool = True
@@ -41,8 +52,28 @@ class Settings(BaseSettings):
     daily_budget_usd: float = 75.0        # rolling 24h spend cap across all evaluation jobs; 0 disables
     max_dialogs_per_run: int = 200        # one evaluation request may queue at most this many dialogs
     max_concurrent_jobs: int = 2          # running evaluation jobs at the same time
+    max_concurrent_trials: int = 2        # single-criterion trials (POST /api/checklists/test-criterion) at the same time
+    max_transcript_chars: int = 100_000   # a dialog longer than this is not sent to a judge (≈20x the longest DEV dialog)
+    max_transcript_turns: int = 2_000     # same for the number of turns
+    spend_ledger_path: Path | None = None  # append-only spend ledger (SQLite) outside the main DB; default <data_dir>/spend_ledger.db
+    public_instance: bool | None = None   # env CQA_PUBLIC_INSTANCE; None = detected from the Railway environment
     app_version: str | None = None        # env APP_VERSION; falls back to RAILWAY_GIT_COMMIT_SHA / git
     team_name: str = "Я Тебя Могну"
+    # default checklist when several checklists have an active version (imports create their own checklist);
+    # None = the active version of the lowest checklist id, i.e. the organizer checklist. A DB setting of the same
+    # key (PUT /api/settings {"default_checklist_id": 1}) wins over the environment.
+    default_checklist_id: int | None = None
+
+    # integrations (Dynamics 365): public URLs for card/embed links and the manifest, optional shared ingest secret
+    web_base_url: str | None = None           # env WEB_BASE_URL, default https://cqa-freedom-pi.vercel.app
+    public_api_url: str | None = None         # env PUBLIC_API_URL, else X-Forwarded-Proto/Host of the request
+    integrations_api_key: str | None = None   # env INTEGRATIONS_API_KEY → header X-CQA-Integration-Key required
+
+    # admin (database snapshots)
+    cqa_admin_token: str | None = None        # env CQA_ADMIN_TOKEN → header X-CQA-Admin-Token required for snapshot writes
+    snapshot_keep_pre_restore: int = 5        # automatic pre-restore snapshots kept (manual ones are never pruned)
+    snapshot_max_manual: int = 20             # manual snapshots kept at most (a new one beyond this is refused, 409)
+    allow_unprotected_snapshots: bool = False  # env ALLOW_UNPROTECTED_SNAPSHOTS=1: snapshot writes without a token on the hosted instance
 
     # USD per 1M tokens: (input, output, cache_read)
     cost_rates: dict[str, tuple[float, float, float]] = Field(
@@ -53,11 +84,45 @@ class Settings(BaseSettings):
         }
     )
 
+    def known_model(self, model: str | None) -> str | None:
+        """The cost_rates key a model id is priced with: the key itself or a dated variant of it (``<key>-…``); else None."""
+        name = (model or "").strip()
+        for key in self.cost_rates:
+            if name == key or name.startswith(key + "-"):
+                return key
+        return None
+
+    def is_known_model(self, model: str | None) -> bool:
+        """Only models with a configured price may be called: an unpriced model would book $0 and escape the budget."""
+        return self.known_model(model) is not None
+
     def rate_for(self, model: str) -> tuple[float, float, float]:
+        """(input, output, cache_read) USD per 1M tokens. An unknown model fails closed: it is priced at the highest
+        configured rate (never $0, which would make its spend invisible to the daily budget) and a warning is logged."""
         for key, rate in self.cost_rates.items():
-            if model.startswith(key):
+            if (model or "").startswith(key):
                 return rate
+        if model and model not in _WARNED_MODELS:
+            _WARNED_MODELS.add(model)
+            _log.warning("no cost rate for model %r: priced at the highest configured rate", model)
+        return max_rate(self.cost_rates.values())
+
+    def is_public_instance(self) -> bool:
+        """True on the public hosted instance: CQA_PUBLIC_INSTANCE when set, else any Railway deployment variable."""
+        if self.public_instance is not None:
+            return bool(self.public_instance)
+        return any((os.environ.get(name) or "").strip() for name in HOSTED_ENV_MARKERS)
+
+
+_WARNED_MODELS: set[str] = set()
+
+
+def max_rate(rates) -> tuple[float, float, float]:
+    """Component-wise maximum of (input, output, cache_read) rates; (0, 0, 0) when nothing is configured."""
+    rates = [tuple(r) for r in rates]
+    if not rates:
         return (0.0, 0.0, 0.0)
+    return tuple(max(r[i] for r in rates) for i in range(3))  # type: ignore[return-value]
 
 
 settings = Settings()

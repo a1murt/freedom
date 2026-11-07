@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..config import settings
-from ..db import SessionLocal
+from ..db import SessionLocal, restore_generation
 from ..ingest.normalize import NormTurn, pack_transcript
 from ..models import (AudioAsset, ChecklistVersion, Conversation, Criterion, Evaluation, EvaluationCriterion,
                       FewshotExample, LlmTrace, Setting)
@@ -24,11 +24,41 @@ from .packer import ConversationPack, CriterionPack, build_bundle
 from .pii import mask_turns
 from .providers import ProviderError, get_provider
 from .providers.base import JudgeProvider
+from ..review.service import recompute_final
 from .reference import reference_facts_for
 from .validate import retry_instruction, validate_verdict
 
 log = logging.getLogger("cqa.judge")
 PROMPT_VERSION = "v1"
+COPIED_FLAG = "copied_from_previous_version"
+DECIDED_REVIEW_STATES = ("confirmed", "changed")  # reviewer decisions carried into a partial re-evaluation
+LOCAL_PROVIDERS = ("local", "ollama", "openai_compatible", "vllm")
+KNOWN_PROVIDERS = ("anthropic", "ensemble", "fake", *LOCAL_PROVIDERS)
+EFFORTS = ("low", "medium", "high", "xhigh", "max")  # output_config.effort of the current Claude models
+MAX_PARALLEL_CRITERIA = 16
+
+
+class UnknownModelError(ValueError):
+    """A Claude model without a configured price (settings.cost_rates): calling it would book $0 and escape the budget."""
+
+    def __init__(self, model: str | None):
+        self.model = model
+        allowed = ", ".join(settings.cost_rates)
+        super().__init__(f"Модель «{model}» не поддерживается: для неё не задана цена, и её расходы не попали бы в суточный "
+                         f"бюджет. Допустимые модели: {allowed}.")
+
+
+class TranscriptTooLong(ValueError):
+    """A dialog over MAX_TRANSCRIPT_CHARS / MAX_TRANSCRIPT_TURNS: never sent to a judge."""
+
+    def __init__(self, conversation_id: str, chars: int, turns: int):
+        self.conversation_id, self.chars, self.turns = conversation_id, chars, turns
+        super().__init__(f"Диалог «{conversation_id}» слишком длинный для оценки: {chars} символов и {turns} реплик "
+                         f"(допускается до {settings.max_transcript_chars} символов и {settings.max_transcript_turns} реплик).")
+
+
+class EvaluationAborted(RuntimeError):
+    """The database changed under a running evaluation (a snapshot restore): none of its results are written."""
 
 EventCallback = Callable[[str, dict[str, Any]], None]
 
@@ -69,6 +99,55 @@ def _to_norm_turns(conv: Conversation) -> list[NormTurn]:
                      text=t.text, is_duplicate=t.is_duplicate, segment=t.segment) for t in conv.turns]
 
 
+def conversation_pack(db: Session, conv: Conversation, provider_name: str, rs: dict[str, Any]) -> ConversationPack:
+    """What the judge sees of a conversation: turns (PII-masked unless the provider is local), structural facts and the
+    acoustic summary of calls. Shared by evaluate_conversation and the single-criterion trial (checklist service)."""
+    turns = _to_norm_turns(conv)
+    if rs.get("pii_masking", True) and provider_name != "local":
+        masked, _ = mask_turns([t.__dict__ for t in turns])
+        for t, m in zip(turns, masked):
+            t.text = m["text"]
+    audio = db.get(AudioAsset, conv.id)
+    meta = conv.meta or {}
+    acoustic = audio.features if audio else None
+    if acoustic is None and conv.channel == "voice call" and conv.audio_url:
+        acoustic = _acoustic_from_cache(conv, audio)
+    return ConversationPack(conversation_id=conv.id, channel=conv.channel, language=conv.language, turns=turns,
+                            operator_start_idx=meta.get("operator_start_idx"), terminal_event=conv.terminal_event,
+                            identity_confirmed_event=bool(meta.get("identity_confirmed_event")),
+                            first_response_seconds=conv.first_response_seconds,
+                            # a lead's manual attribution (OPR-06) is not a name the operator said: the judge gets the detected one
+                            operator_name=(meta.get("operator_name_detected") if meta.get("operator_name_source") == "manual"
+                                           else conv.operator_name),
+                            acoustic=acoustic,
+                            recording_start_idx=meta.get("recording_start_idx"),
+                            not_in_recording=meta.get("not_in_recording"))
+
+
+def _acoustic_from_cache(conv: Conversation, audio: AudioAsset | None) -> dict[str, Any] | None:
+    """Acoustic summary of a call whose features were never computed (or were cleared after its timing was re-derived,
+    cqa.ingest.renormalize): computed from the recording when it is already on disk, never downloaded here (the judge
+    path must not wait on the network). Not stored: GET /api/audio/{id}/features owns the stored copy."""
+    from pathlib import Path
+
+    from ..config import settings as cfg
+
+    candidates = [Path(audio.local_path)] if audio is not None and audio.local_path else []
+    candidates.append(Path(cfg.data_dir) / "audio" / f"{conv.id}.mp3")
+    path = next((c for c in candidates if c.is_file()), None)
+    if path is None:
+        return None
+    try:
+        from ..audio import compute_features
+
+        rows = [{"idx": t.idx, "speaker": t.speaker, "text": t.text, "offset_seconds": t.offset_seconds, "segment": t.segment,
+                 "is_duplicate": t.is_duplicate} for t in sorted(conv.turns, key=lambda t: t.idx)]
+        return compute_features(path, rows)
+    except Exception as e:  # ffmpeg missing or a broken file: judge without acoustic facts, as before
+        log.warning("acoustic features for %s not computed: %s", conv.id, e)
+        return None
+
+
 def _criterion_pack(c: Criterion) -> CriterionPack:
     return CriterionPack(code=c.code, title=c.title, instruction=c.instruction, answer_type=c.answer_type,
                          options=c.options, na_allowed=c.na_allowed, na_condition=c.na_condition,
@@ -76,33 +155,102 @@ def _criterion_pack(c: Criterion) -> CriterionPack:
 
 
 def _members(rs: dict[str, Any], provider_name: str, model: str | None) -> list[JudgeProvider]:
-    # runtime settings (DB) may override the local endpoint/model from the environment
-    if rs.get("local_endpoint"):
-        settings.local_endpoint = rs["local_endpoint"]
-    if rs.get("local_model"):
-        settings.local_model = rs["local_model"]
+    """The judges of a run. Runtime settings (PUT /api/settings) may choose the local endpoint and model, within the
+    rules of cqa.judge.local_endpoint; the process-wide `settings` object is never modified."""
+    from .local_endpoint import effective_endpoint
+
+    endpoint = effective_endpoint(rs.get("local_endpoint"))
+    local_model = str(rs.get("local_model") or settings.local_model)
+
+    def local(name: str | None = None) -> JudgeProvider:
+        extra = {"endpoint": endpoint} if endpoint else {}  # no endpoint: get_provider's own default (LOCAL_ENDPOINT)
+        return get_provider("local", name or local_model, **extra)
+
     if provider_name == "ensemble":
         members = []
-        for m in rs.get("ensemble_members", []):
+        for m in rs.get("ensemble_members") or []:
             try:
-                members.append(get_provider(m["provider"], m.get("model")))
-            except ProviderError as e:
+                name = str(m.get("provider") or "anthropic")
+                members.append(local(m.get("model")) if name.split(":", 1)[0] in LOCAL_PROVIDERS else get_provider(name, m.get("model")))
+            except (ProviderError, AttributeError, TypeError) as e:
                 log.warning("ensemble member skipped: %s", e)
-        if rs.get("local_endpoint") and not any(p.name == "local" for p in members):
+        if endpoint and not any(p.name == "local" for p in members):
             try:
-                members.append(get_provider("local", rs.get("local_model")))
+                members.append(local())
             except ProviderError:
                 pass
         if not members:
             raise ProviderError("No ensemble members available")
         return members
-    if provider_name in ("local", "ollama", "openai_compatible", "vllm"):
-        return [get_provider("local", model or rs.get("local_model"))]
+    if provider_name == "fake":  # offline deterministic judge (tests, CI, keyless demos): never routed to Claude
+        return [get_provider("fake", model)]
+    if provider_name in LOCAL_PROVIDERS:
+        return [local(model)]
     return [get_provider("anthropic", model or rs.get("default_model"))]
 
 
-async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[str, Any]], effort: str) -> tuple[Verdict, dict[str, Any]]:
-    """One provider call with retry on transient failures (connection errors, overload, rate limits)."""
+def require_known_models(members: list[JudgeProvider]) -> None:
+    """Raise UnknownModelError for a Claude member whose model has no configured price."""
+    for p in members:
+        if p.name == "anthropic" and not settings.is_known_model(p.model):
+            raise UnknownModelError(p.model)
+
+
+def effort_of(rs: dict[str, Any]) -> str:
+    value = str(rs.get("judge_effort") or "high").strip().lower()
+    return value if value in EFFORTS else "high"
+
+
+def parallel_criteria_of(rs: dict[str, Any]) -> int:
+    try:
+        value = int(rs.get("max_parallel_criteria", settings.max_parallel_criteria))
+    except (TypeError, ValueError):
+        value = settings.max_parallel_criteria
+    return min(max(value, 1), MAX_PARALLEL_CRITERIA)
+
+
+def transcript_size(conv: Conversation) -> tuple[int, int]:
+    """(characters, turns) of a conversation as the judge would receive it."""
+    return sum(len(t.text or "") for t in conv.turns), len(conv.turns)
+
+
+def check_transcript_size(conversation_id: str, chars: int, turns: int) -> None:
+    max_chars, max_turns = int(settings.max_transcript_chars or 0), int(settings.max_transcript_turns or 0)
+    if (max_chars and chars > max_chars) or (max_turns and turns > max_turns):
+        raise TranscriptTooLong(conversation_id, chars, turns)
+
+
+def reusable_base_rows(base: Evaluation | None) -> dict[str, EvaluationCriterion]:
+    """Rows of a base evaluation a partial re-evaluation copies instead of judging again: rows the judge failed on
+    (flag "error") and applicable rows without an answer are judged again."""
+    if base is None:
+        return {}
+    return {r.code: r for r in base.criteria if "error" not in (r.flags or []) and not (r.applicable and r.answer is None)}
+
+
+def codes_to_judge(criteria_codes: list[str], base_rows: dict[str, Any], only_codes: set[str] | None) -> list[str]:
+    """The criteria a (partial) evaluation sends to the judge; the others are copied from the base evaluation."""
+    return [code for code in criteria_codes if only_codes is None or code in only_codes or code not in base_rows]
+
+
+def _failed_trace(provider: JudgeProvider, system: str, messages: list[dict[str, Any]], e: ProviderError) -> dict[str, Any]:
+    """Trace of a call the provider billed but that gave no usable verdict (refusal, truncated or invalid output)."""
+    usage = e.usage
+    return {"provider": e.provider or provider.name, "model": e.model or provider.model,
+            "request": {"system_chars": len(system), "messages": messages},
+            "response": (e.raw or {}) | {"error": str(e)[:500]}, "input_tokens": usage.input_tokens if usage else 0,
+            "output_tokens": usage.output_tokens if usage else 0, "cache_read_tokens": usage.cache_read_tokens if usage else 0,
+            "cache_write_tokens": usage.cache_write_tokens if usage else 0, "cost_usd": e.cost_usd, "latency_ms": e.latency_ms,
+            "failed": True}
+
+
+async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[str, Any]], effort: str, *,
+                     traces: list[dict[str, Any]] | None = None, kind: str = "judge",
+                     prompt_version: str | None = None) -> tuple[Verdict, dict[str, Any]]:
+    """One provider call with retry on transient failures (connection errors, overload, rate limits).
+
+    With `traces`, every billed attempt is appended to it as it happens, successful or not, so a caller whose call
+    later fails still accounts for the cost already spent."""
     delays = (2.0, 6.0, 15.0)
     last: Exception | None = None
     for attempt, delay in enumerate((0.0,) + delays):
@@ -113,6 +261,8 @@ async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[s
             break
         except ProviderError as e:
             last = e
+            if traces is not None and e.billed:
+                traces.append(_failed_trace(provider, system, messages, e) | {"kind": kind, "prompt_version": prompt_version})
             msg = str(e).lower()
             transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out"))
             if not transient or attempt == len(delays):
@@ -120,24 +270,29 @@ async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[s
             log.warning("%s/%s transient error (attempt %d): %s", provider.name, provider.model, attempt + 1, e)
     else:  # pragma: no cover
         raise last or ProviderError("provider failed")
-    v = Verdict.model_validate(res.parsed)
     cost = provider.cost(res.usage) if hasattr(provider, "cost") else 0.0
     trace = {"provider": res.provider, "model": res.model, "request": {"system_chars": len(system), "messages": messages},
              "response": res.raw | {"parsed": res.parsed}, "input_tokens": res.usage.input_tokens,
              "output_tokens": res.usage.output_tokens, "cache_read_tokens": res.usage.cache_read_tokens,
-             "cost_usd": cost, "latency_ms": res.latency_ms}
+             "cache_write_tokens": res.usage.cache_write_tokens, "cost_usd": cost, "latency_ms": res.latency_ms, "kind": kind}
+    if prompt_version is not None:
+        trace["prompt_version"] = prompt_version
+    if traces is not None:
+        traces.append(trace)
+    v = Verdict.model_validate(res.parsed)
     return v, trace
 
 
 async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: CriterionPack, *, explanation_language: str,
-                    fewshots: list[dict[str, Any]], reference_facts: list[str], effort: str) -> tuple[Verdict, list[dict[str, Any]], list[str]]:
+                    fewshots: list[dict[str, Any]], reference_facts: list[str], effort: str,
+                    traces: list[dict[str, Any]] | None = None) -> tuple[Verdict, list[dict[str, Any]], list[str]]:
+    """Judge one criterion with one provider (plus one validation retry). `traces` (owned by the caller) receives every
+    billed call as it happens, so the cost of a first call survives a retry that fails."""
     bundle = build_bundle(conv, crit, explanation_language=explanation_language, fewshots=fewshots,
                           reference_facts=reference_facts, prompt_version=PROMPT_VERSION)
-    traces: list[dict[str, Any]] = []
-    v, tr = await _call_once(provider, bundle.system, bundle.messages, effort)
-    tr["prompt_version"] = f"{PROMPT_VERSION}:{bundle.prompt_hash}"
-    tr["kind"] = "judge"
-    traces.append(tr)
+    traces = traces if traces is not None else []
+    pv = f"{PROMPT_VERSION}:{bundle.prompt_hash}"
+    v, tr = await _call_once(provider, bundle.system, bundle.messages, effort, traces=traces, kind="judge", prompt_version=pv)
     v.criterion_code = crit.code
     val = validate_verdict(v, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
     issues = list(val.issues)
@@ -146,10 +301,7 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
             {"role": "assistant", "content": [{"type": "text", "text": json.dumps(v.model_dump(), ensure_ascii=False)}]},
             {"role": "user", "content": [{"type": "text", "text": retry_instruction(val.issues)}]},
         ]
-        v2, tr2 = await _call_once(provider, bundle.system, messages, effort)
-        tr2["prompt_version"] = tr["prompt_version"]
-        tr2["kind"] = "retry"
-        traces.append(tr2)
+        v2, _tr2 = await _call_once(provider, bundle.system, messages, effort, traces=traces, kind="retry", prompt_version=pv)
         v2.criterion_code = crit.code
         val2 = validate_verdict(v2, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
         issues += [f"retry: {i}" for i in val2.issues]
@@ -163,22 +315,24 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
 
 async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, crit: CriterionPack, *, rs: dict[str, Any],
                           fewshots: list[dict[str, Any]], reference_facts: list[str]) -> CriterionOutcome:
-    effort = rs.get("judge_effort", "high")
+    effort = effort_of(rs)
     lang = rs.get("explanation_language", "ru")
     outcome = CriterionOutcome(code=crit.code, verdict=Verdict(criterion_code=crit.code, applicable=True, answer="", confidence=0, explanation=""))
+    member_traces: list[list[dict[str, Any]]] = [[] for _ in members]
     try:
         results = await asyncio.gather(*[
-            judge_one(p, conv, crit, explanation_language=lang, fewshots=fewshots, reference_facts=reference_facts, effort=effort)
-            for p in members
+            judge_one(p, conv, crit, explanation_language=lang, fewshots=fewshots, reference_facts=reference_facts, effort=effort,
+                      traces=member_traces[i])
+            for i, p in enumerate(members)
         ], return_exceptions=True)
         verdicts: list[tuple[str, str, Verdict]] = []
-        for p, r in zip(members, results):
+        for p, r, traces in zip(members, results, member_traces):
+            outcome.traces += traces  # billed calls count even when this member failed
             if isinstance(r, Exception):
                 outcome.issues.append(f"{p.name}/{p.model}: {r}")
                 continue
-            v, traces, issues = r
+            v, _traces, issues = r
             verdicts.append((p.name, p.model, v))
-            outcome.traces += traces
             outcome.issues += [f"{p.name}: {i}" for i in issues]
         if not verdicts:
             raise ProviderError("all judges failed: " + "; ".join(outcome.issues))
@@ -191,10 +345,8 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
             bundle = build_bundle(conv, crit, explanation_language=lang, fewshots=fewshots, reference_facts=reference_facts, prompt_version=PROMPT_VERSION)
             messages = bundle.messages + [{"role": "user", "content": [{"type": "text", "text": arbiter_prompt(crit, verdicts)}]}]
             try:
-                av, atr = await _call_once(arb, bundle.system, messages, effort)
-                atr["kind"] = "arbiter"
-                atr["prompt_version"] = f"{PROMPT_VERSION}:{bundle.prompt_hash}"
-                outcome.traces.append(atr)
+                av, _atr = await _call_once(arb, bundle.system, messages, effort, traces=outcome.traces, kind="arbiter",
+                                            prompt_version=f"{PROMPT_VERSION}:{bundle.prompt_hash}")
                 av.criterion_code = crit.code
                 aval = validate_verdict(av, conv.turns, crit, conversation_terminal=conv.terminal_event, channel=conv.channel)
                 if not aval.needs_retry:
@@ -222,58 +374,71 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
                                 model: str | None = None, mode: str = "full", base_evaluation_id: int | None = None,
                                 only_codes: set[str] | None = None, job_id: str | None = None,
                                 on_event: EventCallback | None = None) -> int:
-    """Run a full or partial evaluation and return the new evaluation id."""
+    """Run a full or partial evaluation and return the new evaluation id.
+
+    - A dialog over the transcript limits, or a Claude model without a configured price, fails before anything is
+      written (TranscriptTooLong / UnknownModelError).
+    - No database connection is held while the judges run (minutes with Claude): everything the judges need is loaded
+      first and the read transaction is ended before the calls start.
+    - Before writing results the evaluation checks that the database was not replaced meanwhile (a snapshot restore in
+      this process bumps cqa.db.restore_generation; in any process the row must still be this dialog's running row):
+      otherwise nothing is written (EvaluationAborted), so a restored row with the same id is never overwritten.
+    """
+    from ..jobs import ledger
+
     t0 = time.perf_counter()
+    generation = restore_generation()
+    ev_id: int | None = None
     db = SessionLocal()
     try:
         rs = _runtime_settings(db)
         conv = db.execute(select(Conversation).where(Conversation.id == conversation_id).options(selectinload(Conversation.turns))).scalar_one()
         version = db.execute(select(ChecklistVersion).where(ChecklistVersion.id == checklist_version_id).options(selectinload(ChecklistVersion.criteria))).scalar_one()
-        audio = db.get(AudioAsset, conversation_id)
-        turns = _to_norm_turns(conv)
-        if rs.get("pii_masking", True) and provider_name != "local":
-            masked, _ = mask_turns([t.__dict__ for t in turns])
-            for t, m in zip(turns, masked):
-                t.text = m["text"]
-        pack = ConversationPack(conversation_id=conv.id, channel=conv.channel, language=conv.language, turns=turns,
-                                operator_start_idx=(conv.meta or {}).get("operator_start_idx"), terminal_event=conv.terminal_event,
-                                identity_confirmed_event=bool((conv.meta or {}).get("identity_confirmed_event")),
-                                first_response_seconds=conv.first_response_seconds, operator_name=conv.operator_name,
-                                acoustic=(audio.features if audio else None))
+        check_transcript_size(conv.id, *transcript_size(conv))
+        pack = conversation_pack(db, conv, provider_name, rs)
+        turns = pack.turns
         members = _members(rs, provider_name, model)
+        require_known_models(members)
         ev = Evaluation(conversation_id=conv.id, checklist_version_id=version.id, status="running", provider=provider_name,
                         mode=("partial" if mode == "partial" else ("ensemble" if provider_name == "ensemble" else "single")),
                         model=",".join(f"{p.name}:{p.model}" for p in members), prompt_version=PROMPT_VERSION, job_id=job_id)
         db.add(ev)
         db.commit()
         db.refresh(ev)
+        ev_id = ev.id
         if on_event:
             on_event("evaluation.started", {"conversation_id": conv.id, "evaluation_id": ev.id})
 
         base_rows: dict[str, EvaluationCriterion] = {}
         if mode == "partial" and base_evaluation_id:
-            base = db.get(Evaluation, base_evaluation_id)
-            if base:
-                base_rows = {r.code: r for r in base.criteria}
+            # rows the judge failed on in the base evaluation are judged again instead of being copied as failures
+            base_rows = reusable_base_rows(db.get(Evaluation, base_evaluation_id))
 
         transcript_text = pack_transcript(turns)
         criteria = list(version.criteria)
-        to_judge = [c for c in criteria if (only_codes is None or c.code in only_codes or c.code not in base_rows)]
-        sem = asyncio.Semaphore(int(rs.get("max_parallel_criteria", settings.max_parallel_criteria)))
+        judged = set(codes_to_judge([c.code for c in criteria], base_rows, only_codes))
+        to_judge = [c for c in criteria if c.code in judged]
+        fewshot_on = rs.get("fewshot_from_reviews", True)
+        prepared = {c.code: (_criterion_pack(c), _load_fewshots(db, c.code, conv.language, conv.channel, fewshot_on),
+                             reference_facts_for(transcript_text, c.code)) for c in to_judge}
+        for r in base_rows.values():  # load what the copy step reads before the connection is released
+            _ = (r.answer, r.claims, r.votes, r.final_answer)
+        db.commit()  # end the read transaction: the pooled connection goes back while the judges run
+        sem = asyncio.Semaphore(parallel_criteria_of(rs))
 
         async def run(c: Criterion) -> CriterionOutcome:
             async with sem:
-                cp = _criterion_pack(c)
-                out = await judge_criterion(members, pack, cp, rs=rs,
-                                            fewshots=_load_fewshots(db, c.code, conv.language, conv.channel, rs.get("fewshot_from_reviews", True)),
-                                            reference_facts=reference_facts_for(transcript_text, c.code))
+                cp, fewshots, reference = prepared[c.code]
+                out = await judge_criterion(members, pack, cp, rs=rs, fewshots=fewshots, reference_facts=reference)
                 if on_event:
                     on_event("criterion.done", {"conversation_id": conv.id, "code": c.code,
                                                 "answer": out.verdict.answer if out.verdict.applicable else "N/A", "error": out.error})
                 return out
 
-        outcomes = await asyncio.gather(*[run(c) for c in to_judge])
+        with ledger.context(kind="judge", ref=f"evaluation:{ev_id}" + (f" job:{job_id}" if job_id else "")):
+            outcomes = await asyncio.gather(*[run(c) for c in to_judge])
         by_code = {o.code: o for o in outcomes}
+        _ensure_still_ours(db, ev, generation)
 
         # persist criteria, traces, score
         inputs: list[CriterionInput] = []
@@ -281,6 +446,7 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         total_cost = 0.0
         in_tok = out_tok = 0
         errors = []
+        carried_decisions = 0
         for c in criteria:
             o = by_code.get(c.code)
             if o is None and c.code in base_rows:  # copied from base evaluation (partial mode)
@@ -288,7 +454,11 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
                 row = EvaluationCriterion(evaluation_id=ev.id, criterion_id=c.id, code=c.code, applicable=b.applicable, na_reason=b.na_reason,
                                           answer=b.answer, score=b.score, max_points=c.max_points, weight=c.weight, confidence=b.confidence,
                                           explanation=b.explanation, evidence=b.evidence, checked_span=b.checked_span,
-                                          flags=list(b.flags or []) + ["copied_from_previous_version"], claims=b.claims, votes=b.votes)
+                                          flags=[f for f in (b.flags or []) if f != COPIED_FLAG] + [COPIED_FLAG], claims=b.claims, votes=b.votes)
+                if b.review_state in DECIDED_REVIEW_STATES and b.final_answer is not None:
+                    # a reviewer's decision on an unchanged criterion stays valid: carry it (final_* recomputed below)
+                    row.review_state, row.final_answer, row.final_score = b.review_state, b.final_answer, b.final_score
+                    carried_decisions += 1
             else:
                 assert o is not None
                 if o.error:
@@ -337,23 +507,26 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         ev.completed_at = datetime.now(timezone.utc)
         ev.status = "failed" if errors and len(errors) == len(to_judge) else "completed"
         ev.error = "; ".join(errors) if errors else None
+        if carried_decisions:  # final_total_score / final_earned / sections follow the carried decisions
+            db.flush()
+            recompute_final(db, ev)
+        if restore_generation() != generation:  # a restore started while the rows were being prepared
+            raise EvaluationAborted("database restored from a snapshot while the evaluation ran")
         db.commit()
         if on_event:
             on_event("evaluation.done", {"conversation_id": conv.id, "evaluation_id": ev.id, "total_score": ev.total_score,
                                          "critical_error": ev.critical_error, "status": ev.status, "cost_usd": ev.cost_usd})
         return ev.id
+    except EvaluationAborted as e:
+        db.rollback()
+        log.warning("evaluation of %s not written: %s", conversation_id, e)
+        if on_event:
+            on_event("evaluation.failed", {"conversation_id": conversation_id, "error": str(e)})
+        raise
     except Exception as e:
         db.rollback()
         log.exception("evaluation failed for %s", conversation_id)
-        try:
-            ev_fail = db.execute(select(Evaluation).where(Evaluation.conversation_id == conversation_id, Evaluation.status == "running").order_by(Evaluation.id.desc())).scalars().first()
-            if ev_fail:
-                ev_fail.status = "failed"
-                ev_fail.error = str(e)
-                ev_fail.completed_at = datetime.now(timezone.utc)
-                db.commit()
-        except Exception:
-            pass
+        _mark_failed(db, ev_id, conversation_id, generation, e)
         if on_event:
             on_event("evaluation.failed", {"conversation_id": conversation_id, "error": str(e)})
         raise
@@ -361,7 +534,40 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         db.close()
 
 
+def _ensure_still_ours(db: Session, ev: Evaluation, generation: int) -> None:
+    """Raise EvaluationAborted unless the database is the one the evaluation started on and its row is still this
+    dialog's running evaluation (a restore reuses row ids: the id may now belong to another dialog's evaluation)."""
+    if restore_generation() != generation:
+        raise EvaluationAborted("database restored from a snapshot while the evaluation ran")
+    row = db.execute(select(Evaluation.conversation_id, Evaluation.status, Evaluation.job_id).where(Evaluation.id == ev.id)).first()
+    if row is None or row[0] != ev.conversation_id or row[1] != "running" or row[2] != ev.job_id:
+        raise EvaluationAborted(f"evaluation {ev.id} is no longer this dialog's running evaluation (database replaced or recovered)")
+
+
+def _mark_failed(db: Session, ev_id: int | None, conversation_id: str, generation: int, error: Exception) -> None:
+    """Mark the evaluation's own row failed (never another running evaluation of the dialog, never after a restore)."""
+    if ev_id is None or restore_generation() != generation:
+        return
+    try:
+        ev = db.get(Evaluation, ev_id)
+        if ev is not None and ev.conversation_id == conversation_id and ev.status == "running":
+            ev.status = "failed"
+            ev.error = str(error)[:2000]
+            ev.completed_at = datetime.now(timezone.utc)
+            db.commit()
+    except Exception:  # noqa: BLE001
+        db.rollback()
+
+
+FREE_PROVIDERS = ("local", "ollama", "openai_compatible", "vllm", "fake")
+
+
 def estimate_cost(n_chats: int, n_calls: int, provider_name: str, members: int = 1) -> float:
-    per_chat = {"anthropic": 0.18, "local": 0.0, "ensemble": 0.38}.get(provider_name, 0.18)
-    per_call = {"anthropic": 0.35, "local": 0.0, "ensemble": 0.75}.get(provider_name, 0.35)
+    """Historical flat rate in USD ($0.18 per chat, $0.35 per call; ensemble of three: $0.38 / $0.75). It is only the
+    floor of the real estimate now: runs, resumes and the Dynamics ingest are priced per dialog by cqa.jobs.estimate
+    (criteria, transcript length, ensemble members, model rates). Local models and the offline fake judge cost 0."""
+    if provider_name in FREE_PROVIDERS:
+        return 0.0
+    per_chat = {"anthropic": 0.18, "ensemble": 0.38}.get(provider_name, 0.18)
+    per_call = {"anthropic": 0.35, "ensemble": 0.75}.get(provider_name, 0.35)
     return round(n_chats * per_chat + n_calls * per_call, 2)

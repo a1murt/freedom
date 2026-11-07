@@ -1,5 +1,7 @@
 # CQA · Conversation Quality Analytics for Freedom Broker
 
+> **The system as built (roles, audit, guards, snapshots, Dynamics 365, calibration, control-hour runbook) is described in [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md).** This document is the original design spec and stays the reference for the judge design, the checklist schema and the scoring rules.
+
 Architecture and design spec for the 24-hour CQA hackathon. Companion document: [PLAN.md](PLAN.md) (phases, epics, user stories, owners).
 
 Status: draft v1, 2026-11-07. Open inputs are listed in section 15.

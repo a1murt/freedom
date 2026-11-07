@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -30,7 +30,9 @@ class Conversation(Base):
     channel: Mapped[str] = mapped_column(String(32))  # "agent chat" | "voice call"
     language: Mapped[str] = mapped_column(String(8))  # RU | KZ | EN
     audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    operator_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    operator_name: Mapped[str | None] = mapped_column(String(128), nullable=True)  # detected from the greeting (judge input)
+    # identity from the source system (Dynamics 365 agent display name); never fed to the judge
+    agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     turn_count: Mapped[int] = mapped_column(Integer, default=0)
     first_response_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     terminal_event: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -262,6 +264,7 @@ class AuditEvent(Base):
     """Who did what, when (process correctness, enterprise audit trail). Written by cqa.audit."""
 
     __tablename__ = "audit_events"
+    __table_args__ = (Index("ix_audit_events_entity", "entity_type", "entity_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     actor_role: Mapped[str] = mapped_column(String(32), default="demo")
@@ -271,7 +274,7 @@ class AuditEvent(Base):
     entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    request_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # = the X-Request-ID response header
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 

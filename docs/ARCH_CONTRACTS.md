@@ -17,7 +17,7 @@ Rules:
 - Unknown role → 400 `{"error": {"code": "unknown_role", ...}}`.
 - Missing permission → 403 `{"error": {"code": "forbidden", "message": "...", "role": "...", "permission": "..."}}`.
 - The actor is available to handlers via `request.state.actor` = `{"role": str, "name": str | None, "request_id": str}` and via `cqa.security.roles.current_actor(request)`.
-- `operator` may create appeals only on dialogs whose `operator_name` equals `X-CQA-User` (already enforced in `POST /api/appeals` via `author_role/author_name`; the middleware also fills those from headers when the body omits them).
+- `operator` may create appeals only on dialogs whose `operator_name` (or `agent_name`, the source-system identity) equals `X-CQA-User` (enforced in `POST /api/appeals`; the appeals router fills `author_role` / `author_name` / `author_label` and `reviewer_role` / `reviewer_label` from the headers when the body omits them; the middleware never rewrites bodies).
 
 ### Roles and permissions (source of truth: `cqa/security/roles.py`)
 
@@ -40,25 +40,27 @@ Rules:
 
 Table `audit_events` (model `AuditEvent` in `cqa/models.py`): `ts, actor_role, actor_name, action, entity_type, entity_id, summary, details (JSON), request_id, status_code`.
 
-- Every successful **write** request (POST/PUT/PATCH/DELETE under `/api/`) is recorded by the security middleware with an `action` from the route map (e.g. `appeal.create`, `appeal.decide`, `checklist.create`, `checklist.version.create`, `checklist.version.activate`, `checklist.spec.regenerate`, `evaluation.run`, `dataset.import`, `conversation.upload`, `conversation.paste`, `settings.update`, `job.cancel`, `snapshot.create`, `snapshot.restore`, `calibration.labels.upsert`, `integration.dynamics.ingest`), `entity_id` from path params or the response, and a compact `details` (never full transcripts or secrets; bodies truncated to 2 KB).
+- Every successful **write** request (POST/PUT/PATCH/DELETE under `/api/`, status 2xx) and every refused one (403) is recorded by the security middleware (3xx, other 4xx and 5xx are not; `POST /api/appeals/preview` is not) with an `action` from the route map (e.g. `appeal.create`, `appeal.decide`, `checklist.create`, `checklist.version.create`, `checklist.version.activate`, `checklist.spec.regenerate`, `evaluation.run`, `dataset.import`, `conversation.upload`, `conversation.paste`, `settings.update`, `job.cancel`, `snapshot.create`, `snapshot.restore`, `calibration.labels.upsert`, `integration.dynamics.ingest`), `entity_id` from path params or the response, and a compact `details` (never full transcripts or secrets; bodies truncated to 2 KB).
 - Services may add semantic events with `cqa.audit.record(db, action=..., entity_type=..., entity_id=..., summary=..., details=..., actor=...)` (e.g. `job.completed`, `job.interrupted`).
-- `GET /api/audit?action=&entity_type=&entity_id=&actor_role=&limit=100&before_id=` → newest first.
+- `GET /api/audit?action=&entity_type=&entity_id=&actor_role=&actor_name=&status_code=&q=&since=&until=&limit=100&before_id=` → newest first. `request_id` (64 characters) equals the `X-Request-ID` response header.
 
 ## 3. Platform guards (public hosted instance)
 
-Settings in `cqa/config.py` (env-overridable): `DAILY_BUDGET_USD` (75), `MAX_DIALOGS_PER_RUN` (200), `MAX_CONCURRENT_JOBS` (2), `CORS_ORIGINS` (JSON list), `APP_VERSION`.
+Settings in `cqa/config.py` (env-overridable): `DAILY_BUDGET_USD` (75), `MAX_DIALOGS_PER_RUN` (200), `MAX_CONCURRENT_JOBS` (2), `MAX_CONCURRENT_TRIALS` (2), `MAX_TRANSCRIPT_CHARS` (100 000), `MAX_TRANSCRIPT_TURNS` (2 000), `CORS_ORIGINS` (JSON list), `APP_VERSION`, `SPEND_LEDGER_PATH`, `CQA_PUBLIC_INSTANCE`.
+
+Spend (fix pass, `docs/arch/fixes.md`): every billed Claude call is booked in the spend ledger (`cqa.jobs.ledger`, a file outside the snapshotted database), successful or not, with cache writes at 1.25 × input; the 24 h spend = max(ledger, database). Only models with a configured price may be called (422 `unknown_model`). Estimates are per dialog and token-based (`cqa.jobs.estimate`); a partial run prices dialogs without a completed base evaluation in full.
 
 `POST /api/evaluations/run` (non-dry) is rejected with **429** and a precise code when:
-- `budget_exceeded`: evaluation cost in the last 24 h + this run's estimate > budget (message shows spent/budget/estimate);
+- `budget_exceeded`: 24 h spend + what running jobs, trials and compilations have reserved + this run's estimate > budget (message shows spent/budget/estimate); only runs that make no paid model call (local, fake, a weight-only partial run that copies every row) are never blocked; a paid job also stops starting dialogs once the 24 h spend reaches the budget;
 - `too_many_jobs`: running jobs ≥ limit;
 - `too_many_dialogs`: queued dialogs > limit.
 Dry runs always work and return `budget: {spent_24h, limit, remaining}`.
 
-Start-up recovery (`cqa.jobs.runner.recover_stale_jobs`, called from `main.py`): jobs left `queued/running` by a previous process become `interrupted` (log entry + audit event); evaluations left `running` become `failed` with `error = "interrupted by restart"`. `POST /api/jobs/{id}/resume` re-queues the job's conversations that have no completed evaluation for its checklist version.
+Start-up recovery (`cqa.jobs.runner.recover_stale_jobs`, called from `main.py`): jobs left `queued/running` by a previous process become `interrupted` (log entry + audit event); evaluations left `running` become `failed` with `error = "interrupted by restart"`. `POST /api/jobs/{id}/resume` re-queues the job's conversations that have no completed evaluation for its checklist version made since the job started.
 
 ## 4. Error envelope
 
-Always `{"error": {"code": "<snake_case>", "message": "<human, RU>", ...extra}}` with the HTTP status. Validation errors from new endpoints use 422 with `errors: [{"field": "criteria[2].weight", "message": "..."}]`.
+Always `{"error": {"code": "<snake_case>", "message": "<human, RU>", ...extra}}` with the HTTP status. Validation errors use 422 with `errors: [{"field": "criteria[2].weight", "message": "..."}]`: package routers with their own codes, and a global handler in `main.py` (`validation_error`) for every other route (FastAPI's `detail` list is kept next to it for old clients). Unknown routes answer 404 `not_found`, wrong methods 405 `method_not_allowed`, crashes 500 `internal` with `request_id`.
 
 ## 5. New endpoints by package (details in each package's `docs/arch/<package>.md`; the integration step merges them into `docs/API.md`)
 
@@ -72,6 +74,7 @@ Always `{"error": {"code": "<snake_case>", "message": "<human, RU>", ...extra}}`
 | integrations | `POST /api/integrations/dynamics/transcripts`, `GET /api/integrations/dynamics/manifest` |
 | calibration | `GET/PUT /api/calibration/labels`, `POST /api/calibration/import`, `GET /api/calibration/export`, `GET /api/calibration/agreement`, `GET /api/calibration/stability` |
 | testing | fake provider `fake` (deterministic, offline), CI workflow |
+| integration | `answers=ai\|final` on the results export, `agent_name` on conversations, `snapshots` in `/api/system/health`, `default_checklist_id` setting (see `docs/arch/integration.md`) |
 
 ## 6. Testing contract
 

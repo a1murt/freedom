@@ -1,0 +1,83 @@
+# CI for the CQA prototype (package "testing", docs/arch/testing.md).
+# api: the full pytest suite, offline (the fake judge replaces Claude; no secrets are used or needed).
+# web: typecheck + production build; non-blocking while the frontend is being redesigned.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: api
+    env:
+      # Tests must never reach paid or external APIs: no key, no organizer URL.
+      ANTHROPIC_API_KEY: ""
+      ORGANIZER_API_URL: ""
+      UV_PYTHON: "3.12"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install ffmpeg (audio features and waveform tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: api/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run tests
+        run: uv run --extra dev pytest -q
+
+  web:
+    name: Web (typecheck + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The frontend is being redesigned right now: report its status without failing the workflow.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          package_json_file: web/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build

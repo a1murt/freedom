@@ -97,15 +97,27 @@ def compute_peaks(path: Path, turns: list[dict[str, Any]], buckets: int = 600) -
     }
 
 
+def _timing_key(turns: list[dict[str, Any]]) -> str:
+    """Fingerprint of what the tracks depend on (who speaks when); a re-normalized transcript invalidates the cache."""
+    import hashlib
+
+    rows = [[t.get("idx"), t.get("speaker"), t.get("offset_seconds"), t.get("segment"), bool(t.get("is_duplicate"))] for t in turns]
+    return hashlib.sha1(json.dumps(rows, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()[:16]
+
+
 def cached_peaks(path: Path, turns: list[dict[str, Any]], buckets: int = 600) -> dict[str, Any]:
     cache = path.with_suffix(f".peaks{buckets}.json")
+    key = _timing_key(turns)
     if cache.exists() and cache.stat().st_mtime >= path.stat().st_mtime:
         try:
-            return json.loads(cache.read_text(encoding="utf-8"))
+            data = json.loads(cache.read_text(encoding="utf-8"))
+            if data.get("timing_key") in (None, key) and (data.get("timing_key") == key or not turns):
+                return data
         except (OSError, json.JSONDecodeError):
             pass
     data = compute_peaks(path, turns, buckets)
     if data.get("available"):
+        data["timing_key"] = key
         try:
             cache.write_text(json.dumps(data), encoding="utf-8")
         except OSError:

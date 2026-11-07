@@ -1,6 +1,8 @@
 """GET /api/export/evaluations.csv and GET /api/export/evaluations/{id}.pdf (see docs/API.md)."""
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -27,6 +29,51 @@ def export_evaluations_csv(
     )
 
 
+def _csv(body: str, filename: str) -> Response:
+    return Response(content=body.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@router.get("/violations.csv")
+def export_violations_csv(
+    checklist_version_id: int | None = Query(default=None),
+    type: str | None = Query(default=None, description="insult | paid_bypass | disclosure | other"),
+    language: str | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    operator: str | None = Query(default=None),
+    include_reviewed_out: bool = Query(default=False),
+    dataset_id: int | None = Query(default=None, description="Only dialogs of this imported set"),
+    since: datetime | None = Query(default=None, description="Evaluated at or after (ISO 8601)"),
+    until: datetime | None = Query(default=None, description="Evaluated at or before (ISO 8601)"),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Gross-violations register (same items and filters as GET /api/violations)."""
+    from ..export.registers_csv import violations_csv
+
+    return _csv(violations_csv(db, checklist_version_id=checklist_version_id, kind=type, language=language, channel=channel,
+                               operator=operator, include_reviewed_out=include_reviewed_out, dataset_id=dataset_id, since=since,
+                               until=until), "violations.csv")
+
+
+@router.get("/decisions.csv")
+def export_decisions_csv(
+    status: str | None = Query(default=None, description="open | decided | withdrawn"),
+    operator: str | None = Query(default=None),
+    author_role: str | None = Query(default=None),
+    code: str | None = Query(default=None),
+    conversation_id: str | None = Query(default=None),
+    language: str | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    q: str | None = Query(default=None, description="Substring of the comment, conversation id, operator or author name"),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Appeals and reviewer decisions, one row per appeal (same filters as GET /api/appeals)."""
+    from ..export.registers_csv import decisions_csv
+
+    return _csv(decisions_csv(db, status=status, operator=operator, author_role=author_role, code=code, conversation_id=conversation_id,
+                              language=language, channel=channel, q=q), "decisions.csv")
+
+
 @router.get("/evaluations/{evaluation_id}.pdf")
 def export_evaluation_pdf(evaluation_id: int, db: Session = Depends(get_db)) -> Response:
     if db.get(Evaluation, evaluation_id) is None:
@@ -50,18 +97,21 @@ def export_results_json(
     team_name: str | None = Query(default=None),
     expect: int | None = Query(default=None, description="Expected record count (prod: 10)"),
     download: bool = Query(default=True),
+    answers: str = Query(default="ai", description="ai = the judge's answers (default); final = after reviewer decisions"),
     db: Session = Depends(get_db),
 ) -> Response:
     """Organizer results file (JSON 1.0, docs/ORGANIZER_UPDATES.md §1) with validation report in headers."""
     import json
     import os
 
+    from ..config import settings
     from ..export.results_json import ExportError, from_db, validate_document
 
     ids = [x.strip() for x in conversation_ids.split(",") if x.strip()] if conversation_ids else None
-    team = team_name or os.environ.get("TEAM_NAME") or "Я Тебя Могну"
+    team = team_name or os.environ.get("TEAM_NAME") or settings.team_name
     try:
-        doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id, team_name=team)
+        doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id,
+                                             team_name=team, answers=answers)
     except ExportError as e:
         return JSONResponse(status_code=400, content={"error": {"code": "export_failed", "message": str(e)}})
     errors, warnings = validate_document(doc, expected_ids=list(turn_counts), expected_count=expect, turn_counts=turn_counts, channels=channels)
@@ -84,6 +134,7 @@ def validate_results(
     conversation_ids: str | None = Query(default=None),
     checklist_version_id: int | None = Query(default=None),
     expect: int | None = Query(default=None),
+    answers: str = Query(default="ai", description="ai (default) or final (after reviewer decisions)"),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """Dry run of the results export: counts, errors and warnings, without the file body."""
@@ -91,7 +142,8 @@ def validate_results(
 
     ids = [x.strip() for x in conversation_ids.split(",") if x.strip()] if conversation_ids else None
     try:
-        doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id, team_name="validation")
+        doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id,
+                                             team_name="validation", answers=answers)
     except ExportError as e:
         return JSONResponse(status_code=400, content={"error": {"code": "export_failed", "message": str(e)}})
     errors, warnings = validate_document(doc, expected_ids=list(turn_counts), expected_count=expect, turn_counts=turn_counts, channels=channels)
@@ -106,5 +158,5 @@ def validate_results(
 def _not_found(evaluation_id: int) -> JSONResponse:
     return JSONResponse(
         status_code=404,
-        content={"error": {"code": "not_found", "message": f"evaluation {evaluation_id} not found"}},
+        content={"error": {"code": "not_found", "message": f"Оценка {evaluation_id} не найдена"}},
     )

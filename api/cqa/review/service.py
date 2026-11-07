@@ -6,8 +6,48 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from ..models import Appeal, Decision, Evaluation, EvaluationCriterion, FewshotExample, Turn
+from ..models import Appeal, Criterion, Decision, Evaluation, EvaluationCriterion, FewshotExample, Turn
 from ..scoring.engine import CriterionInput, answer_points, compute_score, normalize_answer
+
+
+# Spellings of "not applicable" accepted from clients (the API stores and returns exactly "N/A").
+NA_ALIASES = frozenset({"n/a", "na", "n.a.", "н/п", "нп", "н/а", "not_applicable", "not applicable", "неприменимо", "не применимо",
+                        "қолданылмайды"})
+
+
+def normalize_na_value(value: Any) -> Any:
+    """"na", "н/п", "not applicable"… → "N/A"; anything else unchanged."""
+    if isinstance(value, str) and value.strip().lower() in NA_ALIASES:
+        return "N/A"
+    return value
+
+
+def is_missing_answer(value: Any) -> bool:
+    """No new answer given: None or a blank string."""
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def na_allowed_on_channel(cdef: Criterion | None, channel: str | None) -> bool:
+    """N/A is a valid answer of the criterion on this channel: allowed for the criterion itself, or by its channel
+    override (C1 = N/A on a voice call whose recording starts after the greeting)."""
+    if cdef is None:
+        return False
+    override = (cdef.channel_overrides or {}).get(channel) or {}
+    return bool(cdef.na_allowed or (isinstance(override, dict) and override.get("na_allowed")))
+
+
+def criterion_definition(db: Session, ec: EvaluationCriterion) -> Criterion | None:
+    """The checklist criterion a result row was scored against (same checklist version, same code)."""
+    return db.execute(select(Criterion).where(Criterion.checklist_version_id == ec.evaluation.checklist_version_id,
+                                              Criterion.code == ec.code)).scalar_one_or_none()
+
+
+def missing_answer_as_na(db: Session, ec: EvaluationCriterion, new_answer: Any) -> Any:
+    """A missing new answer (None or a blank string) stands for N/A when the criterion allows N/A on the dialog's channel
+    (the deployed web app sends N/A as null); otherwise it stays missing (None). Any other value is returned unchanged."""
+    if not is_missing_answer(new_answer):
+        return new_answer
+    return "N/A" if na_allowed_on_channel(criterion_definition(db, ec), ec.evaluation.conversation.channel) else None
 
 
 def _criterion_defs(ev: Evaluation) -> dict[str, Any]:
@@ -45,6 +85,7 @@ def recompute_final(db: Session, ev: Evaluation) -> None:
 
 
 def preview_total(db: Session, ec: EvaluationCriterion, new_answer: Any) -> dict[str, Any]:
+    new_answer = normalize_na_value(new_answer)
     ev = ec.evaluation
     saved = {r.id: (r.final_answer, r.final_score, r.final_earned) for r in ev.criteria}
     saved_total, saved_sections, saved_crit = ev.final_total_score, ev.sections, ev.critical_error
@@ -68,8 +109,13 @@ def create_appeal(db: Session, ec: EvaluationCriterion, comment: str, author_lab
 
 
 def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str, reviewer_label: str, add_to_fewshot: bool, reviewer_role: str | None = None) -> Decision:
+    """Decide an open appeal ("confirm" | "change") and recompute the final total. ValueError (English text, translated
+    by the router) for a decided or withdrawn appeal and for a new answer the criterion does not allow."""
     if ap.decision is not None:
         raise ValueError("appeal already decided")
+    if ap.status != "open":  # withdrawn: deciding it would rewrite the criterion's state (and hide a newer open appeal)
+        raise ValueError("appeal is not open")
+    new_answer = normalize_na_value(new_answer)
     ec = ap.evaluation_criterion
     ev = ec.evaluation
     from ..models import ChecklistVersion
@@ -83,7 +129,7 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
             if cdef is None or answer_points(cdef.options, new_answer) is None:
                 raise ValueError(f"new_answer {new_answer!r} is not an allowed option")
             new_answer = normalize_answer(cdef.options, new_answer)
-        elif cdef is not None and not (cdef.na_allowed or ((cdef.channel_overrides or {}).get(ev.conversation.channel, {}) or {}).get("na_allowed")):
+        elif cdef is not None and not na_allowed_on_channel(cdef, ev.conversation.channel):
             raise ValueError("N/A is not allowed for this criterion")
         ec.final_answer = new_answer
         ec.review_state = "changed"
@@ -101,6 +147,32 @@ def decide(db: Session, ap: Appeal, *, action: str, new_answer: Any, reason: str
     db.commit()
     db.refresh(dec)
     return dec
+
+
+def withdraw_appeal(db: Session, ap: Appeal) -> Appeal:
+    """Withdraw an open appeal: status "withdrawn"; the criterion returns to its state before the appeal (see
+    _settled_review_state). Final answers and totals are untouched (an open appeal never changed them)."""
+    if ap.status != "open":
+        raise ValueError("appeal is not open")
+    ap.status = "withdrawn"
+    ec = ap.evaluation_criterion
+    if not any(a.status == "open" and a.id != ap.id for a in ec.appeals):
+        ec.review_state = _settled_review_state(ec, exclude_appeal_id=ap.id)
+    db.commit()
+    db.refresh(ap)
+    return ap
+
+
+def _settled_review_state(ec: EvaluationCriterion, exclude_appeal_id: int | None = None) -> str:
+    """Review state of a row without an open appeal: the last decision on it; else a decision a partial re-evaluation
+    carried onto the row (final_answer is set while the decided appeal stays on the base evaluation's row): "confirmed"
+    when the final answer is the AI answer, else "changed"; else "none"."""
+    decided = sorted((a for a in ec.appeals if a.id != exclude_appeal_id and a.decision is not None), key=lambda a: a.id)
+    if decided:
+        return {"change": "changed", "confirm": "confirmed"}.get(decided[-1].decision.action, "none")
+    if ec.final_answer is not None:
+        return "confirmed" if ec.final_answer == (ec.answer if ec.applicable else "N/A") else "changed"
+    return "none"
 
 
 def _add_fewshot(db: Session, ec: EvaluationCriterion, reason: str) -> None:

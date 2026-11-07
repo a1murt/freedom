@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Any
 
 PAUSE_RE = re.compile(r"(приостанов|paused|тоқтатыл)", re.I)
+# "Запись и транскрибирование запущены." / "Жазу және транскрипция басталды." / "Recording and transcription started."
+PRE_START_TOLERANCE_S = 1.0
+RECORD_START_RE = re.compile(r"(запис\w*\s+и\s+транскриб\w*\s+(?:запущен|начат)|recording\s+and\s+transcription\s+(?:started|began|have\s+started)"
+                             r"|жазу\s+және\s+транскрипция\s+басталд)", re.I)
 RESUME_RE = re.compile(r"(возобнов|resumed|жалғас)", re.I)
 AGENT_JOINED_RE = re.compile(r"(агент присоединился|agent joined|оператор подключ|агент қосылды)", re.I)
 ESCALATION_RE = re.compile(r"(эскалац|переведен|transferred|жіберілді|передан оператору)", re.I)
@@ -87,44 +91,54 @@ def normalize(record: dict[str, Any]) -> NormalizedConversation:
     is_call = channel == "voice call"
 
     # --- offsets -------------------------------------------------------------
+    # Calls have two clocks. `timeline` = seconds since the first event minus recording pauses (first response time and
+    # duplicate detection, unchanged). `offsets` = position in the audio file: counted from the recording-start event
+    # ("Запись и транскрибирование запущены") when the transcript has one, so evidence seeks land on the right moment;
+    # turns before that event are not in the recording (offset None, listed in meta.not_in_recording).
     offsets: list[float | None] = []
+    timeline: list[float | None] = []
+    call_meta: dict[str, Any] = {}
     if is_call:
-        base: datetime | None = None
-        paused_total = 0.0
-        pause_start: datetime | None = None
-        for t in raw:
-            dt = parse_iso(str(t.get("timestamp", "")))
-            if dt is None:
-                offsets.append(None)
-                continue
-            if base is None:
-                base = dt
-            text = t.get("text", "")
-            if _is_system(t) and RESUME_RE.search(text) and pause_start is not None:
-                paused_total += max(0.0, (dt - pause_start).total_seconds())
-                pause_start = None
-            if pause_start is not None:
-                # recording is paused: everything said now sits at the pause point in the audio
-                offsets.append(max(0.0, (pause_start - base).total_seconds() - paused_total))
-            else:
-                offsets.append(max(0.0, (dt - base).total_seconds() - paused_total))
-            if _is_system(t) and PAUSE_RE.search(text) and not RESUME_RE.search(text):
-                pause_start = dt
+        stamps = [parse_iso(str(t.get("timestamp", ""))) for t in raw]
+        timeline = _call_clock(raw, stamps, base_index=None)
+        start_i = next((i for i, t in enumerate(raw) if _is_system(t) and stamps[i] is not None
+                        and RECORD_START_RE.search(str(t.get("text", "")))), None)
+        if start_i is None:
+            offsets = list(timeline)
+        else:
+            offsets = _call_clock(raw, stamps, base_index=start_i)
+            first = next((dt for dt in stamps if dt is not None), None)
+            not_in = [i for i, o in enumerate(offsets) if o is None and stamps[i] is not None]
+            call_meta = {"recording_start_idx": start_i,
+                         "recording_start_offset_s": round(max(0.0, (stamps[start_i] - first).total_seconds()), 3) if first else 0.0}
+            if not_in:
+                call_meta["not_in_recording"] = not_in
     else:
         for t in raw:
             offsets.append(parse_clock(str(t.get("timestamp", ""))))
+        if raw and all(o is None for o in offsets):
+            # chats from other sources (Dynamics 365) carry ISO timestamps: seconds since the first parseable one
+            stamps = [parse_iso(str(t.get("timestamp", ""))) for t in raw]
+            base_dt = next((dt for dt in stamps if dt is not None), None)
+            if base_dt is not None:
+                offsets = [max(0.0, (dt - base_dt).total_seconds()) if dt is not None and (dt.tzinfo is None) == (base_dt.tzinfo is None)
+                           else None for dt in stamps]
+
+    clock = timeline if is_call else offsets  # first response and duplicates use the dialog's own clock
 
     # --- duplicates ----------------------------------------------------------
     turns: list[NormTurn] = []
     prev: NormTurn | None = None
+    prev_clock: float | None = None
     for i, t in enumerate(raw):
         nt = NormTurn(idx=i, timestamp_raw=str(t.get("timestamp", "")), offset_seconds=offsets[i],
                       speaker=str(t.get("speaker", "client")), text=str(t.get("text", "")).strip())
         if prev is not None and prev.speaker == nt.speaker and prev.text == nt.text:
-            close = (prev.offset_seconds is None or nt.offset_seconds is None or abs(nt.offset_seconds - prev.offset_seconds) <= 2.0)
+            close = (prev_clock is None or clock[i] is None or abs(clock[i] - prev_clock) <= 2.0)
             nt.is_duplicate = close
         turns.append(nt)
         prev = nt
+        prev_clock = clock[i]
 
     # --- segments ------------------------------------------------------------
     operator_start: int | None = None
@@ -181,11 +195,11 @@ def normalize(record: dict[str, Any]) -> NormalizedConversation:
     if operator_start is not None:
         first_op = next((t for t in turns if t.speaker == "operator" and t.idx >= operator_start), None)
         anchor = next((t for t in turns if t.idx == escalation_idx), None) if escalation_idx is not None else None
-        if first_op and first_op.offset_seconds is not None:
-            if anchor and anchor.offset_seconds is not None:
-                first_response = max(0.0, first_op.offset_seconds - anchor.offset_seconds)
+        if first_op and clock[first_op.idx] is not None:
+            if anchor and clock[anchor.idx] is not None:
+                first_response = max(0.0, clock[first_op.idx] - clock[anchor.idx])
             else:
-                first_response = first_op.offset_seconds
+                first_response = clock[first_op.idx]
 
     # --- terminal event --------------------------------------------------------
     terminal: str | None = None
@@ -210,9 +224,46 @@ def normalize(record: dict[str, Any]) -> NormalizedConversation:
         "post_start_idx": post_start,
         "duplicates": sum(1 for t in turns if t.is_duplicate),
         "speakers": {s: sum(1 for t in turns if t.speaker == s) for s in ("client", "operator", "bot", "system")},
+        **call_meta,
     }
+    from ..judge.steering import steering_turns  # local import: normalize stays importable on its own
+
+    steering = steering_turns(turns)
+    if steering:
+        meta["steering_turns"] = steering
     return NormalizedConversation(turns=turns, operator_name=operator_name, first_response_seconds=first_response,
                                   terminal_event=terminal, operator_start_idx=operator_start, meta=meta)
+
+
+def _call_clock(raw: list[dict[str, Any]], stamps: list[datetime | None], *, base_index: int | None) -> list[float | None]:
+    """Seconds per turn from the base event (the first timestamp, or raw[base_index]) minus recording pauses; while the
+    recording is paused everything sits at the pause point. Turns before the base event get None."""
+    base: datetime | None = stamps[base_index] if base_index is not None else None
+    paused_total = 0.0
+    pause_start: datetime | None = None
+    out: list[float | None] = []
+    for i, t in enumerate(raw):
+        dt = stamps[i]
+        if dt is None:
+            out.append(None)
+            continue
+        if base is None:
+            base = dt
+        if base_index is not None and (i < base_index or dt < base):
+            # said before the recording started (system notes logged within a second of the start count as at 0)
+            out.append(0.0 if (base - dt).total_seconds() <= PRE_START_TOLERANCE_S and _is_system(t) else None)
+            continue
+        text = t.get("text", "")
+        if _is_system(t) and RESUME_RE.search(text) and pause_start is not None:
+            paused_total += max(0.0, (dt - pause_start).total_seconds())
+            pause_start = None
+        if pause_start is not None:
+            out.append(max(0.0, (pause_start - base).total_seconds() - paused_total))
+        else:
+            out.append(max(0.0, (dt - base).total_seconds() - paused_total))
+        if _is_system(t) and PAUSE_RE.search(text) and not RESUME_RE.search(text):
+            pause_start = dt
+    return out
 
 
 def extract_name(text: str) -> str | None:
