@@ -57,28 +57,49 @@ def _round(value: float, decimals: int, mode: str = "half_up") -> float:
     return float(Decimal(repr(value)).quantize(q, rounding=rounding))
 
 
+_BOOL_SYNONYMS = {"true": "yes", "false": "no"}
+
+
+def _as_number(text: str) -> float | None:
+    try:
+        return float(text.replace(",", "."))
+    except ValueError:
+        return None
+
+
+def _matches(opt: dict[str, Any], answer: Any) -> bool:
+    """An answer names this option: the value or the label, ignoring case and surrounding spaces; "15.0" = "15" = 15;
+    "true"/"false" = "yes"/"no". The same tolerance as the results.json exporter, so a verdict the validator accepts is
+    one the export can write, and a harmless format difference never costs a retry or a failed criterion."""
+    val = opt.get("value")
+    if val == answer:
+        return True
+    a = str(answer).strip().lower()
+    a = _BOOL_SYNONYMS.get(a, a)
+    v = str(val).strip().lower()
+    if v == a or str(opt.get("label", "")).strip().lower() == a:
+        return True
+    nv, na = _as_number(v), _as_number(a)
+    return nv is not None and na is not None and nv == na
+
+
 def answer_points(options: list[dict[str, Any]], answer: Any) -> float | None:
     """Map an answer to its points using the criterion options. Returns None if not found."""
     if answer is None:
         return None
     for opt in options:
-        val = opt.get("value")
-        if val == answer:
-            return float(opt.get("points", 0))
-        # tolerate "20" vs 20 and "Да"/"Нет" labels
-        if str(val).lower() == str(answer).lower():
-            return float(opt.get("points", 0))
-        if str(opt.get("label", "")).lower() == str(answer).lower():
+        if _matches(opt, answer):
             return float(opt.get("points", 0))
     return None
 
 
 def normalize_answer(options: list[dict[str, Any]], answer: Any) -> Any:
-    """Return the canonical option value for an answer (e.g. "20" -> 20, "Да" -> "yes")."""
+    """Return the canonical option value for an answer (e.g. "20" -> 20, "15.0" -> "15", "Да" -> "yes")."""
+    if answer is None:
+        return answer
     for opt in options:
-        val = opt.get("value")
-        if val == answer or str(val).lower() == str(answer).lower() or str(opt.get("label", "")).lower() == str(answer).lower():
-            return val
+        if _matches(opt, answer):
+            return opt.get("value")
     return answer
 
 

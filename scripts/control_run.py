@@ -8,7 +8,8 @@ Designed for the one-hour window before the stop-code (docs/ORGANIZER_UPDATES.md
   api/.venv/bin/python scripts/control_run.py --rehearse            # 10 DEV chats, writes api/data/rehearsal/, no git
 
 Defaults: hosted API, organizer checklist (version 1), expect 10 records, out results/prod/results.json, git push on.
-Every step prints what it did; any failure stops before git with a clear message, and the partial file is still written.
+Every step prints what it did. A job that times out or a retry the API refuses never stops the export: unfinished
+dialogs become status=error records (a valid file) and the recovery command is printed (--only-incomplete).
 
 Platform behaviour it relies on (docs/ARCHITECTURE_V2.md §8, §10):
 - a database snapshot "pre-control-<UTC time>" is taken before the import (skip with --no-snapshot; a failure only warns);
@@ -268,6 +269,32 @@ def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, prov
         time.sleep(poll_s)
 
 
+def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, *,
+                 only_incomplete: bool = False) -> list[str]:
+    """Evaluate the dialogs, retry the ones that did not complete once, and return those still not completed.
+
+    It never aborts the export: a job that times out, or a retry the API refuses (budget, dialogs per run, busy for
+    too long), is logged and the caller exports what the API has. Unfinished dialogs then become status=error records,
+    which keep results.json valid, instead of the hour ending with no file at all."""
+    targets = not_completed(http, base, ids, version_id) if only_incomplete else list(ids)
+    if only_incomplete:
+        log(f"--only-incomplete: {len(targets)} of {len(ids)} dialogs have no completed evaluation" + (f": {targets}" if targets else ""))
+    if targets:
+        try:
+            run_job(http, base, targets, version_id, provider)
+        except SystemExit as e:
+            log(f"evaluation did not finish ({e}); continuing with what the API has")
+    bad = not_completed(http, base, ids, version_id)
+    if bad:
+        log(f"retrying {len(bad)} dialogs that did not complete: {bad}")
+        try:
+            run_job(http, base, bad, version_id, provider if provider in ("local", "fake") else "anthropic")
+        except SystemExit as e:
+            log(f"retry not run ({e}); continuing with what the API has")
+        bad = not_completed(http, base, bad, version_id)
+    return bad
+
+
 def not_completed(http: httpx.Client, base: str, ids: list[str], version_id: int) -> list[str]:
     bad = []
     for cid in ids:
@@ -306,6 +333,8 @@ def main() -> int:
                     help="with --skip-import --ids or --group (not with --source-url/--source-file): export, validate and "
                          "push without evaluating again")
     ap.add_argument("--tag", action="store_true", help="also create and push a tag control-<UTC time> on the results commit")
+    ap.add_argument("--only-incomplete", action="store_true",
+                    help="evaluate only dialogs without a completed evaluation (recovery after an interrupted run); all ids are still exported")
     args = ap.parse_args()
     if args.export_only and args.ids and not args.skip_import:
         args.skip_import = True  # --export-only --ids X: the dialogs are named, nothing is imported
@@ -379,14 +408,11 @@ def main() -> int:
             log("--export-only: no evaluation, exporting what the API has")
         else:
             preflight(http, base, ids, version_id, args.provider)
-            run_job(http, base, ids, version_id, args.provider)
-            bad = not_completed(http, base, ids, version_id)
+            bad = evaluate_all(http, base, ids, version_id, args.provider, only_incomplete=args.only_incomplete)
             if bad:
-                log(f"retrying {len(bad)} dialogs that did not complete: {bad}")
-                run_job(http, base, bad, version_id, args.provider if args.provider in ("local", "fake") else "anthropic")
-                bad = not_completed(http, base, bad, version_id)
-                if bad:
-                    log(f"still not completed after retry (will be exported as status=error): {bad}")
+                log(f"still not completed (exported as status=error, which keeps the file valid): {bad}")
+                log("to evaluate just those later and re-publish all records: api/.venv/bin/python scripts/control_run.py "
+                    f"--skip-import --ids {','.join(ids)} --only-incomplete")
 
     doc, turn_counts, channels = from_api(base, conversation_ids=ids, checklist_version_id=version_id, team_name=team)
     errors, warnings = validate_document(doc, expected_ids=ids, expected_count=args.expect if not args.rehearse else len(ids), turn_counts=turn_counts, channels=channels)
@@ -507,7 +533,7 @@ def commit_and_push(rel: str, n: int, *, tag: bool = False, branch: str | None =
             tr = git("tag", "-a", name, commit, "-m", f"Control results ({n} dialogs)")
             tp = git("push", "origin", name) if tr.returncode == 0 else tr
             log(f"git tag {name} on {commit[:12]}: {'ok' if tp.returncode == 0 else 'FAILED ' + tp.stderr.strip()[-200:]}")
-        log(f"your local branch is unchanged; run `git pull` later to get the results commit")
+        log("your local branch is unchanged; run `git pull` later to get the results commit")
         return 0
     finally:
         git("worktree", "remove", "--force", str(wt))

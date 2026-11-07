@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
 
-from ..ingest.normalize import RECORD_START_RE, NormTurn, parse_iso
+from ..ingest.normalize import AGENT_JOINED_RE, RECORD_START_RE, NormTurn, parse_iso
 from ..scoring.engine import answer_points, normalize_answer
 from .contract import Evidence, Verdict
 from .packer import CriterionPack
@@ -21,8 +21,9 @@ CONTACT_OUTSIDE_RECORDING_FLAG = "rule_contact_outside_recording"
 CONTACT_EXPORT_ID = "contact"
 # turn timestamps of calls mark the END of an utterance (measured on the DEV audio: 74 % of the client/operator stamps
 # sit at the end of a speech segment); the start is estimated from the word count at a calm speaking rate
-WORDS_PER_SECOND = 2.5
+WORDS_PER_SECOND = 3.5  # calibrated on the DEV calls: operator openings run at 3.4-6.8 words/s
 PARTIAL_MIN_MISSING_S = 1.0  # less than a second before the start is within timing noise
+MIN_OPENING_WORDS = 3  # «Алло?» is not the opening: the first operator turn with at least this many words is
 
 
 @dataclass
@@ -69,34 +70,52 @@ def opening_outside_recording(turns: list[NormTurn]) -> RecordingGap | None:
     """The call's recording gap for the contact criterion, or None.
 
     The audio clock of cqa.ingest.normalize._call_clock decides: its anchor is the first recording-start event with a
-    parseable time (offset 0.0), and turns said before it carry no offset. A first operator turn without an offset was
-    said before the recording (DEV p4-ru-002). A first operator turn stamped after the start may still have begun before
-    it, because the stamp marks the end of the utterance: its start is estimated from the word count (and never before
-    the previous turn's stamp); if at least PARTIAL_MIN_MISSING_S of it precede the start, its opening is not in the
-    audio either. Without a start event or a clock there is nothing to compare with, and the criterion is judged as usual."""
+    parseable time (offset 0.0), and turns said before it carry no offset. The opening is the operator's first turn of at
+    least MIN_OPENING_WORDS words («Алло?» alone is not it), else the first operator turn.
+
+    - Full gap: the opening has no offset and comes before the start, by position or by its stamp (DEV p4-ru-002), or it
+      ended exactly at the start.
+    - Partial gap: the opening ended after the start, but a stamp marks the END of an utterance, so its start is
+      estimated from the word count at WORDS_PER_SECOND. The estimate never reaches before the previous spoken turn,
+      which must have a stamp, or before «Агент присоединился», the moment the operator can start talking. If the agent
+      joined at or after the recording start, the whole opening was recorded. At least PARTIAL_MIN_MISSING_S must
+      precede the start.
+    - Without a start event or a clock there is nothing to compare with, and the criterion is judged as usual."""
     start = next((t for t in turns if t.speaker == "system" and t.offset_seconds is not None and RECORD_START_RE.search(t.text or "")), None)
     if start is None:
         return None
     operator_turns = [t for t in turns if t.speaker == "operator" and not t.is_duplicate]
-    op = next((t for t in operator_turns if t.segment == "operator"), None) or (operator_turns[0] if operator_turns else None)
+    in_segment = [t for t in operator_turns if t.segment == "operator"] or operator_turns
+    op = next((t for t in in_segment if len((t.text or "").split()) >= MIN_OPENING_WORDS), None) or (in_segment[0] if in_segment else None)
     if op is None:
         return None
-    first, began = parse_iso(turns[0].timestamp_raw or ""), parse_iso(start.timestamp_raw or "")
+    first, began, ended = parse_iso(turns[0].timestamp_raw or ""), parse_iso(start.timestamp_raw or ""), parse_iso(op.timestamp_raw or "")
     lost = _seconds(first, began)
     lost = round(lost, 1) if lost is not None and lost >= 0 else None
-    if op.offset_seconds is None:
-        return RecordingGap(op=op, start=start, lost_s=lost) if op.idx < start.idx else None
-    ended = parse_iso(op.timestamp_raw or "")
     after_start = _seconds(began, ended)
-    if after_start is None or after_start <= 0:
+    if op.offset_seconds is None:
+        before = op.idx < start.idx or (after_start is not None and after_start < 0)
+        return RecordingGap(op=op, start=start, lost_s=lost) if before else None
+    if after_start is None:
         return None
+    if after_start <= 0:  # ended exactly at the start: all of it was said before
+        return RecordingGap(op=op, start=start, lost_s=lost)
     estimated = len((op.text or "").split()) / WORDS_PER_SECOND
-    # the utterance cannot start before the previous spoken turn ended (system events such as the start itself are not speech)
-    prev = next((t for t in reversed(turns) if t.idx < op.idx and t.speaker in ("client", "operator", "bot")
-                 and parse_iso(t.timestamp_raw or "") is not None), None)
-    since_prev = _seconds(parse_iso(prev.timestamp_raw), ended) if prev is not None else None
-    if since_prev is not None:
-        estimated = min(estimated, max(since_prev, 0.0))
+    # the previous spoken turn must have a stamp; without one the bound is unknown, and no gap is claimed
+    prev = next((t for t in reversed(turns) if t.idx < op.idx and t.speaker in ("client", "operator", "bot")), None)
+    if prev is not None:
+        prev_at = parse_iso(prev.timestamp_raw or "")
+        if prev_at is None:
+            return None
+        estimated = min(estimated, max(_seconds(prev_at, ended) or 0.0, 0.0))
+    # the operator cannot speak before joining: if that happened at or after the recording start, all was recorded
+    joined = next((t for t in reversed(turns) if t.idx < op.idx and t.speaker == "system" and AGENT_JOINED_RE.search(t.text or "")
+                   and parse_iso(t.timestamp_raw or "") is not None), None)
+    if joined is not None:
+        joined_at = parse_iso(joined.timestamp_raw)
+        if _seconds(began, joined_at) is not None and _seconds(began, joined_at) >= 0:
+            return None
+        estimated = min(estimated, max(_seconds(joined_at, ended) or 0.0, 0.0))
     missing = estimated - after_start
     if missing < PARTIAL_MIN_MISSING_S:
         return None
@@ -128,7 +147,7 @@ def credit_unrecorded_opening(v: Verdict, crit: CriterionPack, gap: RecordingGap
     describe a verdict that no longer stands). Explanations keep the judge's 0-based labels; the output shifts them."""
     op, start = gap.op, gap.start
     quote = _safe_quote(op.text)
-    when = f" через {_num(gap.lost_s)} с от начала разговора" if gap.lost_s is not None else ""
+    when = f" через {_num(gap.lost_s)} с от начала разговора" if gap.lost_s else ""
     if gap.partial:
         heard = (f"Первая реплика оператора [{op.idx}] закончилась уже после старта записи (реплика [{start.idx}]{when}), но по длине "
                  f"началась раньше: примерно {_num(gap.missing_s or 0)} с её начала, где звучат приветствие и представление, в аудиозаписи нет.")

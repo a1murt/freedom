@@ -51,7 +51,7 @@ LATE = _call([(0, "system", "Агент присоединился к разго
 ON_TIME = _call([(0, "system", "Агент присоединился к разговору с клиентом."), (0.5, "system", "Запись и транскрибирование запущены."),
                  (4, "client", "Алло."), (9, "operator", "Компания Фридом Брокер, слушаю вас."), (12, "client", "Хочу выставить лимит.")],
                 cid="call-ok")
-# the opening ends 2 s after the start, but its 13 words take about 5,2 s: it began about 3,2 s before the recording
+# the opening ends 2 s after the start, but its 13 words take about 3,7 s (3,5 words/s): it began about 1,7 s before the recording
 PARTIAL = _call([(0, "system", "Агент присоединился к разговору с клиентом."), (10, "client", "Алло."),
                  (16, "system", "Запись и транскрибирование запущены."),
                  (18, "operator", "Здравствуйте, компания Фридом Брокер, меня зовут Нина, чем я могу вам сегодня помочь?"),
@@ -83,11 +83,41 @@ def test_the_gap_is_read_from_the_audio_clock():
 
 def test_an_opening_that_began_before_the_recording_counts_as_well():
     gap = opening_outside_recording(normalize(PARTIAL).turns)
-    assert (gap.op.idx, gap.start.idx, gap.partial) == (3, 2, True) and gap.missing_s == pytest.approx(3.2, abs=0.1)
+    assert (gap.op.idx, gap.start.idx, gap.partial) == (3, 2, True) and gap.missing_s == pytest.approx(1.7, abs=0.1)
     # bounded by the previous spoken turn: had the client spoken 1 s before the stamp, the opening could not start earlier
     tight = _call([(0, "system", "Агент присоединился к разговору с клиентом."), (16, "system", "Запись и транскрибирование запущены."),
                    (17, "client", "Алло."), (18, "operator", PARTIAL["transcript"][3]["text"])], cid="c")
     assert opening_outside_recording(normalize(tight).turns) is None
+
+
+GREETING = "Здравствуйте, компания Фридом Брокер, меня зовут Нина, чем могу вам помочь сегодня по вашему счёту?"
+
+
+@pytest.mark.parametrize("rows,why", [
+    # the reviewer's shapes: the operator speaks first, right after joining, the recording started just before the join
+    ([(0, "system", "Агент присоединился к разговору с клиентом."), (0.5, "system", "Запись и транскрибирование запущены."),
+      (2.5, "operator", GREETING)], "at most 0,5 s between the join and the start"),
+    ([(0, "system", "Запись и транскрибирование запущены."), (1, "system", "Агент присоединился к разговору с клиентом."),
+      (3, "operator", GREETING)], "the agent joined after the recording started"),
+    ([(0, "system", "Агент присоединился к разговору с клиентом."), (1, "bot", "Здравствуйте!"),
+      (10, "system", "Запись и транскрибирование запущены."), ("bad", "client", "Алло."), (11, "operator", GREETING)],
+     "the previous spoken turn has no stamp"),
+    ([(0, "system", "Агент присоединился к разговору с клиентом."), (3, "operator", "Алло?"),
+      (5, "system", "Запись и транскрибирование запущены."), (12, "operator", GREETING)], "«Алло?» is not the opening; the greeting is recorded"),
+])
+def test_no_phantom_gaps(rows, why):
+    t0 = T0
+    record = {"conversation_id": "c", "channel": "voice call", "language": "RU",
+              "transcript": [{"timestamp": ("2026-11-03Tnot-a-time" if s == "bad" else (t0 + timedelta(seconds=s)).isoformat()),
+                              "speaker": sp, "text": tx} for s, sp, tx in rows]}
+    assert opening_outside_recording(normalize(record).turns) is None, why
+
+
+def test_an_opening_stamped_before_the_start_is_a_full_gap_whatever_its_position():
+    record = _call([(0, "system", "Агент присоединился к разговору с клиентом."), (8, "system", "Запись и транскрибирование запущены."),
+                    (6, "operator", GREETING), (12, "client", "Да.")])  # listed after the start, stamped 2 s before it
+    gap = opening_outside_recording(normalize(record).turns)
+    assert gap is not None and not gap.partial and (gap.op.idx, gap.start.idx) == (2, 1)
 
 
 def test_no_rule_without_a_recording_start_or_without_a_clock():
@@ -154,7 +184,7 @@ def test_partial_recording_explains_itself():
     turns = normalize(PARTIAL).turns
     v = credit_unrecorded_opening(_verdict("no"), C1, opening_outside_recording(turns))
     shown = display_turn_refs(v.explanation, len(turns) - 1)
-    assert v.answer == "yes" and "закончилась уже после старта записи (реплика [3]" in shown and "примерно 3,2 с" in shown
+    assert v.answer == "yes" and "закончилась уже после старта записи (реплика [3]" in shown and "примерно 1,7 с" in shown
 
 
 @pytest.mark.parametrize("record,channel", [(ON_TIME, "voice call"), (LATE, "agent chat")])
@@ -324,3 +354,21 @@ def test_recording_gaps_list_the_call_for_the_telephony_owner(store):
     with store() as db:
         both = recording_gaps(db)
     assert both["contact_compliance_verifiable"] == {"calls": 1, "greeted": 0, "share": 0.0}
+
+
+def test_a_partial_run_replaces_an_older_model_verdict_on_a_gap_call(store):
+    vid = _v1(store)
+    eid = asyncio.run(judge_runner.evaluate_conversation("call-gap", vid, provider_name="fake"))
+    with store() as db:  # a model «Нет» stored before the rule existed (hosted p4-ru-002 had eval 62/63 like this)
+        row = _row(db, eid, "C1")
+        row.answer, row.score, row.flags, row.explanation = "no", 0.0, ["missing_greeting"], "Не поздоровался."
+        db.commit()
+    new = asyncio.run(judge_runner.evaluate_conversation("call-gap", vid, provider_name="fake", mode="partial",
+                                                         base_evaluation_id=eid, only_codes={"C7"}))
+    with store() as db:
+        c1 = _row(db, new, "C1")
+        assert (c1.answer, c1.flags) == ("yes", [CONTACT_OUTSIDE_RECORDING_FLAG])
+        copied = asyncio.run(judge_runner.evaluate_conversation("call-gap", vid, provider_name="fake", mode="partial",
+                                                                base_evaluation_id=new, only_codes={"C7"}))
+    with store() as db:  # a rule row is simply copied by the next partial run
+        assert CONTACT_OUTSIDE_RECORDING_FLAG in _row(db, copied, "C1").flags

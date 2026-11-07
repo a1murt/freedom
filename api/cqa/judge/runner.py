@@ -26,8 +26,8 @@ from .providers import ProviderError, get_provider
 from .providers.base import JudgeProvider
 from ..review.service import _settled_review_state, recompute_final
 from .reference import reference_facts_for
-from .validate import (credit_unrecorded_opening, effective_na, is_contact_criterion, opening_outside_recording,
-                       retry_instruction, unusable_reason, validate_verdict)
+from .validate import (CONTACT_OUTSIDE_RECORDING_FLAG, credit_unrecorded_opening, effective_na, is_contact_criterion,
+                       opening_outside_recording, retry_instruction, unusable_reason, validate_verdict)
 
 log = logging.getLogger("cqa.judge")
 PROMPT_VERSION = "v1"
@@ -348,7 +348,8 @@ async def judge_one(provider: JudgeProvider, conv: ConversationPack, crit: Crite
         else:
             # keep a usable verdict with the flag; one that would store an N/A the checklist forbids here or an answer
             # outside the options fails instead: results.json would get a null or an unknown value (an invalid file at
-            # the control hour), while a failed criterion is retried by the job and the control run
+            # the control hour), while a failed criterion is exported as a status=error record (a valid file) and
+            # scripts/control_run.py re-runs such dialogs once (not_completed → evaluate_all)
             first_bad = unusable_reason(val.verdict, crit, conv.channel)
             second_bad = unusable_reason(val2.verdict, crit, conv.channel)
             if first_bad and second_bad:
@@ -473,11 +474,21 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
 
         transcript_text = pack_transcript(turns)
         criteria = list(version.criteria)
-        # an N/A copied from the base would be stale where this version no longer allows N/A on the dialog's channel
-        # (C1 on calls since 2026-11-08): judge such rows again instead of carrying a value results.json refuses
+        # rows a partial run must decide again instead of copying:
+        # - an N/A this version no longer allows on the dialog's channel (C1 on calls since 2026-11-08): results.json
+        #   would refuse the copied null;
+        # - the contact criterion of a call whose opening the recording missed, unless the row is already the rule's:
+        #   an older model verdict («Нет» for a greeting nobody can hear) must not survive; the rule needs no model call
+        gap = opening_outside_recording(turns) if conv.channel == "voice call" else None
         for c in criteria:
             b = base_rows.get(c.code)
-            if b is not None and not b.applicable and not effective_na(_criterion_pack(c), conv.channel)[0]:
+            if b is None:
+                continue
+            cp = _criterion_pack(c)
+            stale_na = not b.applicable and not effective_na(cp, conv.channel)[0]
+            stale_contact = (gap is not None and is_contact_criterion(cp)
+                             and CONTACT_OUTSIDE_RECORDING_FLAG not in (b.flags or []))
+            if stale_na or stale_contact:
                 del base_rows[c.code]
         judged = set(codes_to_judge([c.code for c in criteria], base_rows, only_codes))
         to_judge = [c for c in criteria if c.code in judged]

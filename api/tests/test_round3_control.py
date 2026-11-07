@@ -52,3 +52,33 @@ def test_rehearsal_picks_skip_the_live_demo_and_reviewed_dialogs(cr):
     assert {i[3:5] for i in ids} == {"ru", "kz", "en"}  # spread over the three languages
     # whatever the order, a protected dialog is never picked
     assert not set(cr.rehearsal_ids(list(reversed(convs)))) & {"p1-ru-029", "p1-ru-005", "p1-kz-005", "p1-en-007"}
+
+
+def test_a_timed_out_or_refused_run_never_stops_the_export(cr, monkeypatch):
+    calls: list[list[str]] = []
+
+    def run_job(http, base, ids, version_id, provider, **kw):
+        calls.append(list(ids))
+        raise SystemExit("evaluation job timed out" if len(calls) == 1 else "evaluations/run failed: HTTP 429 budget_exceeded")
+
+    monkeypatch.setattr(cr, "run_job", run_job)
+    monkeypatch.setattr(cr, "not_completed", lambda http, base, ids, vid: [i for i in ids if i in ("c2", "c7")])
+    bad = cr.evaluate_all(None, "http://api.test", ["c1", "c2", "c7"], 1, "anthropic")
+    assert bad == ["c2", "c7"]  # returned for the status=error export instead of SystemExit
+    assert calls == [["c1", "c2", "c7"], ["c2", "c7"]]  # the full run, then one retry of the unfinished dialogs
+
+
+def test_only_incomplete_evaluates_just_the_unfinished_dialogs(cr, monkeypatch):
+    calls: list[list[str]] = []
+    done: set[str] = {"c1", "c3"}
+
+    def run_job(http, base, ids, version_id, provider, **kw):
+        calls.append(list(ids))
+        done.update(ids)
+
+    monkeypatch.setattr(cr, "run_job", run_job)
+    monkeypatch.setattr(cr, "not_completed", lambda http, base, ids, vid: [i for i in ids if i not in done])
+    assert cr.evaluate_all(None, "http://api.test", ["c1", "c2", "c3", "c4"], 1, "anthropic", only_incomplete=True) == []
+    assert calls == [["c2", "c4"]]
+    calls.clear()
+    assert cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "anthropic", only_incomplete=True) == [] and calls == []
