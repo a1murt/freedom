@@ -64,6 +64,30 @@ def import_group(http: httpx.Client, base: str, group: str) -> list[str]:
     return ids
 
 
+def upload_payload(http: httpx.Client, base: str, payload: dict | list, label: str) -> list[str]:
+    """Upload organizer-format JSON (full API response, a record list, or one record) through POST /api/conversations/upload."""
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    r = http.post(f"{base}/api/conversations/upload", files={"file": (f"{label}.json", body, "application/json")})
+    if r.status_code != 200:
+        raise SystemExit(f"upload failed: HTTP {r.status_code} {r.text[:300]}")
+    info = r.json()
+    ids = info.get("conversation_ids") or []
+    log(f"uploaded {info.get('imported')} records, languages {info.get('by_language')}, channels {info.get('by_channel')}")
+    return ids
+
+
+def fetch_source(url: str) -> dict | list:
+    """GET the control set from the URL the organizers announce (any host), on this laptop."""
+    with httpx.Client(timeout=120, follow_redirects=True) as h:
+        r = h.get(url)
+    if r.status_code != 200:
+        raise SystemExit(f"source URL returned HTTP {r.status_code}: {r.text[:200]}")
+    data = r.json()
+    if isinstance(data, dict) and data.get("isSuccess") is False:
+        raise SystemExit(f"source API error: {data.get('error')}")
+    return data
+
+
 def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, timeout_s: int = 1800) -> dict:
     r = http.post(f"{base}/api/evaluations/run", json={"conversation_ids": ids, "checklist_version_id": version_id, "provider": provider})
     if r.status_code != 200:
@@ -111,6 +135,8 @@ def main() -> int:
     ap.add_argument("--skip-import", action="store_true", help="use already imported conversations given by --ids")
     ap.add_argument("--ids", help="comma-separated ids (with --skip-import)")
     ap.add_argument("--rehearse", action="store_true", help="dry run on 10 DEV chats: no import, writes api/data/rehearsal/results.json, no git")
+    ap.add_argument("--source-url", help="full GET URL of the control set (if the organizers give a URL instead of a group_id); fetched on this laptop and uploaded")
+    ap.add_argument("--source-file", help="path to a downloaded control-set JSON (organizer format); uploaded to the API")
     args = ap.parse_args()
 
     import os
@@ -136,9 +162,14 @@ def main() -> int:
                 raise SystemExit("--skip-import needs --ids")
             ids = [x.strip() for x in args.ids.split(",") if x.strip()]
             out = Path(args.out)
+        elif args.source_url or args.source_file:
+            payload = fetch_source(args.source_url) if args.source_url else json.loads(Path(args.source_file).read_text(encoding="utf-8"))
+            raw = (args.source_file or args.source_url).rstrip("/").split("/")[-1].split("?")[0] or "control"
+            ids = upload_payload(http, base, payload, label=f"control-{raw[:40]}")
+            out = Path(args.out)
         else:
             if not args.group:
-                raise SystemExit("--group is required (the control group_id)")
+                raise SystemExit("--group, --source-url or --source-file is required")
             ids = import_group(http, base, args.group)
             out = Path(args.out)
         log(f"{len(ids)} dialogs: {', '.join(ids)}")
