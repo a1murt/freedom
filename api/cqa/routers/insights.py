@@ -36,10 +36,15 @@ def list_violations(
     dataset_id: int | None = Query(default=None, description="Only dialogs of this imported set"),
     since: datetime | None = Query(default=None, description="Evaluated at or after (ISO 8601)"),
     until: datetime | None = Query(default=None, description="Evaluated at or before (ISO 8601)"),
+    conversation_id: str | None = Query(default=None, description="Only this dialog (the card's gross-violation strip)"),
     db: Session = Depends(get_db),
 ):
+    """`{total, counts, types, items}` after the type filter, plus `total_all`, `counts_all`, `evaluated`,
+    `checklist_versions` and `generated_at` in the same scope before it (register header and type chips; only here, the
+    scorecard's nested `violations` keeps the four keys)."""
     return violations(db, checklist_version_id=checklist_version_id, kind=type, language=language, channel=channel, operator=operator,
-                      include_reviewed_out=include_reviewed_out, dataset_id=dataset_id, since=since, until=until)
+                      include_reviewed_out=include_reviewed_out, dataset_id=dataset_id, since=since, until=until,
+                      conversation_id=conversation_id, with_header=True)
 
 
 @router.get("/violations/candidates")

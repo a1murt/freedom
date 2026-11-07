@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from bisect import bisect_right
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from ..turnrefs import display_turn_refs
@@ -392,7 +392,8 @@ def _critical_hit(crit_rows: list[tuple[Any, str]], include_reviewed_out: bool) 
 
 def violations(db, *, checklist_version_id: int | None = None, kind: str | None = None, language: str | None = None,
                channel: str | None = None, operator: str | None = None, include_reviewed_out: bool = False,
-               dataset_id: int | None = None, since: Any = None, until: Any = None) -> dict[str, Any]:
+               dataset_id: int | None = None, since: Any = None, until: Any = None,
+               conversation_id: str | None = None, with_header: bool = False) -> dict[str, Any]:
     """Latest evaluation per conversation whose gross-error criterion is positive (after reviewer decisions unless
     include_reviewed_out). The gross-error criteria are the version's ``is_critical`` criteria (C8 in the organizer
     checklist) with their ``critical_value`` (default "yes"); a dialog is listed once, under the first one that is positive.
@@ -400,13 +401,24 @@ def violations(db, *, checklist_version_id: int | None = None, kind: str | None 
     The type comes from the judge's text only when the judge itself gave the critical answer: after a reviewer's «Нет → Да»
     the text explains why there is no violation, so the item falls back to identification (C3 = «Нет» after review →
     disclosure) or «other» (needs manual typing). ``operator="—"`` is the unnamed-operator group of GET /api/operators;
-    ``since`` / ``until`` may carry any UTC offset."""
+    ``since`` / ``until`` may carry any UTC offset; ``conversation_id`` narrows the register to one dialog (the card).
+
+    ``total`` / ``counts`` count the listed items (after the type filter). ``with_header`` (GET /api/violations) adds the
+    register header, all in the same scope before the type filter: ``total_all`` / ``counts_all`` (a type chip keeps its
+    number while a type is selected), ``evaluated`` (latest evaluations in scope, with or without a violation: «проверено
+    65»), ``checklist_versions`` ([{id, version_no}] they were scored against) and ``generated_at`` (UTC, with offset).
+    Without it the result keeps its four keys: the operator scorecard nests it as is (GET /api/operators/{name})."""
     from .service import UNKNOWN_OPERATOR, latest_evaluations
 
     unnamed = operator is not None and operator.strip() == UNKNOWN_OPERATOR
     items: list[dict[str, Any]] = []
     counts = {k: 0 for k in VIOLATION_TYPES}
-    evaluations = list(latest_evaluations(db, checklist_version_id))
+    counts_all = {k: 0 for k in VIOLATION_TYPES}
+    total_all = evaluated = 0
+    version_ids: set[int] = set()
+    # one dialog (the card's strip): its latest evaluation is selected in SQL instead of loading every dialog's
+    evaluations = (_latest_of(db, conversation_id, checklist_version_id) if conversation_id
+                   else latest_evaluations(db, checklist_version_id))
     critical = critical_codes(db, {ev.checklist_version_id for ev in evaluations})
     for ev in evaluations:
         conv = ev.conversation
@@ -427,6 +439,8 @@ def violations(db, *, checklist_version_id: int | None = None, kind: str | None 
             continue
         if until is not None and (done is None or _naive(done) > _naive(until)):
             continue
+        evaluated += 1  # in scope whether or not it is a violation: the header's «проверено N»
+        version_ids.add(ev.checklist_version_id)
         rows = {r.code: r for r in ev.criteria}
         hit = _critical_hit(_critical_rows(rows, critical.get(ev.checklist_version_id) or DEFAULT_CRITICAL), include_reviewed_out)
         if hit is None:
@@ -445,6 +459,9 @@ def violations(db, *, checklist_version_id: int | None = None, kind: str | None 
         classified_by = ("explanation" if any(_affirmed(_PATTERNS[k], judge_text) for k in kinds if k in _PATTERNS)
                          else "quote" if any(k in _PATTERNS and _PATTERNS[k].search(" ".join(quotes)) for k in kinds)
                          else "identification" if kinds == ["disclosure"] else "default")
+        total_all += 1  # before the type filter, so the chips keep their numbers while a type is selected
+        for k in kinds:
+            counts_all[k] += 1
         if kind and kind not in kinds:
             continue
         for k in kinds:
@@ -472,7 +489,38 @@ def violations(db, *, checklist_version_id: int | None = None, kind: str | None 
             "evaluated_at": ev.completed_at.isoformat() if ev.completed_at else None,
         })
     items.sort(key=lambda x: (x["final_total_score"] is None, x["final_total_score"] if x["final_total_score"] is not None else 0))
-    return {"total": len(items), "counts": counts, "types": [{"code": k, **v} for k, v in VIOLATION_TYPES.items()], "items": items}
+    out = {"total": len(items), "counts": counts, "types": [{"code": k, **v} for k, v in VIOLATION_TYPES.items()], "items": items}
+    if with_header:
+        out.update({"total_all": total_all, "counts_all": counts_all, "evaluated": evaluated,
+                    "checklist_versions": _checklist_versions(db, version_ids),
+                    "generated_at": datetime.now(UTC).isoformat(timespec="seconds")})
+    return out
+
+
+def _latest_of(db, conversation_id: str, checklist_version_id: int | None) -> list[Any]:
+    """The dialog's latest completed evaluation as a list (empty without one), by the rule of service.latest_evaluations
+    (greatest id; of the version when one is given), in one query: opening a card must not load every evaluation."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
+
+    from ..models import Evaluation
+
+    stmt = (select(Evaluation).where(Evaluation.status == "completed", Evaluation.conversation_id == conversation_id)
+            .options(joinedload(Evaluation.conversation)).order_by(Evaluation.id.desc()).limit(1))
+    if checklist_version_id is not None:
+        stmt = stmt.where(Evaluation.checklist_version_id == checklist_version_id)
+    return list(db.scalars(stmt))
+
+
+def _checklist_versions(db, version_ids) -> list[dict[str, Any]]:
+    """[{id, version_no}] by id: the header shows «чек-лист v1», not the database id (version_no null if the row is gone)."""
+    from ..models import ChecklistVersion
+
+    out = []
+    for vid in sorted(v for v in version_ids if v is not None):
+        v = db.get(ChecklistVersion, vid)
+        out.append({"id": vid, "version_no": v.version_no if v is not None else None})
+    return out
 
 
 def _speaker(evidence: dict[str, Any], turns: dict[int, Any]) -> str | None:

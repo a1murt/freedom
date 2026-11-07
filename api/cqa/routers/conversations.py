@@ -13,7 +13,7 @@ from ..ingest.adapter import IngestError, fetch_organizer, record_from_text, rec
 from ..ingest.service import ON_CONFLICT, ConversationBusy, ConversationExists, import_records, ingest_record
 from ..ingest.language import detect_language
 from ..models import Conversation, Evaluation
-from ..serializers import conversation_detail, conversation_summary, evaluation_dict, latest_evaluation, review_state_of, trace_dict
+from ..serializers import conversation_detail, conversation_summary, evaluation_dict, iso_utc, latest_evaluation, review_state_of, trace_dict
 
 router = APIRouter(prefix="/api", tags=["conversations"])
 
@@ -63,7 +63,7 @@ def list_datasets(db: Session = Depends(get_db)):
 
     counts = dict(db.execute(select(Conversation.dataset_id, func.count(Conversation.id)).group_by(Conversation.dataset_id)).all())
     rows = db.execute(select(Dataset).order_by(Dataset.id)).scalars().all()
-    return [{"id": d.id, "group_id": d.group_id, "source": d.source, "imported_at": d.imported_at.isoformat() if d.imported_at else None,
+    return [{"id": d.id, "group_id": d.group_id, "source": d.source, "imported_at": iso_utc(d.imported_at),
              "record_count": d.record_count, "conversations": counts.get(d.id, 0)} for d in rows]
 
 
@@ -234,7 +234,7 @@ def _loses_points(row) -> bool:
 
 
 def _attempt_brief(ev: Evaluation) -> dict[str, Any]:
-    return {"id": ev.id, "status": ev.status, "error": ev.error, "created_at": ev.created_at.isoformat() if ev.created_at else None}
+    return {"id": ev.id, "status": ev.status, "error": ev.error, "created_at": iso_utc(ev.created_at)}  # UTC offset like the evaluation's own times
 
 
 def _snippet(text: str, needle: str, width: int = 60) -> str:

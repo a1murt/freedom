@@ -95,7 +95,8 @@ def _version_conflict(e: svc.VersionConflict) -> JSONResponse:
 @router.get("")
 def list_checklists(db: Session = Depends(get_db)):
     cls = db.execute(select(Checklist).options(selectinload(Checklist.versions).selectinload(ChecklistVersion.criteria))).scalars().all()
-    return [svc.serialize_checklist(c) for c in cls]
+    counts = svc.evaluation_counts(db)  # versions[].evaluations of every checklist from one grouped COUNT (no query per version)
+    return [svc.serialize_checklist(c, counts) for c in cls]
 
 
 @router.post("")

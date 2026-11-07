@@ -11,11 +11,11 @@ from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Iterable
 
-from sqlalchemy import select, update
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, select, update
+from sqlalchemy.orm import Session, object_session, selectinload
 
 from ..config import settings
-from ..models import Checklist, ChecklistVersion, Conversation, Criterion, Setting
+from ..models import Checklist, ChecklistVersion, Conversation, Criterion, Evaluation, Setting
 from . import compiler
 from .compiler import judge_relevant_signature
 from .validation import (ChecklistValidationError, export_ids_for, field_error, prepare_checklist_payload, prepare_criterion_payload,
@@ -332,20 +332,49 @@ def weights_summary(criteria: Iterable[Any]) -> dict[str, Any]:
     return {"total": round(total, 6), "by_code": by_code, "normalized": normalized}
 
 
-def serialize_version(v: ChecklistVersion) -> dict[str, Any]:
+def evaluation_counts(db: Session, version_ids: Iterable[int | None] | None = None) -> dict[int, int]:
+    """Completed evaluations per checklist version ({version_id: n}, versions without any left out) in one grouped COUNT,
+    never a query per version. A version with evaluations records how they were judged: the studio opens it read-only."""
+    stmt = (select(Evaluation.checklist_version_id, func.count(Evaluation.id))
+            .where(Evaluation.status == "completed").group_by(Evaluation.checklist_version_id))
+    if version_ids is not None:
+        ids = sorted({int(i) for i in version_ids if i is not None})
+        if not ids:
+            return {}
+        stmt = stmt.where(Evaluation.checklist_version_id.in_(ids))
+    return {int(vid): int(n) for vid, n in db.execute(stmt)}
+
+
+def _counts_of(obj: Any, version_ids: Iterable[int | None]) -> dict[int, int]:
+    """evaluation_counts through the ORM object's own session (the serializers take objects, not a session)."""
+    session = object_session(obj)
+    return evaluation_counts(session, version_ids) if session is not None else {}
+
+
+def serialize_version(v: ChecklistVersion, counts: dict[int, int] | None = None) -> dict[str, Any]:
+    """Version JSON; ``counts`` = evaluation_counts(...) when the caller already has them (else one COUNT query here)."""
     criteria = sorted(v.criteria, key=lambda c: c.order)
-    return {"id": v.id, "checklist_id": v.checklist_id, "version_no": v.version_no, "is_active": v.is_active, "change_note": v.change_note,
-            "scoring_rules": v.scoring_rules, "sections": v.sections, "created_at": v.created_at.isoformat() if v.created_at else None,
+    if counts is None:
+        counts = _counts_of(v, [v.id])
+    return {"id": v.id, "version_id": v.id, "checklist_id": v.checklist_id, "version_no": v.version_no, "is_active": v.is_active,
+            "change_note": v.change_note, "scoring_rules": v.scoring_rules, "sections": v.sections,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
             "created_from_version_id": v.created_from_version_id, "criteria": [_criterion_dict(c) for c in criteria],
-            "weights": weights_summary(criteria), "export_ids": export_ids_for([c.code for c in criteria], v.scoring_rules or {})}
+            "weights": weights_summary(criteria), "export_ids": export_ids_for([c.code for c in criteria], v.scoring_rules or {}),
+            "evaluations": counts.get(v.id, 0)}
 
 
-def serialize_checklist(cl: Checklist) -> dict[str, Any]:
+def serialize_checklist(cl: Checklist, counts: dict[int, int] | None = None) -> dict[str, Any]:
+    """Checklist JSON with its versions; pass ``counts`` = evaluation_counts(db) when listing several checklists (one query
+    for all of them), otherwise this checklist's versions are counted in one grouped query."""
+    if counts is None:
+        counts = _counts_of(cl, [v.id for v in cl.versions])
     active = next((v for v in cl.versions if v.is_active), None) or (cl.versions[-1] if cl.versions else None)
     return {"id": cl.id, "name": cl.name, "description": cl.description, "created_at": cl.created_at.isoformat() if cl.created_at else None,
-            "active_version": serialize_version(active) if active else None,
-            "versions": [{"id": v.id, "version_no": v.version_no, "created_at": v.created_at.isoformat() if v.created_at else None,
-                          "change_note": v.change_note, "is_active": v.is_active} for v in cl.versions]}
+            "active_version": serialize_version(active, counts) if active else None,
+            "versions": [{"id": v.id, "version_id": v.id, "version_no": v.version_no,
+                          "created_at": v.created_at.isoformat() if v.created_at else None, "change_note": v.change_note,
+                          "is_active": v.is_active, "evaluations": counts.get(v.id, 0)} for v in cl.versions]}
 
 
 def export_version(v: ChecklistVersion) -> dict[str, Any]:

@@ -595,9 +595,12 @@ def _cost(db: Session, checklist_version_id: int | None, period_start: datetime,
     """Spend over every evaluation run in scope (any status), split by model from the LLM traces.
 
     Evaluations without traces (older data, failures before any call) are attributed to their own provider/model.
+    ``per_dialog_usd`` is fully loaded (all spend ÷ evaluated dialogs); ``per_evaluation_usd`` is the price of one full
+    evaluation: completed runs except partial re-evaluations (they judge only the changed criteria), averaged over
+    ``evaluations_completed`` of them — the same figure as ``per_evaluation`` of GET /api/analytics/summary.
     """
     ev_stmt = select(Evaluation.id, Evaluation.provider, Evaluation.model, Evaluation.cost_usd, Evaluation.input_tokens,
-                     Evaluation.output_tokens, Evaluation.created_at, Evaluation.completed_at)
+                     Evaluation.output_tokens, Evaluation.created_at, Evaluation.completed_at, Evaluation.status, Evaluation.mode)
     tr_stmt = (
         select(LlmTrace.evaluation_id, LlmTrace.provider, LlmTrace.model, func.count(LlmTrace.id), func.sum(LlmTrace.cost_usd),
                func.sum(LlmTrace.input_tokens), func.sum(LlmTrace.output_tokens), func.sum(LlmTrace.cache_read_tokens))
@@ -633,6 +636,7 @@ def _cost(db: Session, checklist_version_id: int | None, period_start: datetime,
         add(*split_model(e.provider, e.model), 0, e.cost_usd, e.input_tokens, e.output_tokens)
 
     total = sum(float(e.cost_usd or 0.0) for e in evaluations)
+    full = [e for e in evaluations if e.status == "completed" and e.mode != "partial"]
     period = 0.0
     for e in evaluations:
         ts = as_utc(e.completed_at) or as_utc(e.created_at)
@@ -655,6 +659,9 @@ def _cost(db: Session, checklist_version_id: int | None, period_start: datetime,
     return {
         "total_usd": round(total, 4),
         "per_dialog_usd": round(total / evaluated, 4) if evaluated else None,
+        # fmean (exact sum ÷ n) as in the summary, so both endpoints show the same number
+        "per_evaluation_usd": rnd(statistics.fmean(float(e.cost_usd or 0.0) for e in full), 4) if full else None,
+        "evaluations_completed": len(full),
         "evaluations": len(evaluations),
         "tokens_in": sum(int(e.input_tokens or 0) for e in evaluations),
         "tokens_out": sum(int(e.output_tokens or 0) for e in evaluations),

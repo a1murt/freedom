@@ -1,7 +1,9 @@
 """GET /api/export/evaluations.csv and GET /api/export/evaluations/{id}.pdf (see docs/API.md)."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
@@ -15,6 +17,40 @@ from ..models import Evaluation
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 
+def _download_headers(disposition: str) -> dict[str, str]:
+    """A cross-origin script (the web app on another host) reads only the headers listed in Expose-Headers: list
+    Content-Disposition so it can save the file under the server's name (X-Request-ID is appended by cqa.platform)."""
+    return {"Content-Disposition": disposition, "Access-Control-Expose-Headers": "Content-Disposition"}
+
+
+def _team_name(explicit: str | None = None) -> str:
+    """team_name of results.json: the query parameter, else env TEAM_NAME, else the settings (one source for the file
+    and its dry run, so the export dialog shows the name the file will carry)."""
+    import os
+
+    from ..config import settings
+
+    return explicit or os.environ.get("TEAM_NAME") or settings.team_name
+
+
+def _issues(errors: list[str], warnings: list[str], conversation_ids: Iterable[Any]) -> list[dict[str, Any]]:
+    """The validator's strings as [{conversation_id, severity, message}]: a message about one record starts with
+    "<conversation_id>: " (the prefix becomes the field, so the dialog can link to its card); file-level messages
+    (schema, model, missing ids, record count) have conversation_id null. Errors first, each list in its own order."""
+    known = {c for c in conversation_ids if isinstance(c, str) and c}
+    # ids that contain ": " themselves (rare uploaded ids) are matched whole, longest first, before the plain split
+    odd = sorted((c for c in known if ": " in c), key=len, reverse=True)
+    out: list[dict[str, Any]] = []
+    for severity, texts in (("error", errors), ("warning", warnings)):
+        for text in texts:
+            cid = next((c for c in odd if text.startswith(f"{c}: ")), None)
+            if cid is None:
+                head, sep, _ = text.partition(": ")
+                cid = head if sep and head in known else None
+            out.append({"conversation_id": cid, "severity": severity, "message": text[len(cid) + 2:] if cid is not None else text})
+    return out
+
+
 @router.get("/evaluations.csv")
 def export_evaluations_csv(
     checklist_version_id: int | None = Query(default=None, description="Restrict to one checklist version"),
@@ -25,13 +61,13 @@ def export_evaluations_csv(
     return Response(
         content=body.encode("utf-8"),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="evaluations{suffix}.csv"'},
+        headers=_download_headers(f'attachment; filename="evaluations{suffix}.csv"'),
     )
 
 
 def _csv(body: str, filename: str) -> Response:
     return Response(content=body.encode("utf-8"), media_type="text/csv; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+                    headers=_download_headers(f'attachment; filename="{filename}"'))
 
 
 @router.get("/violations.csv")
@@ -85,7 +121,7 @@ def export_evaluation_pdf(evaluation_id: int, db: Session = Depends(get_db)) -> 
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="evaluation_{evaluation_id}.pdf"'},
+        headers=_download_headers(f'inline; filename="evaluation_{evaluation_id}.pdf"'),
     )
 
 
@@ -102,13 +138,11 @@ def export_results_json(
 ) -> Response:
     """Organizer results file (JSON 1.0, docs/ORGANIZER_UPDATES.md §1) with validation report in headers."""
     import json
-    import os
 
-    from ..config import settings
     from ..export.results_json import ExportError, from_db, validate_document
 
     ids = [x.strip() for x in conversation_ids.split(",") if x.strip()] if conversation_ids else None
-    team = team_name or os.environ.get("TEAM_NAME") or settings.team_name
+    team = _team_name(team_name)
     try:
         doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id,
                                              team_name=team, answers=answers)
@@ -135,15 +169,17 @@ def validate_results(
     checklist_version_id: int | None = Query(default=None),
     expect: int | None = Query(default=None),
     answers: str = Query(default="ai", description="ai (default) or final (after reviewer decisions)"),
+    team_name: str | None = Query(default=None, description="As in results.json (default: env TEAM_NAME, else the settings)"),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    """Dry run of the results export: counts, errors and warnings, without the file body."""
+    """Dry run of the results export: counts, errors and warnings, without the file body. The document is built with the
+    team name the file will carry, so ``valid`` also covers it; ``issues`` repeats errors and warnings per dialog."""
     from ..export.results_json import ExportError, from_db, summarize, validate_document
 
     ids = [x.strip() for x in conversation_ids.split(",") if x.strip()] if conversation_ids else None
     try:
         doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id,
-                                             team_name="validation", answers=answers)
+                                             team_name=_team_name(team_name), answers=answers)
     except ExportError as e:
         return JSONResponse(status_code=400, content={"error": {"code": "export_failed", "message": str(e)}})
     errors, warnings = validate_document(doc, expected_ids=list(turn_counts), expected_count=expect, turn_counts=turn_counts, channels=channels)
@@ -152,6 +188,8 @@ def validate_results(
         "valid": not errors, "errors": errors, "warnings": warnings, "summary": summarize(doc),
         "records": len(res), "ok": sum(1 for r in res if r["status"] == "ok"), "error_records": [r["conversation_id"] for r in res if r["status"] == "error"],
         "model": doc["model"],
+        "schema_version": doc["schema_version"], "team_name": doc["team_name"],
+        "issues": _issues(errors, warnings, [*turn_counts, *(r.get("conversation_id") for r in res if isinstance(r, dict))]),
     })
 
 

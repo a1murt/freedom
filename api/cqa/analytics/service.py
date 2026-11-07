@@ -10,8 +10,14 @@ Definitions
   requested checklist version (any version when not filtered).
 * totals use ``final_total_score`` (reviewer decisions applied; equals ``total_score`` when there
   was no decision).
-* criteria aggregates use the AI answer/score over applicable rows only.
+* criteria aggregates (heatmap, N/A rates) use the AI answer/score over applicable rows only (``basis="ai"``, the
+  default). With ``basis="final"`` a row a reviewer decided counts with its final answer/score instead (a final "N/A"
+  makes it not applicable); totals are final either way and ``agreement`` always compares AI with final answers.
 * a "reviewed" criterion row has ``review_state`` in {confirmed, changed}.
+* ``bands``: latest totals by the UI legend «Норма ≥ 85 · Внимание 60–85 · Критично < 60» (thresholds shared with
+  GET /api/overview ``quality``).
+* ``per_evaluation``: mean cost and latency of one full evaluation over every completed evaluation in scope except
+  partial re-evaluations (``mode="partial"`` judges only the changed criteria, so it would understate the price).
 """
 from __future__ import annotations
 
@@ -24,8 +30,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..models import ChecklistVersion, Conversation, Criterion, Evaluation, EvaluationCriterion
+from ..scoring.engine import answer_points
 
 BUCKETS: tuple[str, ...] = ("0-59", "60-69", "70-79", "80-89", "90-100")
+BASES: tuple[str, ...] = ("ai", "final")  # which answers the criteria panels count (GET /api/analytics/summary?basis=)
+BASIS_MESSAGE = "basis: ai (ответы модели) или final (с решениями проверяющих)."
+NA = "N/A"
 DEFAULT_FIRST_RESPONSE_THRESHOLD = 180.0
 UNKNOWN_OPERATOR = "—"
 ALL = "ALL"
@@ -67,6 +77,19 @@ def _category(answer: Any) -> str | None:
         return repr(float(text))
     except ValueError:
         return text
+
+
+def _row_values(r: EvaluationCriterion, basis: str, definition: Criterion | None = None) -> tuple[bool, Any, float | None]:
+    """(applicable, answer, points) of one criterion row: the judge's values, or with basis "final" the reviewer's where a
+    decision exists (a confirm keeps the AI answer; a final "N/A" makes the row not applicable)."""
+    if basis == "final" and r.final_answer is not None:
+        if isinstance(r.final_answer, str) and r.final_answer.strip().upper() == NA:
+            return False, None, None
+        points = r.final_score
+        if points is None and definition is not None:  # a carried decision without stored points: price it like the engine
+            points = answer_points(definition.options or [], r.final_answer)
+        return True, r.final_answer, points
+    return bool(r.applicable), r.answer, r.score
 
 
 def _bucket(score: float) -> str:
@@ -167,11 +190,14 @@ def first_response_threshold(db: Session, checklist_version_id: int | None) -> f
 
 
 def summary(db: Session, checklist_version_id: int | None = None, *, language: str | None = None, channel: str | None = None,
-            dataset_id: int | None = None, operator: str | None = None) -> dict[str, Any]:
+            dataset_id: int | None = None, operator: str | None = None, basis: str = "ai") -> dict[str, Any]:
     """Dashboard summary; field names follow docs/API.md. Optional scope (language, channel, dataset, operator) as in
-    GET /api/overview (ANL-01): every block covers only the conversations in scope."""
-    from .overview import scope_conversation_ids
+    GET /api/overview (ANL-01): every block covers only the conversations in scope. ``basis`` ("ai" | "final") picks the
+    criterion answers of the heatmap and the N/A rates (see the module docstring); ValueError for anything else."""
+    from .overview import GOOD_TOTAL, LOW_TOTAL, scope_conversation_ids
 
+    if basis not in BASES:
+        raise ValueError(BASIS_MESSAGE)
     scope_ids = scope_conversation_ids(db, language=language, channel=channel, dataset_id=dataset_id, operator=operator)
     all_completed = completed_evaluations(db, checklist_version_id)
     if scope_ids is not None:
@@ -189,6 +215,11 @@ def summary(db: Session, checklist_version_id: int | None = None, *, language: s
     distribution_counts = {b: 0 for b in BUCKETS}
     for t in totals:
         distribution_counts[_bucket(t)] += 1
+    bands = {
+        "critical": sum(1 for t in totals if t < LOW_TOTAL),
+        "attention": sum(1 for t in totals if LOW_TOTAL <= t < GOOD_TOTAL),
+        "norm": sum(1 for t in totals if t >= GOOD_TOTAL),
+    }
 
     def _group(key: str) -> list[dict[str, Any]]:
         groups: dict[str, list[float | None]] = defaultdict(list)
@@ -228,19 +259,20 @@ def summary(db: Session, checklist_version_id: int | None = None, *, language: s
         language = (conv.language if conv is not None else None) or "—"
         channel = (conv.channel if conv is not None else None) or "—"
         for r in rows_by_eval.get(ev.id, []):
+            applicable, answer, points = _row_values(r, basis, defs.get(r.criterion_id))
             counts = na_counts[r.code]
             counts[1] += 1
-            if not r.applicable:
+            if not applicable:
                 counts[0] += 1
             else:
                 value: float | None
                 if code_type.get(r.code, "binary") == "scale":
-                    if r.score is not None and r.max_points and r.max_points > 0:
-                        value = max(0.0, min(1.0, float(r.score) / float(r.max_points)))
+                    if points is not None and r.max_points and r.max_points > 0:
+                        value = max(0.0, min(1.0, float(points) / float(r.max_points)))
                     else:
                         value = None
                 else:
-                    value = 1.0 if _is_yes(r.answer) else 0.0 if r.answer is not None else None
+                    value = 1.0 if _is_yes(answer) else 0.0 if answer is not None else None
                 if value is not None:
                     for key in ((r.code, ALL, ALL), (r.code, language, ALL), (r.code, language, channel)):
                         cell_values[key].append(value)
@@ -328,6 +360,14 @@ def summary(db: Session, checklist_version_id: int | None = None, *, language: s
         for (provider, model), b in sorted(per_provider.items(), key=lambda kv: (kv[0][0], kv[0][1] or ""))
     ]
 
+    # --- one full evaluation (cost tile «≈ $X за оценку · среднее по N оценкам») -----------------
+    full = [ev for ev in all_completed if ev.mode != "partial"]
+    per_evaluation = {
+        "n": len(full),
+        "mean_cost_usd": _round(statistics.fmean(float(ev.cost_usd or 0.0) for ev in full), 4) if full else None,
+        "mean_latency_ms": _round(statistics.fmean(float(ev.latency_ms or 0) for ev in full), 0) if full else None,
+    }
+
     # --- first response ---------------------------------------------------------------------
     threshold = first_response_threshold(db, checklist_version_id)
     frs = [
@@ -344,10 +384,12 @@ def summary(db: Session, checklist_version_id: int | None = None, *, language: s
 
     return {
         "checklist_version_id": checklist_version_id,
+        "basis": basis,
         "count": len(latest),
         "mean_total": _mean(totals),
         "median_total": _round(statistics.median(totals)) if totals else None,
         "distribution": [{"bucket": b, "n": distribution_counts[b]} for b in BUCKETS],
+        "bands": bands,
         "by_language": _group("language"),
         "by_channel": _group("channel"),
         "criteria_heatmap": heatmap,
@@ -357,6 +399,7 @@ def summary(db: Session, checklist_version_id: int | None = None, *, language: s
         "critical_count": sum(1 for ev in latest if ev.critical_error),
         "agreement": agreement,
         "providers": providers,
+        "per_evaluation": per_evaluation,
         "first_response": first_response,
     }
 

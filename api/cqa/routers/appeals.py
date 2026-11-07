@@ -8,10 +8,10 @@ from sqlalchemy import case, select
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
-from ..models import Appeal, EvaluationCriterion
+from ..models import Appeal, Conversation, EvaluationCriterion, Turn
 from ..review import service as review
 from ..security.roles import DEFAULT_ROLE, actor_display, current_actor, same_person
-from ..serializers import appeal_dict, claims_out, evaluation_dict, max_turn_index, votes_out
+from ..serializers import _evidence_out, appeal_dict, claims_out, evaluation_dict, max_turn_index, votes_out
 from ..turnrefs import display_turn_refs
 
 router = APIRouter(prefix="/api/appeals", tags=["appeals"])
@@ -81,22 +81,46 @@ def _is_latest(db: Session, ev) -> bool:
     return newer is None
 
 
-def _with_context(db: Session, ap: Appeal) -> dict[str, Any]:
+def _call_offsets(db: Session, conversations: list[Conversation | None]) -> dict[str, dict[int, float | None]]:
+    """{conversation id: {turn idx: offset_seconds}} of the voice calls among ``conversations``, in one query of these
+    columns: the queue lists many appeals of a few calls, and a seek time needs no turn text."""
+    ids = sorted({c.id for c in conversations if c is not None and c.channel == "voice call"})
+    out: dict[str, dict[int, float | None]] = {cid: {} for cid in ids}
+    for i in range(0, len(ids), 500):  # SQLite caps the bound parameters of one statement
+        stmt = select(Turn.conversation_id, Turn.idx, Turn.offset_seconds).where(Turn.conversation_id.in_(ids[i:i + 500]))
+        for cid, idx, offset in db.execute(stmt):
+            out[cid][idx] = offset
+    return out
+
+
+def _with_context(db: Session, ap: Appeal, call_offsets: dict[str, dict[int, float | None]] | None = None) -> dict[str, Any]:
+    """The appeal with its criterion, evaluation and dialog. ``call_offsets`` (see _call_offsets) comes from the list, which
+    loads them once for the whole queue; a single appeal loads its own call's."""
     ec = ap.evaluation_criterion
     ev = ec.evaluation
+    conv = ev.conversation
     cdef = review.criterion_definition(db, ec)
+    # calls: evidence seeks to the current transcript's offsets, as on the card (re-derived after the evaluation, see
+    # cqa.ingest.renormalize); chats keep the stored evidence as is
+    if call_offsets is None:
+        call_offsets = _call_offsets(db, [conv])
+    offsets = call_offsets.get(conv.id) if conv is not None else None
+    is_critical = bool(cdef.is_critical) if cdef else False
     d = appeal_dict(ap)
     d.update({"conversation_id": ev.conversation_id, "evaluation_id": ev.id, "code": ec.code, "title": cdef.title if cdef else None,
               "answer_type": cdef.answer_type if cdef else None, "options": cdef.options if cdef else None, "na_allowed": cdef.na_allowed if cdef else False,
               "applicable": ec.applicable, "answer": ec.answer, "na_reason": display_turn_refs(ec.na_reason, max_turn_index(ev.conversation)), "score": ec.score, "max_points": ec.max_points,
-              "weight": ec.weight, "explanation": display_turn_refs(ec.explanation, max_turn_index(ev.conversation)), "evidence": ec.evidence or [], "total_score": ev.total_score,
+              "weight": ec.weight, "explanation": display_turn_refs(ec.explanation, max_turn_index(ev.conversation)), "evidence": _evidence_out(ec.evidence, offsets), "total_score": ev.total_score,
               "final_total_score": ev.final_total_score, "review_state": ec.review_state, "final_answer": ec.final_answer,
               "language": ev.conversation.language, "channel": ev.conversation.channel, "operator_name": ev.conversation.operator_name,
               "na_allowed_for_channel": review.na_allowed_on_channel(cdef, ev.conversation.channel),
               "checklist_version_id": ev.checklist_version_id, "confidence": ec.confidence, "weight_applied": ec.weight_applied,
               "earned": ec.earned, "final_earned": ec.final_earned, "checked_span": ec.checked_span, "flags": ec.flags or [],
               "votes": votes_out(ec.votes, max_turn_index(ev.conversation)), "claims": claims_out(ec.claims, max_turn_index(ev.conversation)), "instruction": cdef.instruction if cdef else None,
-              "is_latest_evaluation": _is_latest(db, ev)})
+              "is_latest_evaluation": _is_latest(db, ev),
+              # gross-error criterion (the queue lists these first) and the answer that marks the violation ("yes" unless the
+              # checklist says otherwise, as in scoring); null for any other criterion
+              "is_critical": is_critical, "critical_value": str(cdef.critical_value or "yes").lower() if is_critical else None})
     return d
 
 
@@ -112,7 +136,9 @@ def list_appeals(status: str | None = None, operator: str | None = None, convers
         stmt = stmt.where(Appeal.status == status)
     if author_role:
         stmt = stmt.where(Appeal.author_role == author_role)
-    items = [_with_context(db, ap) for ap in db.execute(stmt).scalars().all()]
+    appeals = db.execute(stmt).scalars().all()
+    offsets = _call_offsets(db, [ap.evaluation_criterion.evaluation.conversation for ap in appeals])  # one query, not one per call
+    items = [_with_context(db, ap, offsets) for ap in appeals]
     if operator:
         items = [a for a in items if a.get("operator_name") == operator]
     if conversation_id:

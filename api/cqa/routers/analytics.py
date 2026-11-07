@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from ..analytics.recording import recording_gaps
-from ..analytics.service import summary
+from ..analytics.service import BASES, BASIS_MESSAGE, summary
 from ..db import get_db
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -20,9 +20,13 @@ def get_summary(
     channel: str | None = Query(default=None, description="agent chat | voice call"),
     dataset_id: int | None = Query(default=None, description="Only dialogs of this imported set"),
     operator: str | None = Query(default=None, description="Only this operator's dialogs"),
+    basis: str = Query(default="ai", description="Answers of the heatmap and N/A rates: ai = the judge's (default); final = reviewer decisions applied"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    return summary(db, checklist_version_id, language=language, channel=channel, dataset_id=dataset_id, operator=operator)
+    if basis not in BASES:
+        raise HTTPException(422, detail={"code": "validation_error", "message": BASIS_MESSAGE,
+                                         "errors": [{"field": "basis", "message": BASIS_MESSAGE}]})
+    return summary(db, checklist_version_id, language=language, channel=channel, dataset_id=dataset_id, operator=operator, basis=basis)
 
 
 @router.get("/recording-gaps")

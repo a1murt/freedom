@@ -262,3 +262,54 @@ What is left needs these small web changes:
 | `web/src/features/conversations/UploadDialog.tsx:34` | on 409 `conversation_exists`, offer «Сохранить как копию» (`on_conflict: "rename"`, shows `suggested_id`) or «Заменить» (`"replace"`) | paste and upload never overwrite a different transcript silently any more |
 | `web/src/features/checklists/ChecklistEditorPage.tsx:118` | disable «Пересобрать спецификацию» on versions that have evaluations, or confirm and send `?force=true` | 409 `version_in_use` protects the organizer v1, which results.json is pinned to |
 | `web/src/mock/fixtures/conversation_details.json` | replace the real call transcript with a synthetic one | the repository is public; the call recordings and transcripts are real (PII is masked, but names spelled out by ASR remain) |
+
+## 7. New API fields for the redesign (2026-11-08 night, build after 876c1de)
+
+An audit of the work packages in `docs/BUILD_BACKLOG.md` against the API found gaps, and they are now closed. **Everything is additive:** no field was renamed, removed or retyped, so the current web app keeps working. Timestamps now carry an explicit `+00:00`; it is the same instant, and `fmtDate` already handles the offset.
+
+**Card: `GET /api/conversations/{id}/evaluation`, `GET /api/evaluations/{id}`, and the `evaluation` returned by a decision.** Each `criteria[]` row adds:
+- `section`: the section code, for grouping rows with subtotals.
+- `is_critical` and `critical_value`: the C8 row and the gross strip, with no hard-coded C8.
+- `na_allowed` and `na_allowed_for_channel`: offer N/A in the appeal dialog only when the second is true. C1 on calls gives `false`.
+- `answer_option` and `final_option`:
+  - the AI and final answers, typed like `options[].value` («Да» → `"yes"`, `"15"` → `15`);
+  - `"N/A"` for a non-applicable row;
+  - use these to look up anchors and to disable the current option. `answer` and `final_answer` are unchanged.
+- `final_breakdown` {`applicable`, `weight_applied`, `earned`}:
+  - present on every row as soon as any row has a decision, `null` otherwise;
+  - drives the «После решения» column: the rows add up to `final_total_score` even when a decision toggles N/A.
+
+The evaluation also gets an `attention` block: `low_confidence`, `split_votes`, `failed`, `contradicted_claims`, `needs_review`.
+
+**Card states: `GET /api/conversations/{id}`.**
+- `evaluation_in_progress` {`evaluation_id`, `job_id`, `status`, `started_at`} or `null`.
+- Show «Оценивается…» instead of treating the 404 from `…/evaluation` as "not evaluated".
+
+**Gross violations: `GET /api/violations`.**
+- `counts_all` and `total_all`: chip numbers before the type filter. `counts` and `total` keep their filtered meaning.
+- `evaluated`: «проверено N».
+- `checklist_versions` [{`id`, `version_no`}] and `generated_at`: «по данным на HH:MM».
+- New query param `conversation_id`: the card's gross strip, one call with the type and quote.
+
+**Appeal objects (list, item, create, withdraw, decision).**
+- `is_critical` and `critical_value`: queue order, gross-error appeals first.
+- `evidence[].offset_seconds` for calls: mini-player seek.
+
+**Analytics: `GET /api/analytics/summary`.**
+- `bands` {`critical` < 60, `attention` 60–85, `norm` ≥ 85}: the distribution legend.
+- `per_evaluation` {`n`, `mean_cost_usd`, `mean_latency_ms`}: one full evaluation, partial runs excluded. This is the «≈ $0,22 за оценку · ≈ 15 с» figure for the landing and the «Модель и стоимость» block.
+- Query param `basis=final|ai` (default `ai`), echoed as `basis`: the heatmap and N/A rates with reviewer decisions applied.
+
+**Overview: `GET /api/overview`.** `cost.per_evaluation_usd` (the same figure as above) and `cost.evaluations_completed`.
+
+**Export dialog: `GET /api/export/results/validate`.**
+- `schema_version` and `team_name`.
+- `issues` [{`conversation_id` | null, `severity`, `message`}]: errors and warnings with links to the dialogs.
+
+**Checklist versions** (every version JSON, and `versions[]` in the checklist list):
+- `version_id` (= `id`).
+- `evaluations`: the count of completed evaluations. Open v1, and any version that has evaluations, read-only.
+
+**Downloads:** CSV and PDF responses expose `Content-Disposition`, so a fetch-based download gets the file name.
+
+**Ops: `GET /api/system/health`.** `guards` {`daily_budget_usd`, `max_dialogs_per_run`, `max_concurrent_jobs`}. Readiness's `baseline_snapshot` check now reports `baseline_age_minutes`.

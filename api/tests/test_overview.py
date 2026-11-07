@@ -450,7 +450,9 @@ def _assert_empty_panels(ov: dict) -> None:
     assert len(ov["trend"]) == 30 and all(t == {"date": t["date"], "evaluated": 0, "mean_total": None, "critical": 0} for t in ov["trend"])
     assert ov["period"]["evaluated"] == 0 and ov["period"]["mean_total"] is None
     assert ov["cost"] == {"total_usd": 0.0, "per_dialog_usd": None, "evaluations": 0, "tokens_in": 0, "tokens_out": 0, "cache_read_tokens": 0,
-                          "period_usd": 0.0, "by_model": []}
+                          "period_usd": 0.0, "by_model": [],
+                          # round 5 (additive): the price of one full evaluation, none completed yet
+                          "per_evaluation_usd": None, "evaluations_completed": 0}
     assert ov["operators"]["at_risk"] == [] and ov["operators"]["evaluated"] == 0
     assert all(a["n_reviewed"] == 0 and a["agreement_rate"] is None and a["kappa"] is None for a in ov["agreement"])
     for c in ov["criteria"]:
@@ -704,7 +706,7 @@ def test_http_existing_insights_endpoints_unchanged(client, ids):
                           "open_appeals", "last_evaluated_at"}
     assert alina["conversations"] == 2 and alina["open_appeals"] == 1
     v = client.get("/api/violations", params={"checklist_version_id": ids["v1"]})
-    assert v.status_code == 200 and v.json()["total"] == 1 and set(v.json()) == {"total", "counts", "types", "items"}
+    assert v.status_code == 200 and v.json()["total"] == 1 and set(v.json()) >= {"total", "counts", "types", "items"}  # additive fields since 2026-11-08 (counts_all, total_all, evaluated, generated_at, checklist_versions)
 
 
 def test_http_openapi_lists_new_routes(client):
