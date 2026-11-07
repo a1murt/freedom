@@ -326,6 +326,9 @@ def system_health(db: Session = Depends(get_db)):
     return {"ok": db_info["ok"], "version": VERSION, "uptime_s": uptime_s(), "started_at": STARTED_AT.isoformat(),
             "db": db_info, "providers": providers, "jobs": job_counts, "disk_free_bytes": disk_free, "budget": budget,
             "snapshots": _snapshots_summary(),
+            # the run guards in force (go/no-go: budget and limits on before the jury; HOSTING.md «Before and after each deploy»)
+            "guards": {"daily_budget_usd": settings.daily_budget_usd, "max_dialogs_per_run": settings.max_dialogs_per_run,
+                       "max_concurrent_jobs": settings.max_concurrent_jobs},
             "warnings": _health_warnings(db_info, providers, job_counts, disk_free, budget)}
 
 

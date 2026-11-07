@@ -159,10 +159,21 @@ def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, 
     except Exception:  # snapshots unsupported (Postgres) or the folder is missing
         snaps = []
     names = [s.get("name") for s in snaps]
+    # the go/no-go list wants a baseline younger than ~2 h before the jury: show its age (refresh: overwrite + force)
+    base = next((s for s in snaps if s.get("name") == "baseline"), None)
+    age_min = None
+    if base and base.get("created_at"):
+        try:
+            made = datetime.fromisoformat(str(base["created_at"]))
+            made = made if made.tzinfo else made.replace(tzinfo=UTC)
+            age_min = int((datetime.now(UTC) - made).total_seconds() // 60)
+        except ValueError:
+            age_min = None
+    age_txt = f" (снят {age_min // 60} ч {age_min % 60} мин назад)" if age_min is not None else ""
     checks.append(_check("baseline_snapshot", "baseline" in names, "recommended",
-                         "Снимок «baseline» есть: после работы жюри базу можно вернуть." if "baseline" in names
+                         f"Снимок «baseline» есть{age_txt}: после работы жюри базу можно вернуть." if "baseline" in names
                          else "Нет снимка «baseline»: создайте его перед работой жюри (POST /api/admin/snapshots {\"name\": \"baseline\"}).",
-                         snapshots=len(snaps)))
+                         snapshots=len(snaps), baseline_created_at=base.get("created_at") if base else None, baseline_age_minutes=age_min))
 
     corporate = not cfg.get("mascot_enabled") and str(cfg.get("default_theme") or "light") == "light"
     checks.append(_check("corporate_style", corporate, "recommended",

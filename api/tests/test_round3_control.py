@@ -82,3 +82,4 @@ def test_only_incomplete_evaluates_just_the_unfinished_dialogs(cr, monkeypatch):
     assert calls == [["c2", "c4"]]
     calls.clear()
     assert cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "anthropic", only_incomplete=True) == [] and calls == []
+

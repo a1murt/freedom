@@ -743,6 +743,8 @@ def test_system_health_shape(client, db):
     assert body["jobs"] == {"running": 0, "queued": 0, "interrupted": 1, "live_workers": 0}
     assert isinstance(body["disk_free_bytes"], int) and body["disk_free_bytes"] > 0
     assert body["budget"]["spent_24h"] == 0.1 and body["budget"]["limit"] == 75.0
+    assert body["guards"] == {"daily_budget_usd": settings.daily_budget_usd, "max_dialogs_per_run": settings.max_dialogs_per_run,
+                              "max_concurrent_jobs": settings.max_concurrent_jobs}
     assert isinstance(body["warnings"], list)
 
 
