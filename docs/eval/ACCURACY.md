@@ -108,3 +108,9 @@ The rest fall into three patterns. Each fix was measured in the lab on all 60 ch
 - 3 cells moved the other way. p1-en-008 C4 and p1-kz-015 C4 sit at the 15/20 and 5/10 borders, and their new rationales do not use the new rule. p1-ru-018 C6 sits at the 0/4 border (the ML arbiter itself moved it from 4 to 0).
 
 **Variance.** Two single-Opus runs with the same specs differ on about 2 of 60 C4 or C6 cells. That variance is the reason the control run uses the ensemble.
+
+**Totals.** The MAE of the final score against the gold totals was computed with the export's own scoring (`recompute_final_score`):
+- panel gold: 3,20 → **2,89** (exact totals 40 → 43 of 60);
+- ML gold: 3,19 → **2,87** (43 → 45).
+
+**Final configuration, rehearsed** (ensemble, 10 DEV chats, 04:33): 98,8% panel / 95,0% ML gold, against 97,5% / 93,8% for hosted single Opus on the same chats.
