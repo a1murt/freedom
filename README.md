@@ -20,6 +20,22 @@ Then press **Import** on the Conversations screen with group id `DEV` (or the co
 
 Without Docker: `cd api && uv sync && uv run uvicorn cqa.main:app --reload` (API on 8000) and `cd web && pnpm install && pnpm dev` (UI on 5173).
 
+## Results files (organizer JSON 1.0)
+
+- `results/dev/results.json` covers the 65 DEV dialogs; `results/prod/results.json` covers the 10 control chats and is written by the control run.
+- Build or validate any time:
+  ```bash
+  cd api && .venv/bin/python -m cqa.export.results_json --api https://api-production-58ab4.up.railway.app --group DEV --out ../results/dev/results.json --expect 65
+  ```
+  ```bash
+  cd api && .venv/bin/python -m cqa.export.results_json --validate ../results/prod/results.json --expect 10
+  ```
+- Control hour, one command (import, evaluate, retry, export, validate, commit, push):
+  ```bash
+  api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>
+  ```
+- API: `GET /api/export/results.json?group_id=DEV` returns the same file; `GET /api/export/results/validate?group_id=...&expect=10` returns the validation report.
+
 ## What it does
 
 - **Import** by organizer `group_id`, JSON upload, or pasted transcript. Bot and system turns are kept as context; the operator segment, duplicates, recording pauses and terminal events are detected automatically.

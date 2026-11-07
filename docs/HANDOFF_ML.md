@@ -66,3 +66,30 @@ Changing `judge_specs_v1.json` does not reach an existing database by itself. Af
 - Commit to a branch named `ml/<topic>` and open a PR; the team lead merges.
 - Never commit `.env` or anything under `api/data/`.
 - Every evaluation costs about $0.20 per dialog on Opus. A full DEV run is about $14; the gold set run is about $5.
+
+## Organizer answers that change your work (2026-11-07 17:30)
+
+Full text and our decisions: [ORGANIZER_UPDATES.md](ORGANIZER_UPDATES.md). The ones that matter for accuracy:
+
+- **Ground truth is compared per criterion** (each Да/Нет/N/A or scale step), not by the total. Optimise the harness metrics per criterion.
+- **The control set is 10 chats only.** Calls do not count for the control score.
+- **C1 on calls:** if the greeting is not in the recording, the organizers say N/A. The voice-call override must allow N/A for C1 in that case.
+- **C7, farewell without summary or offer of help** ("Пожалуйста. Хорошего вечера!" after a solved question): the organizers answered "N/a". This reads either as "N/A" or as "no answer". The current spec scores it Да. Decide with your gold set, and keep it consistent across all dialogs.
+- **C2, all details given up front:** our discretion. The current spec says N/A.
+- **C3/C8, account data disclosed before identification:** no answer. The current spec says C3 Нет and C8 Да, because the checklist lists disclosure of confidential information as a gross error.
+- **C4:** the company has a knowledge base. The system should flag answers that went off-script as an indicator; it must never invent facts.
+- **Rounding:** half up to two decimals is confirmed.
+- **Their stance:** closeness and adequacy over exact matches; handle N/A, gross errors, incomplete data and disputed statements sensibly; no made-up facts.
+
+## Results submission (built, ready)
+
+- `results/dev/results.json` is generated from the hosted DEV run and validates: 65 of 65 records, 8 gross-error flags. After you improve the judge, re-run DEV on the hosted API and regenerate it:
+  ```bash
+  cd api && .venv/bin/python -m cqa.export.results_json --api https://api-production-58ab4.up.railway.app --group DEV --out ../results/dev/results.json --expect 65
+  ```
+- **Control hour:** one command imports the control group, evaluates, retries failures, exports, validates, commits and pushes `results/prod/results.json`:
+  ```bash
+  api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble
+  ```
+  Rehearse it beforehand with `--rehearse` (10 DEV chats, no git, about $2–4).
+- Tell the team lead which provider and prompt version win on your validation split before H+22, so the control run uses them.

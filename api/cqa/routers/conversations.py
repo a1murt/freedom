@@ -30,6 +30,19 @@ class PasteBody(BaseModel):
     audio_url: str | None = None
 
 
+@router.get("/datasets")
+def list_datasets(db: Session = Depends(get_db)):
+    """Imported datasets (one row per import) with how many conversations currently belong to each."""
+    from sqlalchemy import func
+
+    from ..models import Dataset
+
+    counts = dict(db.execute(select(Conversation.dataset_id, func.count(Conversation.id)).group_by(Conversation.dataset_id)).all())
+    rows = db.execute(select(Dataset).order_by(Dataset.id)).scalars().all()
+    return [{"id": d.id, "group_id": d.group_id, "source": d.source, "imported_at": d.imported_at.isoformat() if d.imported_at else None,
+             "record_count": d.record_count, "conversations": counts.get(d.id, 0)} for d in rows]
+
+
 @router.post("/datasets/import")
 def import_dataset(body: ImportBody, db: Session = Depends(get_db)):
     try:
