@@ -95,7 +95,7 @@ The rest fall into three patterns. Each fix was measured in the lab on all 60 ch
 
 | Criterion | Fix | ML gold (lab) | Panel gold (lab) | Fixed / broken |
 |---|---|---|---|---|
-| C3 | A guess or general rule without opening the account is not disclosure → N/A | 58 → 59 | 58 → 59 | 1 / 0 |
+| C3 | A guess without opening the account, on a request that can be closed without it, is not disclosure → N/A. Narrowed in `e0e741c` after the second opinion; no change on DEV | 58 → 59 | 58 → 59 | 1 / 0 |
 | C4 | A reference-fact caveat the request did not need is not a missed detail; a step needed for the client's goal still is | 54 → 56 | 49 → 51 | 2 / 0 |
 | C6 | The improper offer itself (card transfer, paid advice, personal number) is C8 and does not lower C6 when it is clear | 50 → 53 | 54 → 56 | 2 / 0 |
 

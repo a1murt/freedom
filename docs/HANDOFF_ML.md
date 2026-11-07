@@ -150,7 +150,7 @@ Each change was measured in the lab on all 60 DEV chats against both gold sets b
 
 | Criterion | Rule added | Your gold | Panel gold | Fixed / broken (cells both golds agree on) |
 |---|---|---|---|---|
-| C3 | A guess or a general rule without opening the account («биржа отменяет такие приказы») is not disclosure: N/A | 58 → 59 | 58 → 59 | 1 / 0 (p1-ru-018) |
+| C3 | When the request can be closed without the account (where to look, general reasons), a guess made without opening it («биржа отменяет такие приказы») is not disclosure: N/A. Anything only the account can tell is still disclosure. Narrowed at 04:55 (`e0e741c`) after ChatGPT Pro called the first wording too broad; no change on DEV | 58 → 59 | 58 → 59 | 1 / 0 (p1-ru-018) |
 | C4 | A reference-fact caveat the request did not need (a rule for «отдельные» bonds before the bond is known) is not a missed detail; a step the client needs for the goal (a transfer between accounts first) still is 15 | 54 → 56 | 49 → 51 | 2 / 0 (p1-kz-012, p1-kz-013) |
 | C6 | The improper offer itself (money to a personal card, paid advice, a personal number) is C8 and does not lower C6 when it is clear; «Скиньте» is no longer listed as a wording glitch | 50 → 53 | 54 → 56 | 2 / 0 (p1-en-013, p1-ru-022) |
 

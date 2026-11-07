@@ -44,7 +44,7 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
 
 **6. Round 7 (04:00–04:35): three narrow accuracy fixes and a review of the merged ML code.**
 - **Spec fixes (`ce25bbe`).** The fixes target only cells where both gold sets agree and the judge did not:
-  - C3: a guess without opening the account is not disclosure;
+  - C3: on a request that can be closed without the account, a guess is not disclosure (narrowed after ChatGPT Pro's second opinion, `e0e741c`);
   - C4: a caveat the request did not need is not a missed detail;
   - C6: an improper offer is C8, not a dialog-management glitch.
   - In the lab each fix was +1 or +2 cells with 0 broken. On hosted, after re-judging 56 chats: **95,0%** panel gold and **95,2%** ML gold, up from 94,6% and 94,8%. Details: `docs/eval/ACCURACY.md` «Round 7».
