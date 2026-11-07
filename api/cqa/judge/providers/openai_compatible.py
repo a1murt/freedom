@@ -78,6 +78,8 @@ class OpenAICompatibleProvider:
         }
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         timeout = float(getattr(settings, "local_timeout_s", 900) or 900)  # an 8B model on a laptop needs 1-3 minutes per criterion
+        if timeout <= 0:  # a negative value would make every call fail at once and be retried as a connection error
+            timeout = 900.0
         try:
             async with httpx.AsyncClient(timeout=timeout) as c:
                 r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)

@@ -26,7 +26,7 @@ from .providers import ProviderError, get_provider
 from .providers.base import JudgeProvider
 from ..review.service import _settled_review_state, recompute_final
 from .reference import reference_facts_for
-from .validate import (CONTACT_OUTSIDE_RECORDING_FLAG, apply_c7_bare_farewell_policy, credit_unrecorded_opening, effective_na,
+from .validate import (CONTACT_OUTSIDE_RECORDING_FLAG, apply_c7_bare_farewell_policy, c7_row_follows_policy, credit_unrecorded_opening, effective_na,
                        is_contact_criterion, opening_outside_recording, retry_instruction, unusable_reason, validate_verdict)
 
 log = logging.getLogger("cqa.judge")
@@ -375,6 +375,7 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
                       gap.op.idx, "begins" if gap.partial else "ends", gap.start.idx)
             return outcome
     member_traces: list[list[dict[str, Any]]] = [[] for _ in members]
+    policy = rs.get("c7_bare_farewell_policy")
     try:
         results = await asyncio.gather(*[
             judge_one(p, conv, crit, explanation_language=lang, fewshots=fewshots, reference_facts=reference_facts, effort=effort,
@@ -388,6 +389,9 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
                 outcome.issues.append(f"{p.name}/{p.model}: {r}")
                 continue
             v, _traces, issues = r
+            # the C7 policy decides each member's value before the vote, so the vote, the disagreement check and the
+            # arbiter all work on policy values: one member's bare_farewell flag must not decide the dialog
+            v = apply_c7_bare_farewell_policy(v, crit, policy, conv.channel, terminal=conv.terminal_event, turns=conv.turns)
             verdicts.append((p.name, p.model, v))
             outcome.issues += [f"{p.name}: {i}" for i in issues]
         if not verdicts:
@@ -410,7 +414,7 @@ async def judge_criterion(members: list[JudgeProvider], conv: ConversationPack, 
                     merged.flags.append("arbiter_decided")
             except Exception as e:  # keep the vote
                 outcome.issues.append(f"arbiter failed: {e}")
-        merged = apply_c7_bare_farewell_policy(merged, crit, rs.get("c7_bare_farewell_policy"), conv.channel)
+        merged = apply_c7_bare_farewell_policy(merged, crit, policy, conv.channel, terminal=conv.terminal_event, turns=conv.turns)
         outcome.verdict = merged
         outcome.cost_usd = sum(t.get("cost_usd", 0.0) for t in outcome.traces)
     except Exception as e:
@@ -481,6 +485,7 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
         #   would refuse the copied null;
         # - the contact criterion of a call whose opening the recording missed, unless the row is already the rule's:
         #   an older model verdict («Нет» for a greeting nobody can hear) must not survive; the rule needs no model call
+        # - a C7 row flagged bare_farewell whose value no longer follows c7_bare_farewell_policy (switched in Settings)
         gap = opening_outside_recording(turns) if conv.channel == "voice call" else None
         for c in criteria:
             b = base_rows.get(c.code)
@@ -490,7 +495,10 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
             stale_na = not b.applicable and not effective_na(cp, conv.channel)[0]
             stale_contact = (gap is not None and is_contact_criterion(cp)
                              and CONTACT_OUTSIDE_RECORDING_FLAG not in (b.flags or []))
-            if stale_na or stale_contact:
+            # a bare-farewell C7 row decided under another c7_bare_farewell_policy (the Settings switch)
+            stale_c7 = cp.code == "C7" and not c7_row_follows_policy(b.applicable, b.answer, b.flags, rs.get("c7_bare_farewell_policy"),
+                                                                     conv.terminal_event)
+            if stale_na or stale_contact or stale_c7:
                 del base_rows[c.code]
         judged = set(codes_to_judge([c.code for c in criteria], base_rows, only_codes))
         to_judge = [c for c in criteria if c.code in judged]

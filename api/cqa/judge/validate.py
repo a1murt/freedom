@@ -1,6 +1,7 @@
 """Verdict validation against the transcript and the criterion definition (docs/ARCHITECTURE.md §6.4)."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
@@ -9,6 +10,8 @@ from ..ingest.normalize import AGENT_JOINED_RE, RECORD_START_RE, NormTurn, parse
 from ..scoring.engine import answer_points, normalize_answer
 from .contract import Evidence, Verdict
 from .packer import CriterionPack
+
+log = logging.getLogger(__name__)
 
 QUOTE_MATCH_THRESHOLD = 70
 
@@ -270,14 +273,57 @@ def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, 
 BARE_FAREWELL_FLAG = "bare_farewell"
 
 
-def apply_c7_bare_farewell_policy(v: Verdict, crit: CriterionPack, policy: str | None, channel: str | None = None) -> Verdict:
+C7_POLICIES = ("na", "yes", "no")
+TERMINAL_NA_EVENTS = ("connection_lost", "client_left")
+_WARNED_POLICIES: set[str] = set()
+
+
+def normalize_c7_policy(policy: object) -> str:
+    """"na" | "yes" | "no". Spellings such as "N/A", " n/a " or "Yes" are accepted; anything else (a typo in the
+    environment, a non-string stored value) falls back to the documented default "na" with a warning, never to "yes"."""
+    p = str(policy if policy is not None else "").strip().lower().replace("/", "").replace(" ", "")
+    if p in ("", "na"):
+        return "na"
+    if p in ("yes", "no"):
+        return p
+    key = repr(policy)
+    if key not in _WARNED_POLICIES:  # once per value, not once per member and criterion
+        _WARNED_POLICIES.add(key)
+        log.warning("unknown c7_bare_farewell_policy %r: using the default 'na'", policy)
+    return "na"
+
+
+def _add_flag(v: Verdict, flag: str) -> None:
+    if flag not in v.flags:
+        v.flags.append(flag)
+
+
+def _last_operator_turn(turns: list[NormTurn] | None) -> NormTurn | None:
+    for t in reversed(turns or []):
+        if t.speaker == "operator" and (t.text or "").strip():
+            return t
+    return None
+
+
+def apply_c7_bare_farewell_policy(v: Verdict, crit: CriterionPack, policy: str | None, channel: str | None = None, *,
+                                  terminal: str | None = None, turns: list[NormTurn] | None = None) -> Verdict:
     """Deterministic C7 answer for a polite farewell after a resolved question with no summary, no offer of further help and
     nothing left open. The judge classifies the closing and adds the flag "bare_farewell" (whatever value it chose itself); the
     team policy decides the value: "na" (default: the organizers answered "N/a" for this case), "yes" (a farewell is enough) or
-    "no" (literal reading: a summary or an offer of help is required). Switching the policy needs no prompt change or redeploy."""
+    "no" (literal reading: a summary or an offer of help is required). Switching the policy needs no prompt change or redeploy.
+
+    The checklist's hard rule wins: a chat that ended by connection loss or the client leaving stays N/A whatever the policy.
+    In an ensemble the runner applies this to every member before the vote and once more to the final verdict (idempotent)."""
     if crit.code != "C7" or BARE_FAREWELL_FLAG not in (v.flags or []):
         return v
-    p = (policy or "na").strip().lower().replace("/", "")
+    if terminal in TERMINAL_NA_EVENTS or "rule_na_terminal_event" in (v.flags or []):
+        return v
+    p = normalize_c7_policy(policy)
+    if p == "no" and not v.evidence and v.checked_span is None:
+        # a deduction needs a fragment one can check: cite the closing turn the policy judged
+        last = _last_operator_turn(turns)
+        if last is not None:
+            v.evidence.append(Evidence(turn_idx=last.idx, speaker="operator", quote=(last.text or "").strip()[:300]))
     refs = ", ".join(f"[{e.turn_idx}]" for e in v.evidence[:3]) or "последняя реплика оператора"
     if p == "na":
         if not effective_na(crit, channel)[0]:
@@ -287,20 +333,35 @@ def apply_c7_bare_farewell_policy(v: Verdict, crit: CriterionPack, policy: str |
                            "по ответу организаторов такой случай оценивается как N/A.")
             v.explanation = (f"Завершение — N/A. Оператор попрощался после решения вопроса, не подводя итог и не предлагая дальнейшую "
                              f"помощь; по ответу организаторов такой случай не оценивается. Основание — {refs}.")
-            v.flags.append("rule_c7_bare_farewell_na")
+            _add_flag(v, "rule_c7_bare_farewell_na")
         v.applicable = False
         v.answer = ""
     elif p == "no":
-        v.applicable, v.answer, v.na_reason = True, "no", ""
-        v.explanation = (f"Завершение — Нет. Оператор попрощался, но не подвёл итог и не предложил дальнейшую помощь. "
-                         f"Основание — {refs}.")
-        v.flags.append("rule_c7_bare_farewell_no")
+        if not v.applicable or str(v.answer).lower() != "no" or "rule_c7_bare_farewell_no" not in v.flags:
+            v.applicable, v.answer, v.na_reason = True, "no", ""
+            v.explanation = (f"Завершение — Нет. Оператор попрощался, но не подвёл итог и не предложил дальнейшую помощь. "
+                             f"Основание — {refs}.")
+            _add_flag(v, "rule_c7_bare_farewell_no")
     elif not v.applicable or str(v.answer).lower() != "yes":
         v.applicable, v.answer, v.na_reason = True, "yes", ""
         v.explanation = (f"Завершение — Да. Оператор попрощался после решения вопроса; открытых вопросов не осталось. "
                          f"Основание — {refs}.")
-        v.flags.append("rule_c7_bare_farewell_yes")
+        _add_flag(v, "rule_c7_bare_farewell_yes")
     return v
+
+
+def c7_row_follows_policy(applicable: bool, answer: object, flags: list[str] | None, policy: object,
+                          terminal: str | None = None) -> bool:
+    """Whether a stored C7 row agrees with the current bare-farewell policy. A partial re-run copies rows of criteria it does
+    not judge; a bare-farewell row decided under another policy must be decided again instead (no model call is needed for
+    the value, but the runner simply re-judges the criterion, which also refreshes the explanation)."""
+    flags = flags or []
+    if BARE_FAREWELL_FLAG not in flags or terminal in TERMINAL_NA_EVENTS or "rule_na_terminal_event" in flags:
+        return True
+    p = normalize_c7_policy(policy)
+    if p == "na":
+        return not applicable
+    return bool(applicable) and str(answer).strip().lower() == p
 
 
 def retry_instruction(issues: list[str]) -> str:
