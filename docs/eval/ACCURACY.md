@@ -23,12 +23,12 @@ The final gold set: 9 of 9 labeler batches, 423 of 480 cells unanimous across th
 | C1 Установление контакта | 100% | 100% | |
 | C2 Выявление потребности | 83% | **98%** | p1-ru-029 (demo, old spec) |
 | C3 Идентификация | 97% | 97% | 2 |
-| C4 Консультация | 78% | 78% | **unchanged on purpose**, see below |
-| C5 Эмпатия | 93% | 93% | 4 |
+| C4 Консультация | 78% | **82%** | our own "name the deadline" requirement removed (876c1de); the knowledge-base 15/20 calls stay |
+| C5 Эмпатия | 93% | 95% | tone and stated complaints only (876c1de); within run-to-run noise |
 | C6 Ведение диалога | 85% | **90%** | 6 |
 | C7 Завершение | **40%** | **95%** | 3, one of them the demo dialog p1-ru-029 |
 | C8 Грубые ошибки | 100% | 100% | |
-| **All 480 cells** | **84,6%** | **94,0%** | **+9,4 points** |
+| **All 480 cells** | **84,6%** | **94,6%** | **+10,0 points** (specs 146d9c6 + 876c1de) |
 
 The lab runs on a scratch copy, measured against the provisional gold, showed the same picture: C7 53% → 98% and C2 83% → 95% over two runs.
 
@@ -44,7 +44,7 @@ The lab runs on a scratch copy, measured against the provisional gold, showed th
 
 **C2:** two runs of the new spec gave 95% both times. The remaining 2–3 misses move between chats from run to run, which is normal judge variance.
 
-**C4 was not touched.**
+**C4: only our own extra rule was removed.**
 - The judge gives 15 where the panel gives 20 in 9 chats. It cites concrete misses: no deadline for an escalated question, a bond name asked for but not obtained, an implicit answer to a yes/no question.
 - The synthetic DEV set may well contain deliberate "minor missed detail" cases.
 - Without the organizers' labels, moving to the more lenient reading is a coin flip, so the judge stays as it is.
