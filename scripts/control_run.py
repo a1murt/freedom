@@ -115,7 +115,7 @@ def main() -> int:
 
     import os
 
-    team = args.team or os.environ.get("TEAM_NAME") or "k4ssymzhomart/freedom"
+    team = args.team or os.environ.get("TEAM_NAME") or "Я Тебя Могну"
     base = args.api.rstrip("/")
     t_start = time.time()
     with httpx.Client(timeout=120, follow_redirects=True) as http:

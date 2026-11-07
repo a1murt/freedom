@@ -16,7 +16,7 @@ Format "JSON 1.0" (field names, criterion codes and value types must not change)
 ```json
 {
   "schema_version": "1.0",
-  "team_name": "<team name>",
+  "team_name": "Я Тебя Могну",
   "model": {"mode": "external_api", "name": "claude-opus-5-5"},
   "results": [
     {

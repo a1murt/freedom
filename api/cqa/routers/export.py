@@ -59,7 +59,7 @@ def export_results_json(
     from ..export.results_json import ExportError, from_db, validate_document
 
     ids = [x.strip() for x in conversation_ids.split(",") if x.strip()] if conversation_ids else None
-    team = team_name or os.environ.get("TEAM_NAME") or "k4ssymzhomart/freedom"
+    team = team_name or os.environ.get("TEAM_NAME") or "Я Тебя Могну"
     try:
         doc, turn_counts, channels = from_db(db, group_id=group_id, conversation_ids=ids, checklist_version_id=checklist_version_id, team_name=team)
     except ExportError as e:

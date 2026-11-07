@@ -443,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--group", help="dataset group_id (DEV or the control group id)")
     ap.add_argument("--ids", help="comma-separated conversation ids (overrides --group)")
     ap.add_argument("--version-id", type=int, help="checklist version id (default: the organizer checklist, version 1)")
-    ap.add_argument("--team", default=os.environ.get("TEAM_NAME", "k4ssymzhomart/freedom"), help="team_name (env TEAM_NAME)")
+    ap.add_argument("--team", default=os.environ.get("TEAM_NAME", "Я Тебя Могну"), help="team_name (env TEAM_NAME)")
     ap.add_argument("--out", help="output path, e.g. ../results/dev/results.json")
     ap.add_argument("--expect", type=int, help="expected number of records (prod: 10)")
     args = ap.parse_args(argv)

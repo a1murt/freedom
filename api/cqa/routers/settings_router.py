@@ -24,7 +24,7 @@ def current(db: Session) -> dict[str, Any]:
         "ensemble_members": [{"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.default_model}, {"provider": "anthropic", "model": settings.secondary_model}],
         "local_endpoint": settings.local_endpoint, "local_model": settings.local_model, "judge_effort": settings.judge_effort,
         "max_parallel_criteria": settings.max_parallel_criteria, "cost_rates": settings.cost_rates,
-        "mascot_enabled": False, "default_theme": "light", "team_name": __import__("os").environ.get("TEAM_NAME", "k4ssymzhomart/freedom"),
+        "mascot_enabled": False, "default_theme": "light", "team_name": __import__("os").environ.get("TEAM_NAME", "Я Тебя Могну"),
     }
     for row in db.execute(select(Setting)).scalars():
         base[row.key] = row.value
