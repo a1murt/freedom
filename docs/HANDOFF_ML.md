@@ -128,3 +128,14 @@ None of these change the judge prompts or `api/seeds/judge_specs_v1.json`; they 
   - C1 on calls has no N/A any more (organizer answer 2026-11-08: JSON 1.0 contact is true/false only; the control set has no calls). An operator opening said before the recording started is credited by a code rule (`cqa/judge/validate.py` `opening_outside_recording`), whatever the model answers. In DEV only p4-ru-002 is affected; its total becomes 90,50. Do not label C1 as N/A in the gold set: calibration now refuses it.
   - `results/dev/results.json` was regenerated from that state.
 - **Changing the judge for the control run.** Edit `api/seeds/judge_specs_v1.json` or the prompts, run the harness locally, and write the winner into `api/judge_config_control.md`. Version 1 re-syncs from the repo on start-up (`SEED_SYNC`), so a merged spec change reaches the hosted instance with the next deploy. Ask the architecture side to deploy before 12:00.
+
+## Judge spec changes made at night (2026-11-08, about 02:20 +05)
+
+No gold set had reached `main`, so the architecture side measured the judge against an independent AI-panel gold set. It covers the 60 DEV chats with three lenses and a majority vote. Full write-up: `docs/eval/ACCURACY.md`. Three spec changes landed in `api/seeds/judge_specs_v1.json`, in one commit you can revert:
+
+- **C7.** «Пожалуйста. Хорошего вечера!» with no summary and no offer of help is now **N/A**, following the organizers' explicit answer; it used to be «Да». This is 42 of 60 DEV chats. Agreement went from 53% to 98%.
+- **C2.** An answer that merely uses details the client already gave is **N/A**, not «Да». «Да» needs missing data that the operator clarified. Agreement went from 83% to 95%.
+- **C6.** The organizers' memo rule: an unanswered question belongs to C4; C6 = 4 only when the client re-asks because of wording or order. Neutral on DEV.
+- **C4 is untouched.** The judge is stricter (15 vs 20) in 9 chats, and that is a judgment call for you.
+
+The panel's labels are in `api/eval/gold_ai_panel.json`. Use them as a second opinion next to your own gold set, not as truth.
