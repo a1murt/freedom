@@ -118,5 +118,9 @@ Costs: 10 control chats ≈ $1,80 with Opus; a partial re-judge of one criterion
 - 10 DEV chats evaluated on all 8 criteria, exported and validated **in 48 s for $2,23**, with no failures;
 - the verdicts agree with the AI-panel gold on 95,0% of cells (76 of 80).
 - the same with `--provider ensemble` at 02:50: 10 chats in **53 s for $5,77**, valid, 95,0%, and `model.name` lists both models as the format requires.
+- **final configuration (main 0801b0b, the code of hosted 1141be2), `--provider ensemble` at 04:33:**
+  - 10 chats in **53 s for $6,28**, valid, no failures;
+  - agreement **98,8%** with the panel gold and **95,0%** with the ML gold, against 97,5% and 93,8% for hosted single Opus on the same chats;
+  - the only miss on a cell where both gold sets agree is p1-ru-007 C5, a known borderline case.
 
 The hour has plenty of slack. If a dialog fails, the script still writes a valid file (status=error records) and prints the `--only-incomplete` command to finish it.
