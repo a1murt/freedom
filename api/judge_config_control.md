@@ -57,6 +57,16 @@ The ensemble comparison ran before the spec merge; the vote and the arbiter do n
 4. Rehearse (10 DEV chats, no git, about $6): `api/.venv/bin/python scripts/control_run.py --rehearse --provider ensemble`
 5. Control hour: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`
 
+## On-prem run of the control set (optional, next to the official run)
+
+The official file stays the ensemble on the hosted API. In parallel, the ML teammate judges the same control chats with the open model on the university GPU server, to show the on-prem architecture on new data (selection criterion: diversity of approaches, local LLM vs cloud). Nothing here touches the hosted instance, git or `results/prod/results.json`.
+
+- **Where:** a laptop inside the university network (the GPU server is in a closed network) with this repository, `api/.venv` and `.env` (`ORGANIZER_API_URL` for `--group`).
+- **Before 13:00, warm up and check (≈ 12 min, 2 short DEV chats):** `api/.venv/bin/python scripts/control_local.py --rehearse 2 --tunnel <ssh host of the GPU server>`. Rehearsed 2026-11-08: 2 chats in 12.3 min, valid organizer-format file (`mode: local`), 100% agreement with the cloud verdicts on both.
+- **At 13:00:** `api/.venv/bin/python scripts/control_local.py --group <CONTROL_GROUP_ID> --tunnel <ssh host>` (or `--source-url` / `--source-file`, the same inputs as `control_run.py`). About 6–10 min per chat because the shared Ollama serves one request at a time: 60–100 min for 10 chats. Run the same command again after any interruption: finished dialogs are skipped, failed ones are judged again.
+- **When the official run is pushed:** `git pull`, then `api/.venv/bin/python scripts/control_local.py --compare-only` writes `api/data/control_local/agreement.md`: per-criterion agreement between the local model and the cloud ensemble on the new chats, and the mean difference of totals. That is the slide line.
+- Outputs stay in `api/data/control_local/` (git-ignored). Do not commit them as results.
+
 ## If the organizers clarify C7 after the run
 
 `PUT /api/settings {"c7_bare_farewell_policy": "yes"}` (or `"no"`), re-judge only C7 for the control dialogs (partial re-evaluation, about $0.03 per dialog with a single judge) and export again. Re-judge C7 explicitly (`only_codes: ["C7"]`). Other partial runs do re-judge bare-farewell C7 rows decided under the old policy, but two cases are missed:
