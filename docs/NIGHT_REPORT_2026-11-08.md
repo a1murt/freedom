@@ -54,9 +54,14 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
   - an unknown policy value falls back to `na`;
   - a partial re-run re-judges stale C7 rows;
   - 32 new tests.
+- **ChatGPT Pro second opinion** (`docs/eval/SECOND_OPINION_CHATGPT.md`):
+  - it agrees with the C4 and C6 rules (95% and 80%);
+  - it called the C3 rule too broad, so C3 was narrowed to requests that can be closed without the account (`e0e741c`, no change on DEV);
+  - on the borderline C5 brush-off it sides with our judge («Нет», 85%).
+- **Second independent review** of tonight's runtime code: the ensemble path is correct under the default policy (4,000-case fuzz). The readiness reserve is now priced like the run guard ($11,10, `56cde81`).
 - **Small fixes:**
   - results.json rationales no longer print «..» after the N/A reason (132 DEV rationales had it);
-  - the readiness budget check now reserves for the ensemble control run ($7,60), not single Opus ($3,60).
+  - the readiness budget check now reserves for the ensemble control run plus a retry (now $11,10), not single Opus ($3,60).
 
 ## Hosted state (04:35)
 
