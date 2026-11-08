@@ -96,3 +96,18 @@ def test_job_timeout_is_longer_for_the_local_model():
         sys.path.pop(0)
     assert cr.job_timeout_for("local") == 3000 and cr.job_timeout_for("anthropic") == 1800
     assert cr.job_timeout_for("ensemble") == 1800 and cr.job_timeout_for("local", 900) == 900
+
+
+def test_the_retry_uses_the_given_provider_when_claude_is_off(cr, monkeypatch):
+    seen: list[str] = []
+
+    def run_job(http, base, ids, version_id, provider, **kw):
+        seen.append(provider)
+
+    monkeypatch.setattr(cr, "run_job", run_job)
+    monkeypatch.setattr(cr, "not_completed", lambda http, base, ids, vid: ["c2"])
+    cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "local", retry_provider="local")
+    assert seen == ["local", "local"]
+    seen.clear()
+    cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "ensemble")  # Claude available: single Opus retry as before
+    assert seen == ["ensemble", "anthropic"]

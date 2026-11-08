@@ -71,8 +71,24 @@ def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, 
         return {"ready": False, "ready_for_demo": False, "generated_at": datetime.now(UTC).isoformat(), "checks": checks}
 
     cfg = current(db)
-    checks.append(_check("claude_key", bool(settings.anthropic_api_key), "required",
-                         "Ключ Claude API задан." if settings.anthropic_api_key else "Ключ Claude API не задан: оценка через Claude недоступна."))
+    default_provider = str(cfg.get("default_provider") or "anthropic").strip().lower().split(":", 1)[0]
+    # Claude is needed only when it is on and the instance judges with it by default; otherwise the local model is the judge
+    claude_needed = bool(settings.claude_enabled) and default_provider in ("anthropic", "ensemble")
+    if claude_needed:
+        checks.append(_check("claude_key", bool(settings.anthropic_api_key), "required",
+                             "Ключ Claude API задан." if settings.anthropic_api_key else "Ключ Claude API не задан: оценка через Claude недоступна."))
+    else:
+        checks.append(_check("claude_key", True, "info",
+                             "Claude не используется: судья — локальная модель." if settings.claude_enabled
+                             else "Claude отключён (CLAUDE_ENABLED=false): судья — локальная модель."))
+    from ..judge.local_endpoint import effective_endpoint
+
+    endpoint = effective_endpoint(cfg.get("local_endpoint"))
+    local_model = str(cfg.get("local_model") or settings.local_model)
+    checks.append(_check("local_endpoint", bool(endpoint), "info" if claude_needed else "required",
+                         (f"Локальная модель {local_model} задана." if endpoint else "Локальная модель не задана (LOCAL_ENDPOINT).")
+                         + ("" if claude_needed else " Она судит контрольный прогон."),
+                         model=local_model, configured=bool(endpoint)))
 
     v1 = _organizer_version(db)
     if v1 is None:
@@ -130,13 +146,19 @@ def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, 
     # control_run retries failed dialogs with single Opus: a green check must mean both fit in the 24 h window, priced by
     # the same token estimator the run guard uses (the flat rate is only a floor)
     provider = "ensemble"
-    reserve = _control_reserve(db, v1, group_convs, control_dialogs, estimate_cost(control_dialogs, 0, provider) * 2)
-    budget_ok = budget["unlimited"] or (budget["remaining"] or 0) >= reserve
-    checks.append(_check("budget_reserve", budget_ok, "required",
-                         ("Бюджет без ограничения." if budget["unlimited"] else
-                          f"Осталось ${budget['remaining']:.2f} из ${budget['limit']:.2f} за 24 ч; резерв на контрольный прогон ({control_dialogs} диалогов, "
-                          f"{provider} и повтор упавших одним Opus) — ${reserve:.2f}."),
-                         remaining=budget["remaining"], limit=budget["limit"], reserve=reserve))
+    if not claude_needed:  # the local model judges the control run: it books nothing against the Claude budget
+        reserve = 0.0
+        checks.append(_check("budget_reserve", True, "required",
+                             "Судья — локальная модель: контрольный прогон не расходует бюджет Claude.",
+                             remaining=budget["remaining"], limit=budget["limit"], reserve=reserve))
+    else:
+        reserve = _control_reserve(db, v1, group_convs, control_dialogs, estimate_cost(control_dialogs, 0, provider) * 2)
+        budget_ok = budget["unlimited"] or (budget["remaining"] or 0) >= reserve
+        checks.append(_check("budget_reserve", budget_ok, "required",
+                             ("Бюджет без ограничения." if budget["unlimited"] else
+                              f"Осталось ${budget['remaining']:.2f} из ${budget['limit']:.2f} за 24 ч; резерв на контрольный прогон ({control_dialogs} диалогов, "
+                              f"{provider} и повтор упавших одним Opus) — ${reserve:.2f}."),
+                             remaining=budget["remaining"], limit=budget["limit"], reserve=reserve))
 
     checks.append(_check("organizer_url", bool(settings.organizer_api_url), "recommended",
                          "Адрес API организаторов задан: импорт по group_id работает." if settings.organizer_api_url

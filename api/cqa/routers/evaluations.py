@@ -31,7 +31,7 @@ class RunBody(BaseModel):
     conversation_ids: list[str] | None = None
     all: bool = False
     checklist_version_id: int | None = None
-    provider: str = "anthropic"
+    provider: str | None = None  # omitted: the instance's default provider (Settings, else DEFAULT_PROVIDER)
     model: str | None = None
     mode: str = "full"  # full | partial
     base_version_id: int | None = None
@@ -59,14 +59,24 @@ def _guard_response(e: guards.GuardError) -> JSONResponse:
     return JSONResponse(status_code=e.status, content=e.envelope(), headers=headers)
 
 
-def _provider_and_model(provider: str | None, model: str | None) -> tuple[str, str | None] | JSONResponse:
-    """`anthropic:<model>` is accepted as provider + model; any other unknown provider is a 422 (it used to run Claude)."""
-    name = (provider or "anthropic").strip()
+def _provider_and_model(provider: str | None, model: str | None, db: Session | None = None) -> tuple[str, str | None] | JSONResponse:
+    """`anthropic:<model>` is accepted as provider + model; any other unknown provider is a 422 (it used to run Claude).
+    An omitted provider is the instance's default (the Settings row, else DEFAULT_PROVIDER), never Claude by accident."""
+    from ..judge.runner import CLAUDE_DISABLED_MESSAGE
+    from ..models import Setting
+
+    name = (provider or "").strip()
+    if not name:
+        row = db.get(Setting, "default_provider") if db is not None else None
+        name = str(row.value).strip() if row is not None and row.value else settings.default_provider
     base, _, tail = name.partition(":")
     base = base.strip().lower()
     if base not in KNOWN_PROVIDERS:
         message = f"Неизвестный провайдер «{name}»: доступны {', '.join(KNOWN_PROVIDERS)}."
         return _error(422, "unknown_provider", message, errors=[{"field": "provider", "message": message}])
+    if base == "anthropic" and not settings.claude_enabled:
+        return _error(422, "provider_unavailable", CLAUDE_DISABLED_MESSAGE,
+                      errors=[{"field": "provider", "message": CLAUDE_DISABLED_MESSAGE}])
     return base, ((model or "").strip() or tail.strip() or None)
 
 
@@ -97,7 +107,7 @@ def run_evaluations(body: RunBody, db: Session = Depends(get_db)):
     version = svc.get_version(db, body.checklist_version_id) if body.checklist_version_id else svc.active_version(db)
     if version is None:
         raise HTTPException(400, detail={"code": "no_checklist", "message": "Не найдена версия чек-листа для оценки."})
-    resolved = _provider_and_model(body.provider, body.model)
+    resolved = _provider_and_model(body.provider, body.model, db)
     if isinstance(resolved, JSONResponse):
         return resolved
     provider, model = resolved

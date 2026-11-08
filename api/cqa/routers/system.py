@@ -224,7 +224,7 @@ def _providers(db: Session) -> dict[str, Any]:
     local: dict[str, Any] = {"configured": bool(endpoint), "endpoint": endpoint, "model": settings.local_model, "reachable": None}
     if endpoint:
         local.update(probe_local(endpoint))
-    return {"anthropic": bool(settings.anthropic_api_key), "local": local}
+    return {"anthropic": bool(settings.anthropic_api_key) and bool(settings.claude_enabled), "local": local}
 
 
 def _job_counts(db: Session) -> dict[str, Any]:

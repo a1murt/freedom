@@ -178,7 +178,12 @@ def _members(rs: dict[str, Any], provider_name: str, model: str | None) -> list[
         for m in rs.get("ensemble_members") or []:
             try:
                 name = str(m.get("provider") or "anthropic")
-                members.append(local(m.get("model")) if name.split(":", 1)[0] in LOCAL_PROVIDERS else get_provider(name, m.get("model")))
+                if name.split(":", 1)[0] in LOCAL_PROVIDERS:
+                    members.append(local(m.get("model")))
+                elif settings.claude_enabled:
+                    members.append(get_provider(name, m.get("model")))
+                else:  # Claude is off on this instance: the ensemble is whatever local members remain
+                    log.info("ensemble member %s skipped: Claude is disabled (CLAUDE_ENABLED=false)", name)
             except (ProviderError, AttributeError, TypeError) as e:
                 log.warning("ensemble member skipped: %s", e)
         if endpoint and not any(p.name == "local" for p in members):
@@ -193,6 +198,8 @@ def _members(rs: dict[str, Any], provider_name: str, model: str | None) -> list[
         return [get_provider("fake", model)]
     if provider_name in LOCAL_PROVIDERS:
         return [local(model)]
+    if not settings.claude_enabled:
+        raise ProviderError(CLAUDE_DISABLED_MESSAGE)
     return [get_provider("anthropic", model or rs.get("default_model"))]
 
 
@@ -643,6 +650,12 @@ def _mark_failed(db: Session, ev_id: int | None, conversation_id: str, generatio
 
 
 FREE_PROVIDERS = ("local", "ollama", "openai_compatible", "vllm", "fake")
+CLAUDE_DISABLED_MESSAGE = "Claude недоступен на этом сервере (CLAUDE_ENABLED=false): выберите локальную модель, provider local."
+
+
+def claude_available() -> bool:
+    """A Claude call can be made here: a key is configured and Claude is not switched off (CLAUDE_ENABLED)."""
+    return bool(settings.anthropic_api_key) and bool(settings.claude_enabled)
 
 
 def estimate_cost(n_chats: int, n_calls: int, provider_name: str, members: int = 1) -> float:

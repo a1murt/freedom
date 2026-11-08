@@ -281,7 +281,7 @@ def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, prov
 
 
 def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, *,
-                 only_incomplete: bool = False, job_timeout_s: int | None = None) -> list[str]:
+                 only_incomplete: bool = False, job_timeout_s: int | None = None, retry_provider: str | None = None) -> list[str]:
     """Evaluate the dialogs, retry the ones that did not complete once, and return those still not completed.
 
     It never aborts the export: a job that times out, or a retry the API refuses (budget, dialogs per run, busy for
@@ -299,7 +299,8 @@ def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int,
     if bad:
         log(f"retrying {len(bad)} dialogs that did not complete: {bad}")
         try:
-            run_job(http, base, bad, version_id, provider if provider in ("local", "fake") else "anthropic", timeout_s=job_timeout_s)
+            retry_with = retry_provider or (provider if provider in ("local", "fake") else "anthropic")
+            run_job(http, base, bad, version_id, retry_with, timeout_s=job_timeout_s)
         except SystemExit as e:
             log(f"retry not run ({e}); continuing with what the API has")
         bad = not_completed(http, base, bad, version_id)
@@ -326,8 +327,9 @@ def main() -> int:
     ap.add_argument("--group", help="control group_id announced by the organizers")
     ap.add_argument("--job-timeout", type=int, default=None, metavar="SECONDS",
                     help="how long to follow one evaluation job (default: 3000 for local, 1800 for Claude)")
-    ap.add_argument("--provider", default="anthropic", choices=["anthropic", "ensemble", "local", "fake"],
-                    help="fake = offline judge for a free rehearsal of the flow (never committed or pushed)")
+    ap.add_argument("--provider", default=None, choices=["anthropic", "ensemble", "local", "fake"],
+                    help="default: the API's default_provider (GET /api/settings); "
+                         "fake = offline judge for a free rehearsal of the flow (never committed or pushed)")
     ap.add_argument("--version-id", type=int, help="checklist version (default: organizer version 1)")
     ap.add_argument("--team", default=None, help="team_name for the file (default: env TEAM_NAME or repo name)")
     ap.add_argument("--expect", type=int, default=10)
@@ -381,8 +383,20 @@ def main() -> int:
     with httpx.Client(timeout=120, follow_redirects=True, headers=ACTOR_HEADERS) as http:
         health = http.get(f"{base}/api/health").json()
         log(f"API {base} health: {health}")
-        if not health.get("providers", {}).get("anthropic") and args.provider not in ("local", "fake"):
-            raise SystemExit("Claude provider is not configured on this API")
+        claude_ok = bool(health.get("providers", {}).get("anthropic"))
+        if not args.provider:  # the instance decides: Claude while it works, the local model when Claude is off
+            try:
+                args.provider = str(http.get(f"{base}/api/settings").json().get("default_provider") or "anthropic").split(":", 1)[0]
+            except (httpx.HTTPError, ValueError, AttributeError):
+                args.provider = "anthropic" if claude_ok else "local"
+            log(f"provider: {args.provider} (the API's default_provider)")
+        if not claude_ok and args.provider not in ("local", "fake"):
+            raise SystemExit(f"Claude is not available on this API (no key or CLAUDE_ENABLED=false): run with --provider local, "
+                             f"not {args.provider}")
+        if args.provider in ("local", "fake") or not claude_ok:
+            args.retry_provider = args.provider
+        else:  # a failed Claude ensemble dialog is retried with single Opus
+            args.retry_provider = "anthropic"
         version_id = resolve_version(http, base, args.version_id)
         log(f"checklist version {version_id} (organizer checklist)")
 
@@ -422,7 +436,7 @@ def main() -> int:
         else:
             preflight(http, base, ids, version_id, args.provider)
             bad = evaluate_all(http, base, ids, version_id, args.provider, only_incomplete=args.only_incomplete,
-                               job_timeout_s=args.job_timeout)
+                               job_timeout_s=args.job_timeout, retry_provider=getattr(args, "retry_provider", None))
             if bad:
                 log(f"still not completed (exported as status=error, which keeps the file valid): {bad}")
                 log("to evaluate just those later and re-publish all records: api/.venv/bin/python scripts/control_run.py "
@@ -444,6 +458,11 @@ def main() -> int:
 
     if args.no_git:
         return 0
+    if not any(r.get("status") == "ok" for r in doc.get("results") or []):
+        # a file of error records validates, but publishing it would replace nothing with a zero: stop and say how to go on
+        log("no dialog was evaluated (every record is status=error): NOT committed. Fix the judge, then run again with "
+            f"--skip-import --ids {','.join(ids)} --only-incomplete")
+        return 1
     if not out.resolve().is_relative_to(ROOT):
         log(f"{out} is outside the repository: not committed (use the default --out or --no-git)")
         return 1

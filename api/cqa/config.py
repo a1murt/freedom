@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # sent as "reasoning_effort" to the local endpoint when set: "none" turns a thinking model's reasoning off (Qwen3 on
     # Ollama: one short JSON instead of a long hidden reasoning pass), "low" | "medium" | "high" keep it; empty = not sent
     local_reasoning_effort: str | None = None
+    # false when the Claude API cannot be used (the credit is exhausted, or data must stay on-prem): Claude members are
+    # dropped from ensembles, an explicit "anthropic" run is refused with a clear message, judge-spec compilation uses
+    # the template spec, and readiness checks the local endpoint instead of the Claude key
+    claude_enabled: bool = True
 
     explanation_language: str = "ru"
     pii_masking: bool = True

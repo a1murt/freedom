@@ -236,6 +236,10 @@ def _provider(db: Session, provider: str | None, model: str | None) -> tuple[str
     if base not in KNOWN_PROVIDERS:
         message = f"Неизвестный провайдер «{name}»: доступны {', '.join(KNOWN_PROVIDERS)}"
         raise _error(422, "unknown_provider", message, errors=[{"field": "provider", "message": message}])
+    if base == "anthropic" and not settings.claude_enabled:
+        from ..judge.runner import CLAUDE_DISABLED_MESSAGE
+
+        raise _error(422, "provider_unavailable", CLAUDE_DISABLED_MESSAGE, errors=[{"field": "provider", "message": CLAUDE_DISABLED_MESSAGE}])
     return base, ((model or "").strip() or tail.strip() or None)
 
 

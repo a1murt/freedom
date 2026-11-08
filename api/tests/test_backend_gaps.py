@@ -887,3 +887,60 @@ def test_regenerating_the_spec_of_a_used_version_needs_force(env, monkeypatch):
     ok = env.client.post(f"/api/checklists/1/versions/{env.ids['version_id']}/judge-spec/C1/regenerate", params={"force": "true"},
                          headers=H("methodologist"))
     assert ok.status_code == 200 and ok.json()["code"] == "C1"
+
+
+# ------------------------------------------------------------------------------------------------ Claude switched off (CLAUDE_ENABLED=false)
+
+def test_claude_off_routes_every_default_to_the_local_model(env, monkeypatch):
+    from fastapi.responses import JSONResponse as _JR
+
+    from cqa.checklist import compiler
+    from cqa.judge import runner as jr
+    from cqa.judge.providers.base import ProviderError
+    from cqa.routers import evaluations as ev_router
+    from cqa.routers import settings_router
+    from cqa.routers import system as system_r
+
+    monkeypatch.setattr(settings, "claude_enabled", False)
+    monkeypatch.setattr(settings, "anthropic_api_key", "sk-test")
+    monkeypatch.setattr(settings, "default_provider", "local")
+    monkeypatch.setattr(settings, "local_endpoint", "http://llm.test/v1")
+    with env.Session() as db:
+        # an omitted provider follows the instance default (local), never Claude by accident
+        assert ev_router._provider_and_model(None, None, db) == ("local", None)
+        # an explicit Claude run is refused before any job exists
+        refused = ev_router._provider_and_model("anthropic", None, db)
+        assert isinstance(refused, _JR) and refused.status_code == 422 and b"provider_unavailable" in refused.body
+        assert system_r._providers(db)["anthropic"] is False
+    # the ensemble keeps only local members; a Claude run is refused by the judge too
+    members = jr._members({"ensemble_members": [{"provider": "anthropic", "model": "claude-opus-5-5"}]}, "ensemble", None)
+    assert [m.name for m in members] == ["local"]
+    with pytest.raises(ProviderError, match="Claude недоступен"):
+        jr._members({}, "anthropic", None)
+    # no paid compilation, and Settings cannot switch the default back to Claude
+    assert compiler.llm_compiles() is False
+    errors: list = []
+    settings_router._validate("default_provider", "anthropic", errors)
+    assert errors and "Claude недоступен" in errors[0]["message"]
+    errors = []
+    settings_router._validate("default_provider", "local", errors)
+    assert errors == []
+    # readiness: the local endpoint is the required judge check, the Claude key is information only, no Claude reserve
+    checks = {x["code"]: x for x in env.client.get("/api/system/readiness", params={"group_id": "NONE"}).json()["checks"]}
+    assert checks["claude_key"]["severity"] == "info" and checks["claude_key"]["ok"]
+    assert checks["local_endpoint"]["severity"] == "required" and checks["local_endpoint"]["ok"]
+    assert checks["budget_reserve"]["ok"] and checks["budget_reserve"]["value"]["reserve"] == 0.0
+
+
+def test_claude_on_keeps_the_previous_behaviour(env, monkeypatch):
+    from cqa.checklist import compiler
+
+    monkeypatch.setattr(settings, "claude_enabled", True)
+    monkeypatch.setattr(settings, "anthropic_api_key", "sk-test")
+    monkeypatch.setattr(settings, "default_provider", "anthropic")
+    assert compiler.llm_compiles() is True
+    from cqa.routers import system as system_r
+    with env.Session() as db:
+        assert system_r._providers(db)["anthropic"] is True
+    checks = {x["code"]: x for x in env.client.get("/api/system/readiness", params={"group_id": "NONE"}).json()["checks"]}
+    assert checks["claude_key"]["severity"] == "required" and checks["local_endpoint"]["severity"] == "info"

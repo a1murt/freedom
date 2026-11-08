@@ -52,6 +52,8 @@ def _validate(key: str, value: Any, errors: list[dict[str, str]]) -> None:
     if key == "default_provider":
         if not isinstance(value, str) or value.strip().lower() not in KNOWN_PROVIDERS:
             _err(errors, key, f"Провайдер по умолчанию: один из {', '.join(KNOWN_PROVIDERS)}.")
+        elif not settings.claude_enabled and value.strip().lower().split(":", 1)[0] in ("anthropic", "ensemble"):
+            _err(errors, key, "Claude недоступен на этом сервере: провайдер по умолчанию — локальная модель (local).")
     elif key in ("default_model", "secondary_model"):
         _claude_model(value, key, errors)
     elif key == "ensemble_members":
@@ -110,7 +112,7 @@ def current(db: Session) -> dict[str, Any]:
     for row in db.execute(select(Setting)).scalars():
         base[row.key] = row.value
     base["fewshot_count"] = db.execute(select(FewshotExample.id)).all().__len__()
-    base["anthropic_configured"] = bool(settings.anthropic_api_key)
+    base["anthropic_configured"] = bool(settings.anthropic_api_key) and bool(settings.claude_enabled)
     return base
 
 
@@ -153,4 +155,5 @@ def health(db: Session = Depends(get_db)):
     row = db.get(Setting, "local_endpoint")
     local = bool(effective_endpoint(row.value if row is not None and isinstance(row.value, str) else None))
     return {"ok": True, "db": "sqlite" if settings.database_url.startswith("sqlite") else "postgres",
-            "providers": {"anthropic": bool(settings.anthropic_api_key), "local": local}, "organizer_api": bool(settings.organizer_api_url)}
+            "providers": {"anthropic": bool(settings.anthropic_api_key) and bool(settings.claude_enabled), "local": local},
+            "organizer_api": bool(settings.organizer_api_url)}

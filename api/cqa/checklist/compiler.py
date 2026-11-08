@@ -49,8 +49,8 @@ def fallback_spec(crit: dict[str, Any]) -> dict[str, Any]:
 
 
 def llm_compiles() -> bool:
-    """True when compile_spec_async makes a paid LLM call (an API key is configured)."""
-    return bool(settings.anthropic_api_key)
+    """True when compile_spec_async makes a paid LLM call (an API key is configured and Claude is not switched off)."""
+    return bool(settings.anthropic_api_key) and bool(getattr(settings, "claude_enabled", True))
 
 
 async def compile_spec_async(crit: dict[str, Any]) -> dict[str, Any]:
