@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
@@ -187,13 +188,40 @@ def unusable_reason(v: Verdict, crit: CriterionPack, channel: str | None) -> str
     return None
 
 
+EVIDENCE_FROM_TEXT_FLAG = "evidence_from_explanation"
+_TURN_REF = re.compile(r"\[(\d{1,4})\]")
+
+
+def evidence_from_text(v: Verdict, turns: list[NormTurn], limit: int = 5) -> list[Evidence]:
+    """Evidence for a verdict that cites turns only in its text («Основание — реплика [9]»). Small local models often skip
+    the optional structured `evidence` list; the card's jump-to-turn and the results file's evidence_turns need it. The
+    explanation's references come first; the step results are used only when the explanation cites none."""
+    by_idx = {t.idx: t for t in turns}
+    for text in [v.explanation or "", " ".join(v.step_results or [])]:
+        out: list[Evidence] = []
+        for m in _TURN_REF.finditer(text):
+            t = by_idx.get(int(m.group(1)))
+            if t is not None and all(e.turn_idx != t.idx for e in out):
+                out.append(Evidence(turn_idx=t.idx, speaker=t.speaker, quote=(t.text or "")[:300], role="supports"))
+            if len(out) >= limit:
+                break
+        if out:
+            return out
+    return []
+
+
 def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, conversation_terminal: str | None = None, channel: str | None = None) -> ValidationResult:
     issues: list[str] = []
     retry = False
     penalty = 0.0
     by_idx = {t.idx: t for t in turns}
 
-    # evidence
+    # evidence (a verdict that cites turns only in its text gets them as structured evidence)
+    if not v.evidence:
+        derived = evidence_from_text(v, turns)
+        if derived:
+            v.evidence = derived
+            v.flags.append(EVIDENCE_FROM_TEXT_FLAG)
     kept = []
     for ev in v.evidence:
         t = by_idx.get(ev.turn_idx)

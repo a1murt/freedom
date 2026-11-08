@@ -74,3 +74,20 @@ def test_model_na_with_flag_follows_the_policy():
     assert yes.applicable and yes.answer == "yes" and not yes.na_reason and yes.explanation.startswith("Завершение — Да")
     no = apply_c7_bare_farewell_policy(_na_verdict(), _c7(), "no", "agent chat")
     assert no.applicable and no.answer == "no"
+
+
+def test_evidence_is_taken_from_the_explanation_when_missing():
+    from cqa.ingest.normalize import NormTurn
+    from cqa.judge.validate import EVIDENCE_FROM_TEXT_FLAG, evidence_from_text, validate_verdict
+
+    turns = [NormTurn(idx=i, timestamp_raw=None, offset_seconds=None, speaker=s, text=f"turn {i}", is_duplicate=False, segment=None)
+             for i, s in enumerate(["client", "bot", "operator", "client", "operator"])]
+    v = Verdict(criterion_code="C7", applicable=True, answer="no", confidence=0.8, evidence=[],
+                explanation="Завершение — Нет. Основание — реплика [4] и [99] (нет такой).", step_results=["[2] приветствие"])
+    assert [e.turn_idx for e in evidence_from_text(v, turns)] == [4]
+    res = validate_verdict(v, turns, _c7(), channel="agent chat")
+    assert [e.turn_idx for e in res.verdict.evidence] == [4] and res.verdict.evidence[0].speaker == "operator"
+    assert EVIDENCE_FROM_TEXT_FLAG in res.verdict.flags and not res.needs_retry
+    cited = Verdict(criterion_code="C7", applicable=True, answer="yes", confidence=0.9,
+                    evidence=[Evidence(turn_idx=2, speaker="operator", quote="turn 2")], explanation="… [4]")
+    assert [e.turn_idx for e in validate_verdict(cited, turns, _c7(), channel="agent chat").verdict.evidence] == [2]
