@@ -98,7 +98,7 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
 3. `GET /api/system/readiness` is green, and `scripts/smoke_asks.py` gives 7/7.
 4. The Git link has been sent to the organizers.
 5. Disk: 247 MB free at 04:32 (the warning starts at about 204 MB). The 13:00 run takes a pre-control snapshot (about 53 MB), so the warning may appear. If `GET /api/system/health` shows `disk_low`, delete `post-deploy-d6c55d5` and `pre-deploy-round4` (`DELETE /api/admin/snapshots/<name>` with the admin token). Checksum-verified copies are in `api/data/offsite/`.
-6. 13:00: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`. Use `--source-url` or `--source-file` if they hand over a link or a file.
+6. 13:00: `api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID> --provider ensemble`. Use `--source-url` or `--source-file` if they hand over a link or a file. Both paths were rehearsed end to end at 05:04 (offline judge, organizer-format file, VALID).
    - The ensemble measured +1,5 points over single Opus on the noisy criteria (27 chats, 95,6% vs 94,1%) and lowers variance.
    - It costs about $6 for the 10 chats.
    - Rehearsed at 04:33 with the final code (scratch copy, no git): 53 s, $6,28, VALID, 98,8% / 95,0% agreement (panel / ML gold).
