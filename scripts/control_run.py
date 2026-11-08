@@ -211,11 +211,22 @@ def fetch_source(url: str) -> dict | list:
     return data
 
 
-def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, timeout_s: int = 1800,
+# how long to follow one evaluation job: Claude finishes 10 chats in about a minute; a 27B open model on one GPU needs
+# about 30 minutes, and the stop-code leaves about an hour after the control set opens
+JOB_TIMEOUT_S = {"local": 3000, "fake": 600}
+JOB_TIMEOUT_DEFAULT_S = 1800
+
+
+def job_timeout_for(provider: str, override: int | None = None) -> int:
+    return int(override) if override else JOB_TIMEOUT_S.get(provider, JOB_TIMEOUT_DEFAULT_S)
+
+
+def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, timeout_s: int | None = None,
             poll_s: float = 4.0) -> dict:
     job = start(http, base, f"{base}/api/evaluations/run", {"conversation_ids": ids, "checklist_version_id": version_id, "provider": provider})
     job_id = job["job_id"]
     log(f"job {job_id}: {job['queued']} dialogs, estimate ${job.get('estimated_cost_usd')}, provider {provider}")
+    timeout_s = timeout_s or job_timeout_for(provider)
     t0 = time.time()
     last = None
     resumes = 0
@@ -270,7 +281,7 @@ def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, prov
 
 
 def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, *,
-                 only_incomplete: bool = False) -> list[str]:
+                 only_incomplete: bool = False, job_timeout_s: int | None = None) -> list[str]:
     """Evaluate the dialogs, retry the ones that did not complete once, and return those still not completed.
 
     It never aborts the export: a job that times out, or a retry the API refuses (budget, dialogs per run, busy for
@@ -281,14 +292,14 @@ def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int,
         log(f"--only-incomplete: {len(targets)} of {len(ids)} dialogs have no completed evaluation" + (f": {targets}" if targets else ""))
     if targets:
         try:
-            run_job(http, base, targets, version_id, provider)
+            run_job(http, base, targets, version_id, provider, timeout_s=job_timeout_s)
         except SystemExit as e:
             log(f"evaluation did not finish ({e}); continuing with what the API has")
     bad = not_completed(http, base, ids, version_id)
     if bad:
         log(f"retrying {len(bad)} dialogs that did not complete: {bad}")
         try:
-            run_job(http, base, bad, version_id, provider if provider in ("local", "fake") else "anthropic")
+            run_job(http, base, bad, version_id, provider if provider in ("local", "fake") else "anthropic", timeout_s=job_timeout_s)
         except SystemExit as e:
             log(f"retry not run ({e}); continuing with what the API has")
         bad = not_completed(http, base, bad, version_id)
@@ -313,6 +324,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--api", default=HOSTED)
     ap.add_argument("--group", help="control group_id announced by the organizers")
+    ap.add_argument("--job-timeout", type=int, default=None, metavar="SECONDS",
+                    help="how long to follow one evaluation job (default: 3000 for local, 1800 for Claude)")
     ap.add_argument("--provider", default="anthropic", choices=["anthropic", "ensemble", "local", "fake"],
                     help="fake = offline judge for a free rehearsal of the flow (never committed or pushed)")
     ap.add_argument("--version-id", type=int, help="checklist version (default: organizer version 1)")
@@ -408,7 +421,8 @@ def main() -> int:
             log("--export-only: no evaluation, exporting what the API has")
         else:
             preflight(http, base, ids, version_id, args.provider)
-            bad = evaluate_all(http, base, ids, version_id, args.provider, only_incomplete=args.only_incomplete)
+            bad = evaluate_all(http, base, ids, version_id, args.provider, only_incomplete=args.only_incomplete,
+                               job_timeout_s=args.job_timeout)
             if bad:
                 log(f"still not completed (exported as status=error, which keeps the file valid): {bad}")
                 log("to evaluate just those later and re-publish all records: api/.venv/bin/python scripts/control_run.py "

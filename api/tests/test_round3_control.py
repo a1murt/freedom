@@ -83,3 +83,16 @@ def test_only_incomplete_evaluates_just_the_unfinished_dialogs(cr, monkeypatch):
     calls.clear()
     assert cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "anthropic", only_incomplete=True) == [] and calls == []
 
+
+
+def test_job_timeout_is_longer_for_the_local_model():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    try:
+        import control_run as cr
+    finally:
+        sys.path.pop(0)
+    assert cr.job_timeout_for("local") == 3000 and cr.job_timeout_for("anthropic") == 1800
+    assert cr.job_timeout_for("ensemble") == 1800 and cr.job_timeout_for("local", 900) == 900
