@@ -57,7 +57,9 @@ The ensemble comparison ran before the spec merge; the vote and the arbiter do n
 
 ## If the organizers clarify C7 after the run
 
-`PUT /api/settings {"c7_bare_farewell_policy": "yes"}` (or `"no"`), re-judge only C7 for the control dialogs (partial re-evaluation, about $0.03 per dialog with a single judge) and export again. Scoring the alternatives offline: `cd api && uv run python -m cqa.eval.harness --gold eval/gold.json --c7-bare yes`.
+`PUT /api/settings {"c7_bare_farewell_policy": "yes"}` (or `"no"`), re-judge only C7 for the control dialogs (partial re-evaluation, about $0.03 per dialog with a single judge) and export again. Re-judge C7 explicitly (`only_codes: ["C7"]`). Other partial runs do re-judge bare-farewell C7 rows decided under the old policy, but two cases are missed:
+- the cost estimate does not count those extra calls;
+- an ensemble row whose most confident member did not flag the bare farewell keeps no flag, so it is copied as it was. Scoring the alternatives offline: `cd api && uv run python -m cqa.eval.harness --gold eval/gold.json --c7-bare yes`.
 
 ## Measure it yourself
 

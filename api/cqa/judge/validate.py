@@ -351,7 +351,7 @@ def apply_c7_bare_farewell_policy(v: Verdict, crit: CriterionPack, policy: str |
 
 
 def c7_row_follows_policy(applicable: bool, answer: object, flags: list[str] | None, policy: object,
-                          terminal: str | None = None) -> bool:
+                          terminal: str | None = None, *, na_allowed: bool = True) -> bool:
     """Whether a stored C7 row agrees with the current bare-farewell policy. A partial re-run copies rows of criteria it does
     not judge; a bare-farewell row decided under another policy must be decided again instead (no model call is needed for
     the value, but the runner simply re-judges the criterion, which also refreshes the explanation)."""
@@ -360,7 +360,8 @@ def c7_row_follows_policy(applicable: bool, answer: object, flags: list[str] | N
         return True
     p = normalize_c7_policy(policy)
     if p == "na":
-        return not applicable
+        # where C7 has no N/A on the channel the rule leaves the verdict as judged, so an applicable row follows "na"
+        return not applicable or not na_allowed
     return bool(applicable) and str(answer).strip().lower() == p
 
 

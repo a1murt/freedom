@@ -129,3 +129,39 @@ def test_policy_no_cites_the_closing_turn_when_the_model_gave_no_evidence():
 ])
 def test_partial_runs_re_judge_c7_rows_decided_under_another_policy(applicable, answer, flags, policy, terminal, follows):
     assert c7_row_follows_policy(applicable, answer, flags, policy, terminal) is follows
+
+
+def test_a_c7_without_na_on_the_channel_is_not_stale_under_na():
+    # the rule leaves an applicable verdict alone where C7 has no N/A, so the copied row must not be re-judged forever
+    assert c7_row_follows_policy(True, "yes", ["bare_farewell"], "na", None, na_allowed=False) is True
+    assert c7_row_follows_policy(True, "yes", ["bare_farewell"], "na", None, na_allowed=True) is False
+    assert c7_row_follows_policy(True, "yes", ["bare_farewell"], "no", None, na_allowed=False) is False
+
+
+def test_readiness_reserve_uses_the_run_estimator(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from cqa.platform import readiness as rd
+
+    calls = []
+
+    def fake_estimate_run(db, convs, version, *, provider, model, **kw):
+        calls.append((provider, len(convs)))
+        return SimpleNamespace(total_usd={"ensemble": 8.0, "anthropic": 3.0}[provider] * len(convs) / 10)
+
+    class FakeDB:
+        def execute(self, _q):
+            return SimpleNamespace(scalars=lambda: [SimpleNamespace(id=f"c{i}") for i in range(10)])
+
+    import cqa.jobs.estimate as est
+
+    monkeypatch.setattr(est, "estimate_run", fake_estimate_run)
+    assert rd._control_reserve(FakeDB(), object(), ["c0"], 10, 7.6) == 11.0
+    assert calls == [("ensemble", 10), ("anthropic", 10)]
+    assert rd._control_reserve(FakeDB(), None, ["c0"], 10, 7.6) == 7.6  # no organizer version: the flat floor
+
+    def broken(*a, **k):
+        raise RuntimeError("unpriced model")
+
+    monkeypatch.setattr(est, "estimate_run", broken)
+    assert rd._control_reserve(FakeDB(), object(), ["c0"], 10, 7.6) == 7.6

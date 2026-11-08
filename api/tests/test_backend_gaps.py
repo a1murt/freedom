@@ -567,9 +567,10 @@ def test_readiness_reports_required_and_recommended_checks(env, monkeypatch):
     assert not checks["organizer_url"]["ok"] and checks["organizer_url"]["severity"] == "recommended"
     assert checks["violations"]["ok"] and checks["violations"]["value"]["total"] == 1
     assert {"db", "jobs", "budget_reserve", "appeals_seeded", "baseline_snapshot", "corporate_style"} <= set(checks)
-    # the reserve covers the recommended control run (ensemble) and one retry, whatever the default provider is
+    # the reserve covers the recommended control run (ensemble) and a single-Opus retry, whatever the default provider is,
+    # priced like the run guard prices it and never below the flat-rate floor
     from cqa.judge.runner import estimate_cost
-    assert checks["budget_reserve"]["value"]["reserve"] == estimate_cost(10, 0, "ensemble") * 2
+    assert checks["budget_reserve"]["value"]["reserve"] >= estimate_cost(10, 0, "ensemble") * 2
     assert "ensemble" in checks["budget_reserve"]["message"]
 
 

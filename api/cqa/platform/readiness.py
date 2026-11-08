@@ -35,6 +35,26 @@ def _organizer_version(db: Session) -> ChecklistVersion | None:
                       .order_by(ChecklistVersion.version_no)).scalars().first()
 
 
+def _control_reserve(db: Session, v1: ChecklistVersion | None, group_convs: list[str], control_dialogs: int, floor: float) -> float:
+    """The ensemble control run plus a single-Opus retry of the same dialogs, priced by cqa.jobs.estimate (the estimator
+    POST /api/evaluations/run checks the budget with) on up to `control_dialogs` chats of the group and scaled to
+    `control_dialogs`; never below the flat-rate `floor`, and the floor alone when the estimate cannot be made."""
+    if v1 is None or not group_convs:
+        return round(floor, 2)
+    try:
+        from ..jobs.estimate import estimate_run
+
+        sample = list(db.execute(select(Conversation).where(Conversation.id.in_(group_convs), Conversation.channel == "agent chat")
+                                 .order_by(Conversation.id).limit(control_dialogs)).scalars())
+        if not sample:
+            return round(floor, 2)
+        run = estimate_run(db, sample, v1, provider="ensemble", model=None).total_usd
+        retry = estimate_run(db, sample, v1, provider="anthropic", model=None).total_usd
+        return round(max((run + retry) / len(sample) * control_dialogs, floor), 2)
+    except Exception:  # noqa: BLE001 - an unpriced model or a provider error must not break the readiness page
+        return round(floor, 2)
+
+
 def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, control_dialogs: int = CONTROL_DIALOGS) -> dict[str, Any]:
     from ..analytics.violations import violations
     from ..export.results_json import ExportError, from_db, validate_document
@@ -106,15 +126,16 @@ def readiness(db: Session, *, group_id: str = "DEV", expect: int | None = None, 
                          **by_status))
 
     budget = guards.budget_status(db)
-    # the control run uses --provider ensemble (api/judge_config_control.md) whatever the default provider is, so a green
-    # check must mean that the recommended run and one retry fit in the 24 h window
+    # the control run uses --provider ensemble (api/judge_config_control.md) whatever the default provider is, and
+    # control_run retries failed dialogs with single Opus: a green check must mean both fit in the 24 h window, priced by
+    # the same token estimator the run guard uses (the flat rate is only a floor)
     provider = "ensemble"
-    reserve = estimate_cost(control_dialogs, 0, provider) * 2
+    reserve = _control_reserve(db, v1, group_convs, control_dialogs, estimate_cost(control_dialogs, 0, provider) * 2)
     budget_ok = budget["unlimited"] or (budget["remaining"] or 0) >= reserve
     checks.append(_check("budget_reserve", budget_ok, "required",
                          ("Бюджет без ограничения." if budget["unlimited"] else
                           f"Осталось ${budget['remaining']:.2f} из ${budget['limit']:.2f} за 24 ч; резерв на контрольный прогон ({control_dialogs} диалогов, "
-                          f"{provider}, ×2) — ${reserve:.2f}."),
+                          f"{provider} и повтор упавших одним Opus) — ${reserve:.2f}."),
                          remaining=budget["remaining"], limit=budget["limit"], reserve=reserve))
 
     checks.append(_check("organizer_url", bool(settings.organizer_api_url), "recommended",

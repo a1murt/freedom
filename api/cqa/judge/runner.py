@@ -497,7 +497,8 @@ async def evaluate_conversation(conversation_id: str, checklist_version_id: int,
                              and CONTACT_OUTSIDE_RECORDING_FLAG not in (b.flags or []))
             # a bare-farewell C7 row decided under another c7_bare_farewell_policy (the Settings switch)
             stale_c7 = cp.code == "C7" and not c7_row_follows_policy(b.applicable, b.answer, b.flags, rs.get("c7_bare_farewell_policy"),
-                                                                     conv.terminal_event)
+                                                                     conv.terminal_event,
+                                                                     na_allowed=effective_na(cp, conv.channel)[0])
             if stale_na or stale_contact or stale_c7:
                 del base_rows[c.code]
         judged = set(codes_to_judge([c.code for c in criteria], base_rows, only_codes))
