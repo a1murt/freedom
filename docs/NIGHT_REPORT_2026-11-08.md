@@ -2,6 +2,26 @@
 
 For the team's morning sync. Everything below is on `main` and deployed (hosted build **56cde81**; later commits change only docs).
 
+## TL;DR (05:10)
+
+- **Ready for 13:00.**
+  - Hosted 56cde81 is green: smoke 18/18, live asks 7/7, readiness ready. The command is in the morning checklist, item 6.
+  - The final configuration was rehearsed with the ensemble: 10 chats in 53 s for $6,28, VALID.
+  - The file and URL fallbacks were rehearsed too.
+- **Accuracy against two independent AI gold sets** (60 DEV chats):
+  - per criterion: **95,0% / 95,2%**, up from 84,6% before the night;
+  - total score MAE **2,9**, with 43 of 60 totals exact;
+  - the ensemble rehearsal scored **98,8% / 95,0%** on its 10 chats.
+- **Demo dialogs unchanged:**
+  - p1-ru-029 is 51,25 with the insult at turn 10;
+  - p1-ru-005's appeal preview is 78,46 → 85,38.
+  - The C7 what-if numbers in DEMO.md are refreshed: 19 dialogs change, mean 83,88 → 83,46.
+- **Decisions for you:**
+  - the ML teammate reviews the night's spec changes (`docs/HANDOFF_ML.md` «Round 7»);
+  - the frontend `idx+1` transcript fix;
+  - whether to re-judge the four demo dialogs (they keep their older verdicts on purpose).
+- **Budget:** $26,73 of the $60 daily guard left at 05:00, against an $11,11 reserve for the run. Railway: $4,93 credit.
+
 ## What changed overnight
 
 **1. The organizers' answer on calls (contact true/false only).**
