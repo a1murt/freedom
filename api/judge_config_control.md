@@ -15,7 +15,7 @@ Frozen by the ML owner on top of `main` at 876c1de. Evidence: two independent AI
 | C1 on calls | no N/A; an opening outside the recording is credited by the system rule | Organizer answer 2026-11-08 (upstream). |
 | PII masking | on | The local provider keeps data on the machine and is not masked. |
 | Few-shots | none seeded | |
-| Local model | qwen3:8b through Ollama, outside the control vote | Works end to end; much less accurate (see below). |
+| Local model | qwen3.8:27b (Q4_K_M) through Ollama on the university GPU server (2×A10, closed network), outside the control vote | On par with single Claude on the 8 validation dialogs, but 6–17 min per dialog: an on-prem option and a demo, not the control run. |
 
 ## Accuracy of this configuration (single Opus 5.5, C7 policy N/A, fresh local run)
 
@@ -38,9 +38,11 @@ The two gold sets agree with each other on 95.6% of the shared chat labels; C4 (
 |---|---|---|---|
 | ensemble (Opus, Opus, Sonnet + arbiter) | 0.966 | 8 / 232 | $0.58 |
 | single Opus 5.5 | 0.962 | 9 / 232 | $0.24 |
-| local qwen3:8b (Ollama, MacBook Pro M4, 16 GB, 8 validation dialogs) | see `runs.csv` | | $0, 15–20 min per dialog |
+| local qwen3.8:27b Q4_K_M (Ollama, university server, 2×A10; 8 validation dialogs) | 0.859 (lenient 0.906) | 9 / 64 | $0, 6–17 min per dialog, one request at a time |
+| single Opus 5.5, deployed specs, the same 8 dialogs | 0.844 (lenient 0.859) | 10 / 64 | $0.26 |
+| local qwen3:8b (Ollama, MacBook Pro M4, 16 GB; 8 validation dialogs) | 0.609 | 25 / 64 | $0, 15–20 min per dialog |
 
-The ensemble comparison ran before the spec merge; the vote and the arbiter do not depend on the spec text. The local model's first run (specs v1, before the provider fixes) reached 0.609; the rerun with the fixed provider is in `runs.csv`.
+The ensemble comparison ran before the spec merge; the vote and the arbiter do not depend on the spec text. The 8 validation dialogs hold the hardest disputed cases, hence the lower numbers for every judge; with 8 dialogs the 27B model is "on par" with Claude, not better. The 8B model fails on C2, C4 and C7 (0.12, 0.25, 0.25). Sending the eight criteria in parallel did not speed up the server (369 s vs 371 s for one dialog): its Ollama serves one request at a time.
 
 ## Apply it on the hosted instance
 
@@ -64,6 +66,19 @@ cd api && uv run python -m cqa.eval.harness --gold eval/gold.json --split holdou
 ```
 
 ## Run the local model
+
+On the university GPU server (Ollama already serves `qwen3.8:27b-q4_K_M` on its localhost; the server is in a closed network, so reach it through an SSH tunnel and run the API or the harness on a laptop inside that network):
+
+```bash
+ssh -f -N -L 11435:127.0.0.1:11434 <user>@<gpu-server>
+```
+```bash
+cd api && LOCAL_ENDPOINT=http://localhost:11435/v1 LOCAL_MODEL=qwen3.8:27b-q4_K_M uv run python -m cqa.eval.harness --gold eval/gold.json --split validation --run --provider local --model qwen3.8:27b-q4_K_M --concurrency 1
+```
+
+The hosted Railway instance cannot reach the closed network; do not expose Ollama publicly (it has no authentication), and keep `local_endpoint` empty on the hosted instance during the control run (a set endpoint joins every ensemble vote).
+
+On a laptop:
 
 ```bash
 brew install ollama && brew services start ollama
