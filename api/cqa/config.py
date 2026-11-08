@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     local_endpoint_allowlist: str | None = None
     local_max_parallel: int = 1       # concurrent requests to the local endpoint (Ollama on a laptop: 1; vLLM on a GPU: 8+)
     local_timeout_s: float = 900.0    # one criterion call on an 8B model on a laptop takes 1-3 minutes
+    # sent as "reasoning_effort" to the local endpoint when set: "none" turns a thinking model's reasoning off (Qwen3 on
+    # Ollama: one short JSON instead of a long hidden reasoning pass), "low" | "medium" | "high" keep it; empty = not sent
+    local_reasoning_effort: str | None = None
 
     explanation_language: str = "ru"
     pii_masking: bool = True

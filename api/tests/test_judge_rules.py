@@ -91,3 +91,34 @@ def test_evidence_is_taken_from_the_explanation_when_missing():
     cited = Verdict(criterion_code="C7", applicable=True, answer="yes", confidence=0.9,
                     evidence=[Evidence(turn_idx=2, speaker="operator", quote="turn 2")], explanation="… [4]")
     assert [e.turn_idx for e in validate_verdict(cited, turns, _c7(), channel="agent chat").verdict.evidence] == [2]
+
+
+# ------------------------------------------------------------------------------------------------ N/A reason from the explanation
+
+def test_na_reason_is_taken_from_the_explanation_instead_of_a_retry():
+    from cqa.judge.contract import Verdict
+    from cqa.judge.validate import NA_REASON_FROM_TEXT_FLAG, na_reason_from_text, validate_verdict
+
+    crit = _crit("C3") if "_crit" in globals() else None
+    if crit is None:
+        import json as _json
+
+        from cqa.config import settings as _s
+        from cqa.judge.packer import CriterionPack
+        seed = _json.loads((_s.seeds_dir / "checklist_freedom_v1.json").read_text(encoding="utf-8"))
+        c = next(c for c in seed["criteria"] if c["code"] == "C3")
+        crit = CriterionPack(code="C3", title=c["title"], instruction=c["instruction"], answer_type=c["answer_type"], options=c["options"],
+                             na_allowed=c["na_allowed"], na_condition=c["na_condition"], channel_overrides=c["channel_overrides"] or {},
+                             judge_spec=None)
+    from cqa.ingest.normalize import NormTurn
+    turns = [NormTurn(idx=0, timestamp_raw="", offset_seconds=None, speaker="client", text="Где посмотреть мой тариф?"),
+             NormTurn(idx=1, timestamp_raw="", offset_seconds=None, speaker="operator", text="В приложении: Меню → Тарифы.")]
+    v = Verdict(criterion_code="C3", applicable=False, answer="", confidence=0.9, na_reason="",
+                explanation="Идентификация — N/A. Клиент задал общий вопрос о навигации, данные счёта не раскрывались. Основание — [0].")
+    res = validate_verdict(v, turns, crit, channel="agent chat")
+    assert not res.needs_retry and "N/A without na_reason" not in res.issues
+    assert res.verdict.na_reason.startswith("Клиент задал общий вопрос") and NA_REASON_FROM_TEXT_FLAG in res.verdict.flags
+    # nothing to take it from: the re-ask stays
+    bare = Verdict(criterion_code="C3", applicable=False, answer="", confidence=0.9, na_reason="", explanation="N/A")
+    assert na_reason_from_text(bare) == ""
+    assert validate_verdict(bare, turns, crit, channel="agent chat").needs_retry

@@ -210,6 +210,24 @@ def evidence_from_text(v: Verdict, turns: list[NormTurn], limit: int = 5) -> lis
     return []
 
 
+NA_REASON_FROM_TEXT_FLAG = "na_reason_from_explanation"
+_LEADING_VERDICT = re.compile(r"^[^.—:\n]{0,80}(?:—|:)\s*N/?A\s*[.:;—-]?\s*", re.I)
+
+
+def na_reason_from_text(v: Verdict, limit: int = 400) -> str:
+    """The N/A reason of a verdict that gives it only in its explanation (or step results): the explanation without a
+    leading «Критерий — N/A.» label, cut at a sentence end near `limit`. Empty when there is no text to take it from."""
+    for text in (v.explanation or "", " ".join(v.step_results or [])):
+        t = _LEADING_VERDICT.sub("", text.strip(), count=1).strip()
+        if len(t) < 12:
+            continue
+        if len(t) > limit:
+            cut = t.rfind(".", 0, limit)
+            t = t[: cut + 1] if cut >= 40 else t[:limit].rstrip() + "…"
+        return t
+    return ""
+
+
 def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, conversation_terminal: str | None = None, channel: str | None = None) -> ValidationResult:
     issues: list[str] = []
     retry = False
@@ -258,8 +276,13 @@ def validate_verdict(v: Verdict, turns: list[NormTurn], crit: CriterionPack, *, 
             issues.append("N/A given but not allowed for this criterion")
             retry = True
         elif not v.na_reason.strip():
-            issues.append("N/A without na_reason")
-            retry = True
+            derived = na_reason_from_text(v)
+            if derived:  # local models often put the reason only in the explanation: use it instead of a re-ask
+                v.na_reason = derived
+                v.flags.append(NA_REASON_FROM_TEXT_FLAG)
+            else:
+                issues.append("N/A without na_reason")
+                retry = True
         v.answer = ""
     else:
         norm = normalize_answer(crit.options, v.answer)

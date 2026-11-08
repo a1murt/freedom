@@ -76,6 +76,9 @@ class OpenAICompatibleProvider:
             "max_tokens": max_tokens,
             "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
         }
+        effort_setting = str(getattr(settings, "local_reasoning_effort", "") or "").strip().lower()
+        if effort_setting:  # "none": no reasoning pass on thinking models (Qwen3 on Ollama); the server may not know it
+            body["reasoning_effort"] = effort_setting
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         timeout = float(getattr(settings, "local_timeout_s", 900) or 900)  # an 8B model on a laptop needs 1-3 minutes per criterion
         if timeout <= 0:  # a negative value would make every call fail at once and be retried as a connection error
@@ -83,6 +86,9 @@ class OpenAICompatibleProvider:
         try:
             async with httpx.AsyncClient(timeout=timeout) as c:
                 r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
+                if r.status_code == 400 and "reasoning" in r.text and "reasoning_effort" in body:
+                    body.pop("reasoning_effort", None)  # an endpoint that does not know the parameter
+                    r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
                 if r.status_code == 400 and "response_format" in r.text:
                     body.pop("response_format", None)
                     r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
@@ -95,6 +101,10 @@ class OpenAICompatibleProvider:
             text = data["choices"][0]["message"]["content"] or ""
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise ProviderError(f"Local provider returned an unexpected response: {r.text[:300]}") from e
+        if not text.strip() and data["choices"][0].get("finish_reason") == "length":
+            # a thinking model spent max_tokens on its separate reasoning field: report it as invalid JSON (retried)
+            raise ProviderError("Local model returned invalid JSON: the token limit ran out during reasoning "
+                                "(set LOCAL_REASONING_EFFORT=none)")
         parsed = _extract_json(text)
         u = data.get("usage", {})
         usage = Usage(input_tokens=u.get("prompt_tokens", 0), output_tokens=u.get("completion_tokens", 0))

@@ -665,3 +665,40 @@ def test_runner_retries_transient_claude_errors_only(monkeypatch):
     with pytest.raises(ProviderError, match="Anthropic API error 400"):
         run(judge_runner._call_once(AnthropicProvider("claude-opus-5-5"), "SYS", MESSAGES, "high"))
     assert len(fake.messages.calls) == 1 and slept == []
+
+
+# ------------------------------------------------------------------------------------------------ local reasoning switch (2026-11-08)
+
+def test_local_sends_reasoning_effort_when_configured(local_llm, monkeypatch):
+    from cqa.config import settings as cfg
+
+    verdict = _verdict_json()
+    calls = local_llm(lambda body, n: httpx.Response(200, json=_completion(json.dumps(verdict))))
+    monkeypatch.setattr(cfg, "local_reasoning_effort", "None ")
+    run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
+    assert calls[-1]["body"]["reasoning_effort"] == "none"
+    monkeypatch.setattr(cfg, "local_reasoning_effort", None)
+    run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
+    assert "reasoning_effort" not in calls[-1]["body"]
+
+
+def test_local_drops_reasoning_effort_an_endpoint_does_not_know(local_llm, monkeypatch):
+    from cqa.config import settings as cfg
+
+    monkeypatch.setattr(cfg, "local_reasoning_effort", "none")
+    verdict = _verdict_json(answer="no")
+
+    def respond(body, n):
+        if "reasoning_effort" in body:
+            return httpx.Response(400, json={"error": {"message": "unknown parameter reasoning_effort"}})
+        return httpx.Response(200, json=_completion(json.dumps(verdict)))
+
+    calls = local_llm(respond)
+    res = run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
+    assert len(calls) == 2 and "reasoning_effort" not in calls[1]["body"] and res.parsed["answer"] == "no"
+
+
+def test_local_empty_content_after_reasoning_is_a_retryable_json_error(local_llm):
+    local_llm(lambda body, n: httpx.Response(200, json=_completion("", finish="length")))
+    with pytest.raises(ProviderError, match="invalid JSON"):
+        run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
