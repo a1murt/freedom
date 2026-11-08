@@ -122,3 +122,14 @@ def test_na_reason_is_taken_from_the_explanation_instead_of_a_retry():
     bare = Verdict(criterion_code="C3", applicable=False, answer="", confidence=0.9, na_reason="", explanation="N/A")
     assert na_reason_from_text(bare) == ""
     assert validate_verdict(bare, turns, crit, channel="agent chat").needs_retry
+
+
+def test_an_n_a_whose_explanation_states_an_answer_is_re_asked():
+    from cqa.judge.contract import Verdict
+    from cqa.judge.validate import na_reason_from_text
+
+    for text in ("Выявление потребности — Нет. Оператор не уточнил детали.", "Консультация — 15. Пропущена деталь.",
+                 "Empathy — yes. The operator apologised."):
+        assert na_reason_from_text(Verdict(criterion_code="C2", applicable=False, answer="", confidence=0.9, explanation=text)) == ""
+    ok = Verdict(criterion_code="C2", applicable=False, answer="", confidence=0.9, explanation="Выявление потребности — N/A. Уточнять было нечего.")
+    assert na_reason_from_text(ok) == "Уточнять было нечего."

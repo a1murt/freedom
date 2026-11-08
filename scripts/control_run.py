@@ -215,6 +215,23 @@ def fetch_source(url: str) -> dict | list:
 # about 30 minutes, and the stop-code leaves about an hour after the control set opens
 JOB_TIMEOUT_S = {"local": 3000, "fake": 600}
 JOB_TIMEOUT_DEFAULT_S = 1800
+# --deadline: the results must be pushed by then; export, validate and push take about a minute, kept with a margin
+EXPORT_MARGIN_S = 240
+MIN_RETRY_S = 300  # a retry needs at least one dialog's worth of time on the local model (about 3 min)
+
+
+def deadline_epoch(text: str | None) -> float | None:
+    """'HH:MM' today in local time -> epoch seconds; None when not given."""
+    if not text:
+        return None
+    hh, mm = (int(x) for x in text.strip().split(":", 1))
+    lt = time.localtime()
+    return time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, hh, mm, 0, 0, 0, -1))
+
+
+def time_left(deadline: float | None) -> float | None:
+    """Seconds a job may still be followed before the export must start (None without a deadline)."""
+    return None if deadline is None else deadline - time.time() - EXPORT_MARGIN_S
 
 
 def job_timeout_for(provider: str, override: int | None = None) -> int:
@@ -222,7 +239,7 @@ def job_timeout_for(provider: str, override: int | None = None) -> int:
 
 
 def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, timeout_s: int | None = None,
-            poll_s: float = 4.0) -> dict:
+            poll_s: float = 4.0, deadline: float | None = None) -> dict:
     job = start(http, base, f"{base}/api/evaluations/run", {"conversation_ids": ids, "checklist_version_id": version_id, "provider": provider})
     job_id = job["job_id"]
     log(f"job {job_id}: {job['queued']} dialogs, estimate ${job.get('estimated_cost_usd')}, provider {provider}")
@@ -275,13 +292,18 @@ def run_job(http: httpx.Client, base: str, ids: list[str], version_id: int, prov
                     return j
             elif j["status"] in TERMINAL:
                 return j
-        if time.time() - t0 > timeout_s:
-            raise SystemExit("evaluation job timed out")
+        if time.time() - t0 > timeout_s or (deadline is not None and time.time() > deadline - EXPORT_MARGIN_S):
+            try:  # stop the job on the API: no new dialog starts, so a retry does not race it (dialogs in flight finish)
+                http.post(f"{base}/api/jobs/{job_id}/cancel")
+            except httpx.HTTPError:
+                pass
+            raise SystemExit(f"evaluation job {job_id} timed out after {time.time() - t0:.0f} s (cancelled on the API)")
         time.sleep(poll_s)
 
 
 def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int, provider: str, *,
-                 only_incomplete: bool = False, job_timeout_s: int | None = None, retry_provider: str | None = None) -> list[str]:
+                 only_incomplete: bool = False, job_timeout_s: int | None = None, retry_provider: str | None = None,
+                 deadline: float | None = None) -> list[str]:
     """Evaluate the dialogs, retry the ones that did not complete once, and return those still not completed.
 
     It never aborts the export: a job that times out, or a retry the API refuses (budget, dialogs per run, busy for
@@ -290,19 +312,26 @@ def evaluate_all(http: httpx.Client, base: str, ids: list[str], version_id: int,
     targets = not_completed(http, base, ids, version_id) if only_incomplete else list(ids)
     if only_incomplete:
         log(f"--only-incomplete: {len(targets)} of {len(ids)} dialogs have no completed evaluation" + (f": {targets}" if targets else ""))
+    t_job = job_timeout_for(provider, job_timeout_s)
     if targets:
+        left = time_left(deadline)
         try:
-            run_job(http, base, targets, version_id, provider, timeout_s=job_timeout_s)
+            run_job(http, base, targets, version_id, provider, timeout_s=t_job if left is None else min(t_job, max(left, 60)),
+                    deadline=deadline)
         except SystemExit as e:
             log(f"evaluation did not finish ({e}); continuing with what the API has")
     bad = not_completed(http, base, ids, version_id)
     if bad:
+        left = time_left(deadline)
+        if left is not None and left < MIN_RETRY_S:
+            log(f"no time for a retry before the deadline ({max(left, 0):.0f} s left): exporting what the API has; {bad} stay status=error")
+            return bad
         log(f"retrying {len(bad)} dialogs that did not complete: {bad}")
         try:
             retry_with = retry_provider or (provider if provider in ("local", "fake") else "anthropic")
-            run_job(http, base, bad, version_id, retry_with, timeout_s=job_timeout_s)
+            run_job(http, base, bad, version_id, retry_with, timeout_s=t_job if left is None else min(t_job, left), deadline=deadline)
         except SystemExit as e:
-            log(f"retry not run ({e}); continuing with what the API has")
+            log(f"retry did not finish ({e}); continuing with what the API has")
         bad = not_completed(http, base, bad, version_id)
     return bad
 
@@ -327,6 +356,8 @@ def main() -> int:
     ap.add_argument("--group", help="control group_id announced by the organizers")
     ap.add_argument("--job-timeout", type=int, default=None, metavar="SECONDS",
                     help="how long to follow one evaluation job (default: 3000 for local, 1800 for Claude)")
+    ap.add_argument("--deadline", metavar="HH:MM", help="local time by which the results must be pushed (e.g. 13:57): jobs are "
+                    "followed only until then minus the export margin, and the retry is skipped when no time is left")
     ap.add_argument("--provider", default=None, choices=["anthropic", "ensemble", "local", "fake"],
                     help="default: the API's default_provider (GET /api/settings); "
                          "fake = offline judge for a free rehearsal of the flow (never committed or pushed)")
@@ -436,7 +467,8 @@ def main() -> int:
         else:
             preflight(http, base, ids, version_id, args.provider)
             bad = evaluate_all(http, base, ids, version_id, args.provider, only_incomplete=args.only_incomplete,
-                               job_timeout_s=args.job_timeout, retry_provider=getattr(args, "retry_provider", None))
+                               job_timeout_s=args.job_timeout, retry_provider=getattr(args, "retry_provider", None),
+                               deadline=deadline_epoch(args.deadline))
             if bad:
                 log(f"still not completed (exported as status=error, which keeps the file valid): {bad}")
                 log("to evaluate just those later and re-publish all records: api/.venv/bin/python scripts/control_run.py "

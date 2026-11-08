@@ -211,12 +211,15 @@ def evidence_from_text(v: Verdict, turns: list[NormTurn], limit: int = 5) -> lis
 
 
 NA_REASON_FROM_TEXT_FLAG = "na_reason_from_explanation"
+_STATED_ANSWER = re.compile(r"^[^.—–:\n]{0,80}(?:—|–|:)\s*(?:да|нет|yes|no|иә|жоқ|\d{1,2})\b", re.I)
 _LEADING_VERDICT = re.compile(r"^[^.—:\n]{0,80}(?:—|:)\s*N/?A\s*[.:;—-]?\s*", re.I)
 
 
 def na_reason_from_text(v: Verdict, limit: int = 400) -> str:
     """The N/A reason of a verdict that gives it only in its explanation (or step results): the explanation without a
     leading «Критерий — N/A.» label, cut at a sentence end near `limit`. Empty when there is no text to take it from."""
+    if _STATED_ANSWER.match((v.explanation or "").strip()):
+        return ""  # «Выявление потребности — Нет. …» contradicts the N/A: re-ask instead of storing a null
     for text in (v.explanation or "", " ".join(v.step_results or [])):
         t = _LEADING_VERDICT.sub("", text.strip(), count=1).strip()
         if len(t) < 12:

@@ -77,9 +77,22 @@ def log(msg: str) -> None:
 
 
 # ---------------------------------------------------------------- endpoint and tunnel
+def _auth_headers() -> dict[str, str]:
+    """Bearer LOCAL_API_KEY for a key-protected endpoint (the environment, else the repository .env); never printed."""
+    key = os.environ.get("LOCAL_API_KEY", "").strip()
+    if not key:
+        env = Path(__file__).resolve().parents[1] / ".env"
+        if env.exists():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("LOCAL_API_KEY="):
+                    key = line.split("=", 1)[1].strip().strip('"').strip("'")
+    return {"Authorization": f"Bearer {key}"} if key and key.lower() != "none" else {}
+
+
 def endpoint_models(endpoint: str) -> list[str] | None:
     try:
-        with urllib.request.urlopen(endpoint.rstrip("/") + "/models", timeout=8) as r:
+        req = urllib.request.Request(endpoint.rstrip("/") + "/models", headers=_auth_headers())
+        with urllib.request.urlopen(req, timeout=8) as r:
             return [m.get("id") for m in json.loads(r.read().decode("utf-8")).get("data", [])]
     except Exception:
         return None
@@ -114,7 +127,8 @@ def ensure_endpoint(fatal: bool = True) -> bool:
         log(f"warming up {ARGS.model} (loading it into GPU memory can take a minute) …")
         t0 = time.time()
         body = json.dumps({"model": ARGS.model, "messages": [{"role": "user", "content": "ok"}], "max_tokens": 1}).encode()
-        req = urllib.request.Request(ARGS.endpoint.rstrip("/") + "/chat/completions", data=body, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(ARGS.endpoint.rstrip("/") + "/chat/completions", data=body,
+                                     headers={"Content-Type": "application/json", **_auth_headers()})
         try:
             with urllib.request.urlopen(req, timeout=600) as r:
                 r.read()

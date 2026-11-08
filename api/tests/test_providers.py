@@ -698,7 +698,23 @@ def test_local_drops_reasoning_effort_an_endpoint_does_not_know(local_llm, monke
     assert len(calls) == 2 and "reasoning_effort" not in calls[1]["body"] and res.parsed["answer"] == "no"
 
 
-def test_local_empty_content_after_reasoning_is_a_retryable_json_error(local_llm):
-    local_llm(lambda body, n: httpx.Response(200, json=_completion("", finish="length")))
-    with pytest.raises(ProviderError, match="invalid JSON"):
+def test_local_output_cut_at_the_limit_is_retried_once_with_sampling_then_fails_without_transient_words(local_llm):
+    calls = local_llm(lambda body, n: httpx.Response(200, json=_completion('{"criterion_code": "C1", "appl', finish="length")))
+    with pytest.raises(ProviderError, match="cut at the token limit") as e:
         run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
+    assert [c["body"]["temperature"] for c in calls] == [0.0, 0.3]
+    assert not any(k in str(e.value).lower() for k in ("invalid json", "timeout", "connection"))  # not retried again
+
+
+def test_local_sampled_retry_after_a_cut_can_succeed(local_llm):
+    verdict = _verdict_json()
+    calls = local_llm(lambda body, n: httpx.Response(200, json=_completion("", finish="length") if n == 1
+                                                         else _completion(json.dumps(verdict))))
+    res = run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict))
+    assert res.parsed == verdict and len(calls) == 2
+
+
+def test_local_output_tokens_are_capped(local_llm):
+    calls = local_llm(lambda body, n: httpx.Response(200, json=_completion(json.dumps(_verdict_json()))))
+    run(_local().complete("sys", [{"role": "user", "content": "hi"}], Verdict, max_tokens=4096))
+    assert calls[0]["body"]["max_tokens"] == 1536

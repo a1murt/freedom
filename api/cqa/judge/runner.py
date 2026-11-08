@@ -310,8 +310,12 @@ async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[s
             if traces is not None and e.billed:
                 traces.append(_failed_trace(provider, system, messages, e) | {"kind": kind, "prompt_version": prompt_version})
             msg = str(e).lower()
-            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out", "invalid json"))
-            if not transient or attempt == len(delays):
+            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "504",
+                                               "gateway time", "timeout", "timed out", "invalid json"))
+            # a local model at temperature 0 repeats a timeout or broken JSON: one retry, not three (each can cost minutes)
+            repeat_prone = getattr(provider, "name", "") == "local" and any(k in msg for k in ("timeout", "timed out", "time-out",
+                                                                                              "invalid json"))
+            if not transient or attempt == len(delays) or (repeat_prone and attempt >= 1):
                 raise
             log.warning("%s/%s transient error (attempt %d): %s", provider.name, provider.model, attempt + 1, e)
     else:  # pragma: no cover

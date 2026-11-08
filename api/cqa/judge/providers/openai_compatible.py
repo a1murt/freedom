@@ -42,6 +42,9 @@ def _extract_json(text: str) -> dict[str, Any]:
 
 
 _SLOTS: dict[tuple[str, int], asyncio.Semaphore] = {}
+# a verdict is 150-700 tokens on Qwen 27B; a cap of about twice the longest stops a runaway generation in minutes, not ten
+LOCAL_MAX_TOKENS = 1536
+CONNECT_TIMEOUT_S = 10.0
 
 
 def _slot(base_url: str) -> asyncio.Semaphore:
@@ -66,14 +69,15 @@ class OpenAICompatibleProvider:
         async with _slot(self.base_url):
             return await self._complete(system, messages, schema, max_tokens=max_tokens)
 
-    async def _complete(self, system: str, messages: list[dict[str, Any]], schema: type[BaseModel], *, max_tokens: int) -> ProviderResult:
+    async def _complete(self, system: str, messages: list[dict[str, Any]], schema: type[BaseModel], *, max_tokens: int,
+                        temperature: float = 0.0, length_retry: bool = True) -> ProviderResult:
         t0 = time.perf_counter()
         json_schema = schema.model_json_schema()
         body: dict[str, Any] = {
             "model": self.model,
             "messages": _flatten_messages(system, messages) + [{"role": "user", "content": "Return only the JSON object matching the schema: " + json.dumps(json_schema, ensure_ascii=False)[:6000]}],
-            "temperature": 0,
-            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "max_tokens": min(int(max_tokens), LOCAL_MAX_TOKENS),
             "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
         }
         effort_setting = str(getattr(settings, "local_reasoning_effort", "") or "").strip().lower()
@@ -84,7 +88,7 @@ class OpenAICompatibleProvider:
         if timeout <= 0:  # a negative value would make every call fail at once and be retried as a connection error
             timeout = 900.0
         try:
-            async with httpx.AsyncClient(timeout=timeout) as c:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=CONNECT_TIMEOUT_S)) as c:
                 r = await c.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
                 if r.status_code == 400 and "reasoning" in r.text and "reasoning_effort" in body:
                     body.pop("reasoning_effort", None)  # an endpoint that does not know the parameter
@@ -101,11 +105,18 @@ class OpenAICompatibleProvider:
             text = data["choices"][0]["message"]["content"] or ""
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise ProviderError(f"Local provider returned an unexpected response: {r.text[:300]}") from e
-        if not text.strip() and data["choices"][0].get("finish_reason") == "length":
-            # a thinking model spent max_tokens on its separate reasoning field: report it as invalid JSON (retried)
-            raise ProviderError("Local model returned invalid JSON: the token limit ran out during reasoning "
-                                "(set LOCAL_REASONING_EFFORT=none)")
-        parsed = _extract_json(text)
+        if data["choices"][0].get("finish_reason") == "length":
+            try:
+                parsed = _extract_json(text)
+            except ProviderError:
+                # cut at the token limit (a runaway, or a reasoning pass that used it up): at temperature 0 the same
+                # request repeats itself, so try once more with a little sampling, then fail without the transient words
+                if length_retry:
+                    return await self._complete(system, messages, schema, max_tokens=max_tokens, temperature=0.3, length_retry=False)
+                raise ProviderError("Local model output was cut at the token limit (finish_reason=length); "
+                                    "with a thinking model set LOCAL_REASONING_EFFORT=none") from None
+        else:
+            parsed = _extract_json(text)
         u = data.get("usage", {})
         usage = Usage(input_tokens=u.get("prompt_tokens", 0), output_tokens=u.get("completion_tokens", 0))
         latency = int((time.perf_counter() - t0) * 1000)

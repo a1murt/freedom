@@ -111,3 +111,50 @@ def test_the_retry_uses_the_given_provider_when_claude_is_off(cr, monkeypatch):
     seen.clear()
     cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "ensemble")  # Claude available: single Opus retry as before
     assert seen == ["ensemble", "anthropic"]
+
+
+def test_local_repeat_prone_errors_get_one_retry(monkeypatch):
+    import asyncio
+
+    from cqa.judge import runner as jr
+    from cqa.judge.providers.base import ProviderError
+
+    async def no_sleep(_s):
+        return None
+
+    monkeypatch.setattr(jr.asyncio, "sleep", no_sleep)
+
+    class P:
+        def __init__(self, name, msg):
+            self.name, self.model, self.msg, self.calls = name, "m", msg, 0
+
+        async def complete(self, *a, **k):
+            self.calls += 1
+            raise ProviderError(self.msg)
+
+    for name, msg, want in (("local", "Local model returned invalid JSON: x", 2), ("local", "Local provider connection error: ReadTimeout", 2),
+                            ("local", "Local provider connection error: ConnectError refused", 4), ("anthropic", "Anthropic API error 503", 4),
+                            ("local", "Local provider HTTP 504: 504 Gateway Time-out", 2)):
+        p = P(name, msg)
+        try:
+            asyncio.run(jr._call_once(p, "sys", [], "high"))
+        except ProviderError:
+            pass
+        assert p.calls == want, (name, msg, p.calls)
+
+
+def test_deadline_cuts_the_retry_when_no_time_is_left(cr, monkeypatch):
+    import time as _t
+
+    calls: list[tuple[list[str], int | None]] = []
+
+    def run_job(http, base, ids, version_id, provider, timeout_s=None, **kw):
+        calls.append((list(ids), timeout_s))
+        raise SystemExit("evaluation job timed out")
+
+    monkeypatch.setattr(cr, "run_job", run_job)
+    monkeypatch.setattr(cr, "not_completed", lambda http, base, ids, vid: ["c2"])
+    deadline = _t.time() + cr.EXPORT_MARGIN_S + 120  # 2 minutes of job time left: the first job is bounded, no retry
+    bad = cr.evaluate_all(None, "http://api.test", ["c1", "c2"], 1, "local", deadline=deadline)
+    assert bad == ["c2"] and len(calls) == 1 and calls[0][1] <= 125
+    assert cr.deadline_epoch(None) is None and cr.deadline_epoch("13:57") > 0
