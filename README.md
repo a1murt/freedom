@@ -1,13 +1,21 @@
-# CQA · Conversation Quality Analytics for Freedom Broker
+# CQA — Conversation Quality Analytics для Freedom Broker
 
-Prototype built for the Freedom Broker CQA hackathon: an LLM judge scores support dialogs (RU / KZ / EN chats and RU voice calls) against an editable, versioned checklist, shows per-criterion answers, points, weights, explanations and evidence turns, supports appeals and reviewer decisions with recalculated totals, and proves every verdict with a full trace.
+**Команда: «Я Тебя Могну»** · хакатон Freedom Broker CQA, ноябрь 2026
 
-**Live demo:** https://cqa-freedom-pi.vercel.app (no login; DEV set already evaluated). API: https://api-production-58ab4.up.railway.app (Swagger at `/docs`). Local run below.
+Система оценивает качество работы оператора поддержки по чек-листу компании: читает чат или транскрипт звонка (RU / KZ / EN), выставляет ответ по каждому из восьми критериев, объясняет его цитатой из диалога, считает итоговый балл по правилам организаторов и даёт оспорить любую оценку. Каждый вердикт воспроизводим: сохраняются модель, версия промпта, запрос, ответ, токены и стоимость.
 
-## Run it in three commands
+| | |
+|---|---|
+| **Живое демо (без входа)** | https://cqa-freedom-pi.vercel.app |
+| **API и Swagger** | https://api-production-58ab4.up.railway.app/docs |
+| **Результаты контрольного набора** | [`results/prod/results.json`](results/prod/results.json) (FBroker, 10 чатов, формат JSON 1.0) |
+| **Результаты DEV** | [`results/dev/results.json`](results/dev/results.json) (65 диалогов) |
+| **Точность судьи** | [`docs/eval/ACCURACY.md`](docs/eval/ACCURACY.md), [`api/judge_config_control.md`](api/judge_config_control.md) |
+
+## Запуск за три команды
 
 ```bash
-cp .env.example .env    # add ANTHROPIC_API_KEY and the organizer URL
+cp .env.example .env    # вписать ANTHROPIC_API_KEY и ORGANIZER_API_URL (ссылку GET организаторов без group_id)
 ```
 ```bash
 docker compose up --build
@@ -16,54 +24,95 @@ docker compose up --build
 open http://localhost:5173
 ```
 
-Then press **Import** on the Conversations screen with group id `DEV` (or the control group id), pick the checklist and press **Evaluate**.
+API поднимается на `http://localhost:8000` (Swagger: `/docs`), интерфейс — на `5173`. В интерфейсе: **Импорт** → `group_id` (`DEV`, `FBroker`) → **Оценить**. Через минуту у каждого диалога есть карточка с баллами и обоснованиями.
 
-Without Docker: `cd api && uv sync && uv run uvicorn cqa.main:app --reload` (API on 8000) and `cd web && pnpm install && pnpm dev` (UI on 5173).
+Без Docker:
 
-## Results files (organizer JSON 1.0)
-
-- `results/dev/results.json` covers the 65 DEV dialogs; `results/prod/results.json` covers the 10 control chats and is written by the control run.
-- Build or validate any time:
-  ```bash
-  cd api && .venv/bin/python -m cqa.export.results_json --api https://api-production-58ab4.up.railway.app --group DEV --out ../results/dev/results.json --expect 65
-  ```
-  ```bash
-  cd api && .venv/bin/python -m cqa.export.results_json --validate ../results/prod/results.json --expect 10
-  ```
-- Control hour, one command (snapshot, import, dry-run guard check, evaluate, resume after a restart, retry, export, validate, commit, push; runbook in `docs/ARCHITECTURE_V2.md` §10):
-  ```bash
-  api/.venv/bin/python scripts/control_run.py --group <CONTROL_GROUP_ID>
-  ```
-- API: `GET /api/export/results.json?group_id=DEV` returns the same file; `GET /api/export/results/validate?group_id=...&expect=10` returns the validation report.
-
-## What it does
-
-- **Import** by organizer `group_id`, JSON upload, or pasted transcript. Bot and system turns are kept as context; the operator segment, duplicates, recording pauses and terminal events are detected automatically.
-- **Checklist Studio**: criteria with Да/Нет or scale answers, weights, N/A rules, gross-error flag, channel overrides for calls; every save is a new version; a diff tells which criteria need re-judging; **partial re-evaluation** re-judges only those.
-- **Judge**: one structured call per criterion (transcript first, compiled decision procedure second), evidence validated against the transcript, hard N/A rules from the checklist, deterministic scoring with N/A weight redistribution and two-decimal rounding exactly as the organizer PDF specifies.
-- **Providers**: Claude Opus 5.5 (default), Claude Sonnet 5.5, a local open model through any OpenAI-compatible endpoint (vLLM / Ollama), and an **ensemble** mode with cross-model voting and an arbiter.
-- **Trace**: model, prompt version hash, request, response, tokens, cost and latency for every call.
-- **Appeals**: analyst disputes a criterion, reviewer confirms or changes it with a reason, totals are recalculated, and accepted decisions become few-shot examples for the judge.
-- **Calls**: audio is resolved from the organizer player page, cached and streamed with seeking; acoustic features (pace, pauses, talk ratio, holds) feed criterion 6.
-- **Analytics and export**: distributions, criterion heatmap, operator leaderboard, AI-vs-reviewer agreement, cost per provider; CSV of all per-criterion answers and totals; PDF card.
-- **Dynamics 365 ready**: the web app builds to a single HTML file, has an embed mode (`?embed=1&conversation=<id>`), uses hash routing and no auth; `POST /api/integrations/dynamics/transcripts` takes Omnichannel transcripts pushed by Power Automate (admin guide: `docs/INTEGRATION_D365.md`).
-- **Enterprise layer**: nine roles with a permission matrix and an audit trail of every write (`X-CQA-Role` / `X-CQA-User` headers, `/api/roles`, `/api/audit`), daily budget and concurrency guards, restart recovery with job resume, database snapshots with one-click restore, executive overview and operator scorecards, gold-label calibration with AI-vs-human agreement, deep health, metrics and request ids. System as built: [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md).
-
-## Model and cost
-
-Default judge: `claude-opus-5-5` with adaptive thinking, effort `high`, structured outputs. Measured on DEV: about **$0.20 per chat** (8 calls, ~12k input and ~7.5k output tokens, 20 s wall time) and about $0.40 per voice call. Sonnet 5.5 is about half; the local model is free. Ensemble (Opus + Sonnet + arbiter) is about 2.5× a single Opus run. Actual cost per evaluation is computed from token usage and shown on every card.
-
-## Repository
-
+```bash
+cd api && uv sync --extra dev && uv run uvicorn cqa.main:app --reload
 ```
-api/      FastAPI service: ingest, checklist versions, scoring engine, judge, jobs, audio, review, analytics, export
-web/      Vite + React UI (RU/EN/KK), single-file build for Dynamics 365
-docs/     ARCHITECTURE_V2.md (as built) · ARCHITECTURE.md (design) · API.md · ARCH_CONTRACTS.md · arch/ · PLAN.md · ML_BRIEF.md · DATASET_NOTES.md · knowledge/
-api/seeds Organizer checklist (v1) and compiled judge specs, claims ledger
+```bash
+cd web && pnpm install && pnpm dev
 ```
 
-Tests: `cd api && uv run --extra dev pytest -q` (968 tests, offline: the `fake` judge replaces Claude; includes an end-to-end process test). CI: `.github/workflows/ci.yml`.
+Без ключа Claude система тоже работает: укажите в `.env` локальную модель через любой OpenAI-совместимый сервер (`LOCAL_ENDPOINT=http://localhost:11434/v1`, `LOCAL_MODEL=qwen3:8b` для Ollama) и `CLAUDE_ENABLED=false`. Подробнее — раздел «Облако или свой сервер».
 
-## Team
+## Что показать за пять минут
 
-Product, frontend, pitch: Kassymzhomart Shubay. ML judge and calibration: teammate. Built with Claude Code.
+1. **Диалог и карточка.** Список из 65 DEV-диалогов с итогом, флагом грубого нарушения, провайдером и стоимостью. Откройте `p1-ru-029`: итог **51,25 / 100**, баннер «Оскорбление клиента» с цитатой «Вы вообще читать умеете?», по каждому критерию — ответ, баллы, вес, обоснование в стиле чек-листа и переход к реплике-доказательству.
+2. **N/A.** Критерий «Идентификация» в том же диалоге — N/A с причиной: вопрос навигационный, данных счёта оператор не раскрывал. Вес N/A-критерия перераспределён между остальными.
+3. **Апелляция.** Роль «Оператор» видит свои диалоги и оспаривает критерий с комментарием; роль «Проверяющий» видит спорную оценку, комментарий и фрагмент, подтверждает или меняет её с причиной. Итог пересчитывается сразу, в карточке остаются исходная оценка, решение и финальный балл.
+4. **Чек-лист.** Checklist Studio: добавить критерий, изменить формулировку, вес, тип ответа или правило N/A; каждое сохранение — новая версия; диф показывает, какие критерии нужно пересудить, и **частичная переоценка** пересуживает только их.
+5. **Грубые нарушения.** Отдельный экран со всеми диалогами, где найдено оскорбление, платная услуга в обход компании или раскрытие данных без идентификации, — с типом нарушения, объяснением и цитатой.
+
+Сценарий с таймингом и запасными ходами: [`docs/DEMO.md`](docs/DEMO.md).
+
+## Как считается оценка
+
+Чек-лист организаторов перенесён без изменений ([`api/seeds/checklist_freedom_v1.json`](api/seeds/checklist_freedom_v1.json)): восемь критериев, веса 10 / 15 / 20 / 20 / 15 / 15 / 5, шкалы 0–20 и 0–10, условия N/A со стр. 1, грубые ошибки — отдельным флагом без баллов.
+
+- **Судья.** На каждый критерий — один структурированный вызов модели: сначала транскрипт с размеченными сегментами (до оператора, оператор, внутренняя консультация, после завершения), затем критерий со скомпилированной процедурой решения. Ответ проверяется: цитаты ищутся в транскрипте, N/A допускается только там, где его разрешает чек-лист, для «Нет» обязательна реплика-основание или участок, где действие ожидалось.
+- **Балл.** Детерминированно, без модели: «Да» даёт полный вес, шкала пересчитывается пропорционально, веса N/A перераспределяются между применимыми критериями, итог округляется до двух знаков (half-up, 50,625 → 50,63). Грубая ошибка итог не меняет и отмечается отдельно.
+- **Ответы организаторов** встроены в правила: вежливое прощание без итога и без предложения помощи — N/A по «Завершению» (переключатель `c7_bare_farewell_policy` в настройках); данных хватало с самого начала — N/A по «Выявлению потребности»; звонок, у которого приветствие не попало в запись, — без штрафа по «Установлению контакта».
+- **Справочные факты.** Утверждения оператора о путях меню, сроках и комиссиях сверяются с базой фактов компании ([`api/seeds/claims_ledger.json`](api/seeds/claims_ledger.json), [`docs/knowledge/`](docs/knowledge/)); система помечает расхождения, но не придумывает факты.
+
+## Точность
+
+Два независимых эталона на 60 DEV-чатах, по три разметчика в каждом, читавших только чек-лист и ответы организаторов (без доступа к нашему судье). Эталоны совпадают между собой на 95,6 % ячеек.
+
+| | Согласие по критериям |
+|---|---|
+| Судья до калибровки по ответам организаторов | 84,6 % |
+| Судья сейчас, против эталона №1 / №2 | **95,0 % / 95,2 %** |
+| Ансамбль Opus ×2 + Sonnet, репетиция контрольного прогона | 98,8 % |
+| Локальная модель qwen3.8-27B против Claude, 24 отложенных чата | 96,9 % против 98,4 % |
+
+Средняя ошибка итогового балла против эталона — **2,9 балла**, 43 из 60 итогов совпали точно. Между двумя прогонами одного судьи расходятся около 2 ячеек из 60 по шкальным критериям, поэтому контрольный набор оценивает ансамбль. Метод, журнал решений и каждая метка: [`docs/eval/ACCURACY.md`](docs/eval/ACCURACY.md), [`api/eval/decisions.md`](api/eval/decisions.md), [`api/eval/gold.json`](api/eval/gold.json).
+
+## Контрольный набор
+
+`results/prod/results.json` — оценки 10 чатов набора **FBroker** на замороженном коде и спеках: ансамбль Claude Opus 5.5 ×2 + Sonnet 5.5 с арбитром, чек-лист v1, 48 секунд, $7,99. 10 записей `ok`, два флага грубых нарушений. Набор **Swap** сохранён (кэш организаторского ответа и импорт в базу хостового инстанса), оценка по нему будет запущена по дополнительной инструкции организаторов.
+
+Проверить файл или собрать его заново:
+
+```bash
+cd api && uv run python -m cqa.export.results_json --validate ../results/prod/results.json --expect 10
+```
+```bash
+cd api && uv run python -m cqa.export.results_json --api https://api-production-58ab4.up.railway.app --group FBroker --out ../results/prod/results.json --expect 10
+```
+
+Контрольный час одной командой (импорт, оценка, повтор сбоев, экспорт, проверка, коммит, пуш): `api/.venv/bin/python scripts/control_run.py --group <GROUP_ID> --provider ensemble`. Тот же набор на локальной модели, рядом с официальным прогоном и без обращения к облаку: `scripts/control_local.py`.
+
+## Облако или свой сервер
+
+Судья работает с любым из трёх провайдеров, переключение — в настройках без редеплоя:
+
+- **Claude** (Opus 5.5 по умолчанию, Sonnet 5.5): около **$0,20 и 20 с на чат**, звонок — около $0,40; ансамбль с арбитром — в 3–4 раза дороже (контрольный набор: $0,80 за чат). Стоимость каждой оценки считается по токенам и видна в карточке.
+- **Локальная модель** через OpenAI-совместимый endpoint (vLLM, Ollama). На хакатоне это qwen3.8-27B (Q4) на университетском сервере с двумя NVIDIA A10: $0, около 2 минут на чат при трёх запросах параллельно, точность на уровне Claude (см. выше). Данные не покидают контур: перед отправкой в облако PII маскируется, локальная модель получает текст как есть. Установка и доступ: [`api/local/GPU_SERVER.md`](api/local/GPU_SERVER.md).
+- **Ансамбль**: несколько моделей голосуют, при расхождении решает арбитр; локальная модель может быть одним из голосов.
+
+`CLAUDE_ENABLED=false` гарантирует, что ни один запрос не уйдёт в облако.
+
+## Архитектура
+
+```
+web/        React + Vite (RU / EN / KK), сборка в один HTML-файл и embed-режим для Dynamics 365
+api/        FastAPI: импорт → нормализация → судья → валидация → скоринг → апелляции → аналитика → экспорт
+api/seeds/  чек-лист организаторов (v1), процедуры решения судьи, база фактов
+api/eval/   эталонная разметка (65 диалогов), протокол, журнал решений, прогоны harness
+docs/       архитектура, API, демо-сценарий, хостинг, отчёты о точности
+scripts/    контрольный прогон (облако и локальная модель), smoke-проверки, демо-данные
+results/    results.json для DEV и для контрольного набора
+```
+
+Хранение — SQLite (или Postgres через `DATABASE_URL`); все вызовы модели — в таблице трассировок. Хостинг: API на Railway, интерфейс на Vercel; то же самое поднимается локально через `docker compose`. Роли (аналитик, проверяющий, оператор, руководитель и др.) с матрицей прав и журналом действий, дневной лимит расходов, снапшоты базы, интеграция с Dynamics 365 (`POST /api/integrations/dynamics/transcripts`). Как построено: [`docs/ARCHITECTURE_V2.md`](docs/ARCHITECTURE_V2.md), контракт API: [`docs/API.md`](docs/API.md).
+
+Тесты: `cd api && uv run --extra dev pytest -q` — около 1300 тестов, офлайн (судью заменяет детерминированный `fake`-провайдер). CI: `.github/workflows/ci.yml`.
+
+## Команда «Я Тебя Могну»
+
+- **Касымжомарт Шубай** — продукт, архитектура, фронтенд, хостинг, презентация.
+- **Алнур Кенесбай** — ML: калибровка судьи, эталонная разметка, локальная модель и on-prem контур.
+
+Построено с Claude Code.
