@@ -76,6 +76,9 @@ class OpenAICompatibleProvider:
             "max_tokens": max_tokens,
             "response_format": {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
         }
+        reasoning = str(getattr(settings, "local_reasoning_effort", "none") or "").strip().lower()
+        if reasoning:  # Ollama ≥0.40: "none" disables the model's thinking (minutes per call otherwise); vLLM ignores unknown values
+            body["reasoning_effort"] = reasoning
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         timeout = float(getattr(settings, "local_timeout_s", 900) or 900)  # an 8B model on a laptop needs 1-3 minutes per criterion
         if timeout <= 0:  # a negative value would make every call fail at once and be retried as a connection error
@@ -92,6 +95,10 @@ class OpenAICompatibleProvider:
             raise ProviderError(f"Local provider HTTP {r.status_code}: {r.text[:300]}")
         try:
             data = r.json()
+            if isinstance(data, dict) and "choices" not in data and data.get("error"):
+                err = data["error"]
+                msg = err.get("message") if isinstance(err, dict) else str(err)
+                raise ProviderError(f"Local provider error: {str(msg)[:300]}")  # a gateway may answer 200 with an error body
             text = data["choices"][0]["message"]["content"] or ""
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise ProviderError(f"Local provider returned an unexpected response: {r.text[:300]}") from e

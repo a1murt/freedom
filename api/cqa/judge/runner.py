@@ -303,7 +303,7 @@ async def _call_once(provider: JudgeProvider, system: str, messages: list[dict[s
             if traces is not None and e.billed:
                 traces.append(_failed_trace(provider, system, messages, e) | {"kind": kind, "prompt_version": prompt_version})
             msg = str(e).lower()
-            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out", "invalid json"))
+            transient = any(k in msg for k in ("connection", "overloaded", "rate limit", "429", "529", "500", "502", "503", "timeout", "timed out", "invalid json", "504", "524"))
             if not transient or attempt == len(delays):
                 raise
             log.warning("%s/%s transient error (attempt %d): %s", provider.name, provider.model, attempt + 1, e)
@@ -427,7 +427,7 @@ def _load_fewshots(db: Session, code: str, language: str, channel: str, enabled:
     if not enabled:
         return []
     rows = db.execute(select(FewshotExample).where(FewshotExample.criterion_code == code, FewshotExample.channel == channel)
-                      .order_by(FewshotExample.language == language, FewshotExample.id.desc()).limit(3)).scalars().all()
+                      .order_by((FewshotExample.language == language).desc(), FewshotExample.id.desc()).limit(3)).scalars().all()
     return [{"transcript_excerpt": r.transcript_excerpt, "verdict": r.verdict} for r in rows]
 
 

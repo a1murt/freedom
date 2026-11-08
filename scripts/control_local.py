@@ -3,7 +3,7 @@
 
 Runs on a laptop inside the university network. It never touches the hosted instance, git or the official results:
 - its own database `api/data/control_local.db` and outputs in `api/data/control_local/` (both git-ignored);
-- the judge is the OpenAI-compatible local provider (Ollama on the GPU server, reached through an SSH tunnel);
+- the judge is the OpenAI-compatible local provider (the CQA Ollama on the GPU server, port 11436, 3 slots; reached through an SSH tunnel);
 - the official file stays `results/prod/results.json` from `scripts/control_run.py` (ensemble on the hosted API).
 
 Usage, from the repository root (wrap long runs in `caffeinate -i` so the laptop does not sleep):
@@ -48,10 +48,11 @@ def parse() -> argparse.Namespace:
     src.add_argument("--rehearse", type=int, metavar="N", help="rehearse on the N shortest DEV chats")
     src.add_argument("--export-only", action="store_true", help="export the dialogs of the last run from the database, no judging")
     src.add_argument("--compare-only", action="store_true", help="only compare the existing local file with the cloud file")
-    ap.add_argument("--endpoint", default="http://localhost:11435/v1", help="OpenAI-compatible base URL of the local model")
+    ap.add_argument("--endpoint", default="http://localhost:11436/v1", help="OpenAI-compatible base URL of the local model (default: the SSH tunnel to the CQA Ollama on the GPU server)")
     ap.add_argument("--model", default="qwen3.8:27b-q4_K_M", help="model name served by the endpoint")
-    ap.add_argument("--tunnel", metavar="SSH_HOST", help="open ssh -L <port>:127.0.0.1:11434 to this host when the endpoint is down")
-    ap.add_argument("--parallel", type=int, default=1, help="concurrent requests to the endpoint (the shared Ollama serves one at a time)")
+    ap.add_argument("--tunnel", metavar="SSH_HOST", help="open ssh -L <local port>:127.0.0.1:<remote port> to this host when the endpoint is down")
+    ap.add_argument("--remote-port", type=int, default=11436, help="port of the model server on the SSH host (CQA Ollama: 11436)")
+    ap.add_argument("--parallel", type=int, default=3, help="concurrent requests to the endpoint (the CQA Ollama runs 3 slots; a shared single-slot server: 1)")
     ap.add_argument("--timeout", type=float, default=300.0, help="seconds per request before it is retried (the slowest real call: 80 s)")
     ap.add_argument("--refetch", action="store_true", help="fetch the control set again instead of reusing the cached copy")
     ap.add_argument("--compare", help="cloud results.json to compare with")
@@ -92,7 +93,7 @@ def open_tunnel() -> None:
     log(f"endpoint down; opening the SSH tunnel to {ARGS.tunnel} on port {port}")
     try:
         subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=15",
-                        "-o", "ServerAliveCountMax=8", "-f", "-N", "-L", f"{port}:127.0.0.1:11434", ARGS.tunnel],
+                        "-o", "ServerAliveCountMax=8", "-f", "-N", "-L", f"{port}:127.0.0.1:{ARGS.remote_port}", ARGS.tunnel],
                        check=False, timeout=30)
     except subprocess.TimeoutExpired:
         log("  ssh did not return within 30 s")

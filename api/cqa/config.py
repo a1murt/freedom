@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     local_endpoint_allowlist: str | None = None
     local_max_parallel: int = 1       # concurrent requests to the local endpoint (Ollama on a laptop: 1; vLLM on a GPU: 8+)
     local_timeout_s: float = 900.0    # one criterion call on an 8B model on a laptop takes 1-3 minutes
+    # thinking of the local model through the OpenAI route (Ollama ≥0.40 honours reasoning_effort): "none" answers in
+    # 20-40 s per criterion; "low"/"medium"/"high" think first (minutes per criterion on a 27B model); "" sends nothing
+    local_reasoning_effort: str = "none"
 
     explanation_language: str = "ru"
     pii_masking: bool = True

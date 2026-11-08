@@ -91,3 +91,22 @@ def test_evidence_is_taken_from_the_explanation_when_missing():
     cited = Verdict(criterion_code="C7", applicable=True, answer="yes", confidence=0.9,
                     evidence=[Evidence(turn_idx=2, speaker="operator", quote="turn 2")], explanation="… [4]")
     assert [e.turn_idx for e in validate_verdict(cited, turns, _c7(), channel="agent chat").verdict.evidence] == [2]
+
+
+def test_fewshots_prefer_the_dialog_language():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from cqa.judge.runner import _load_fewshots
+    from cqa.models import Base, FewshotExample
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        for i, lang in enumerate(["RU", "RU", "RU", "KZ", "KZ"]):
+            db.add(FewshotExample(criterion_code="C7", language=lang, channel="agent chat", transcript_excerpt=f"ex{i}-{lang}", verdict={}))
+        db.commit()
+        picked = [f["transcript_excerpt"] for f in _load_fewshots(db, "C7", "KZ", "agent chat", True)]
+        assert picked[:2] == ["ex4-KZ", "ex3-KZ"] and len(picked) == 3
+        assert _load_fewshots(db, "C7", "KZ", "voice call", True) == []
+        assert _load_fewshots(db, "C7", "KZ", "agent chat", False) == []
