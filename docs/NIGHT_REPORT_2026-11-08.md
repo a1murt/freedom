@@ -19,7 +19,10 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
 - **Decisions for you:**
   - the ML teammate reviews the night's spec changes (`docs/HANDOFF_ML.md` «Round 7»);
   - the frontend `idx+1` transcript fix;
-  - whether to re-judge the four demo dialogs (they keep their older verdicts on purpose).
+  - whether to re-judge the four demo dialogs (they keep their older verdicts on purpose). On p1-ru-029, both gold sets and your own label say C2 = N/A and C7 = «Нет»; we have C2 «Нет» and C7 «Да».
+    - That would make the total **55,38** instead of 51,25.
+    - «Почему снижена оценка» would then list C5, C6 and C7 instead of C2, C5 and C6, and DEMO.md step 5 would need the new numbers.
+    - Re-judging only those two criteria on that one dialog costs about $0,10.
 - **Budget:** $26,73 of the $60 daily guard left at 05:00, against an $11,11 reserve for the run. Railway: $4,93 credit.
 
 ## What changed overnight
