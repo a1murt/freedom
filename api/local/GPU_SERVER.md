@@ -47,4 +47,14 @@ while other people's jobs run.
 
 ## Measured
 
-See `api/judge_config_control.md` (accuracy against the gold set, timings) and `api/eval/runs.csv`.
+Gold `holdout_chats` (24 DEV chats never used for spec changes), C7 policy N/A, deployed specs:
+
+| Judge | Mean per-criterion agreement | Misses / 192 | Time |
+|---|---|---|---|
+| Claude Opus 5.5 | 0.984 | 3 | ~20 s per chat |
+| qwen3.8:27b, thinking off, no few-shots | 0.969 | 6 | 34 s per criterion; 24 chats in 49 min with 3 in flight |
+| qwen3.8:27b + gold few-shots (3 per criterion, channel, language) | 0.963 | 7 | 24 chats in 65 min |
+
+The qwen misses are the soft C4 cells (15/20 on the D-account twins and an unanswered follow-up, 10/20 on p1-kz-012), one C2 and one
+C6; few-shots added a C7 miss where the Kazakh examples had no N/A case. Details and the control configuration:
+`api/judge_config_control.md`; every run: `api/eval/runs.csv`.

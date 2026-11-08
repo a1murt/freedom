@@ -54,6 +54,8 @@ def parse() -> argparse.Namespace:
     ap.add_argument("--remote-port", type=int, default=11436, help="port of the model server on the SSH host (CQA Ollama: 11436)")
     ap.add_argument("--parallel", type=int, default=3, help="concurrent requests to the endpoint (the CQA Ollama runs 3 slots; a shared single-slot server: 1)")
     ap.add_argument("--timeout", type=float, default=300.0, help="seconds per request before it is retried (the slowest real call: 80 s)")
+    ap.add_argument("--fewshots", choices=["gold", "none"], default="none",
+                    help="gold: seed three gold-set examples per criterion, channel and language into this database before judging (DEV is imported for the excerpts); none: no examples")
     ap.add_argument("--refetch", action="store_true", help="fetch the control set again instead of reusing the cached copy")
     ap.add_argument("--compare", help="cloud results.json to compare with")
     ap.add_argument("--db", default=str(DATA / "control_local.db"))
@@ -198,7 +200,40 @@ def prepare(db, label: str) -> tuple[list[str], int]:
     if not ids:
         raise SystemExit("0 dialogs resolved from the source: check the group_id, the URL or the file")
     (OUT / f"ids_{label}.json").write_text(json.dumps({"ids": ids, "version_id": version.id}), encoding="utf-8")
+    seed_fewshots(db, ARGS.fewshots)
     return ids, version.id
+
+
+def seed_fewshots(db, mode: str) -> None:
+    """Few-shot examples for the judge from the gold set (cqa.eval.seed_fewshots), all 65 DEV dialogs as sources."""
+    from sqlalchemy import delete, select
+
+    from cqa.ingest.adapter import fetch_organizer, records_from_payload
+    from cqa.ingest.service import import_records
+    from cqa.models import Conversation, FewshotExample
+
+    if mode == "none":
+        n = db.execute(delete(FewshotExample).where(FewshotExample.source == "gold")).rowcount
+        db.commit()
+        if n:
+            log(f"removed {n} gold few-shot examples (--fewshots none)")
+        return
+    if db.execute(select(FewshotExample.id).where(FewshotExample.source == "gold")).first():
+        log("gold few-shot examples already seeded")
+        return
+    if not db.execute(select(Conversation.id).where(Conversation.id.like("p1-%"))).first():
+        import_records(db, records_from_payload(fetch_organizer("DEV")), "DEV")  # the examples quote DEV turns
+    db.commit()
+    import subprocess
+
+    env = dict(os.environ)
+    r = subprocess.run([sys.executable, "-m", "cqa.eval.seed_fewshots", "--split", "all", "--replace"], cwd=str(API), env=env,
+                       capture_output=True, text=True)
+    last = (r.stdout.strip().splitlines() or [""])[-1]
+    if r.returncode != 0:
+        log(f"few-shot seeding failed (continuing without): {(r.stderr or r.stdout)[-300:]}")
+    else:
+        log(f"few-shots: {last}")
 
 
 def latest_local(db, cid: str, version_id: int):
