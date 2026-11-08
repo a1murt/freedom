@@ -1,6 +1,6 @@
 # Night report, 2026-11-08 (00:30–04:40 +05, architecture side)
 
-For the team's morning sync. Everything below is on `main` and deployed (hosted build **1141be2**).
+For the team's morning sync. Everything below is on `main` and deployed (hosted build **56cde81**; later commits change only docs).
 
 ## What changed overnight
 
@@ -65,7 +65,7 @@ For the team's morning sync. Everything below is on `main` and deployed (hosted 
 
 ## Hosted state (04:35)
 
-- **1141be2:** smoke 18/18, live asks 7/7, readiness green. Agreement: 95,0% with the panel gold and 95,2% with the ML gold.
+- **1141be2 → 56cde81** (the narrowed C3 spec and the review fixes; no verdict changes): smoke 18/18, live asks 7/7, readiness green. Agreement: 95,0% with the panel gold and 95,2% with the ML gold.
 - **Demo dialogs:** p1-ru-029 is still 51,25 and p1-ru-005 still previews 78,46 → 85,38. The C7 what-if is now 19 dialogs, mean 83,88 → 83,46 (DEMO.md updated).
 - **Baseline:** retaken at 04:31 (53 MB) with an offsite copy, `api/data/offsite/cqa-baseline-1141be2-20261108-0431.db`.
 - **Budget:** $26,73 of the $60 daily guard left at 04:32; the ensemble control run needs about $6. Disk: 247 MB free. Railway credit: $4,93; the app uses about $0,07 a day.
